@@ -349,7 +349,8 @@ struct DocumentPickerView: UIViewControllerRepresentable {
     let onImportComplete: (Bool, String) -> Void
 
     func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
-        let picker = UIDocumentPickerViewController(documentTypes: ["public.json"], in: .import)
+        // 支持 JSON 和 TXT 文件
+        let picker = UIDocumentPickerViewController(documentTypes: ["public.json", "public.text"], in: .import)
         picker.delegate = context.coordinator
         picker.allowsMultipleSelection = false
         return picker
