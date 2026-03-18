@@ -11,6 +11,8 @@
 		APP03 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP04 /* ContentView.swift */; };
 		APP15 /* WordData.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP16 /* WordData.swift */; };
 		APP17 /* CloudStorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP18 /* CloudStorageManager.swift */; };
+		APP19 /* LocalStorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP1A /* LocalStorageManager.swift */; };
+		APP1B /* JSONImportManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP1C /* JSONImportManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -20,6 +22,8 @@
 		APP06 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		APP16 /* WordData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordData.swift; sourceTree = "<group>"; };
 		APP18 /* CloudStorageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudStorageManager.swift; sourceTree = "<group>"; };
+		APP1A /* LocalStorageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalStorageManager.swift; sourceTree = "<group>"; };
+		APP1C /* JSONImportManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONImportManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -48,6 +52,8 @@
 				APP04 /* ContentView.swift */,
 				APP16 /* WordData.swift */,
 				APP18 /* CloudStorageManager.swift */,
+				APP1A /* LocalStorageManager.swift */,
+				APP1C /* JSONImportManager.swift */,
 				APP06 /* Info.plist */,
 			);
 			path = WordMem;
@@ -132,6 +138,8 @@
 				APP03 /* ContentView.swift in Sources */,
 				APP15 /* WordData.swift in Sources */,
 				APP17 /* CloudStorageManager.swift in Sources */,
+				APP19 /* LocalStorageManager.swift in Sources */,
+				APP1B /* JSONImportManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
