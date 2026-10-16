@@ -34,7 +34,7 @@
 - Consumes: Existing `Info.plist`, `MARKETING_VERSION`, and `CURRENT_PROJECT_VERSION` build settings.
 - Produces: `ITSAppUsesNonExemptEncryption = NO` in the built app's Info.plist and `MARKETING_VERSION = 0.1.0` for Debug and Release configurations.
 
-- [ ] **Step 1: Add export-compliance key**
+- [x] **Step 1: Add export-compliance key**
 
 Add:
 
@@ -43,11 +43,11 @@ Add:
 <false/>
 ```
 
-- [ ] **Step 2: Set beta marketing version**
+- [x] **Step 2: Set beta marketing version**
 
 Change both target-level `MARKETING_VERSION` values from `1.0` to `0.1.0`.
 
-- [ ] **Step 3: Validate plist and build settings**
+- [x] **Step 3: Validate plist and build settings**
 
 Run `plutil -lint WordMem/Info.plist`. Run a Debug simulator build and verify it exits successfully.
 
@@ -62,18 +62,18 @@ Run `plutil -lint WordMem/Info.plist`. Run a Debug simulator build and verify it
 - Consumes: Bundle ID, development team, Xcode Cloud concept, TestFlight groups.
 - Produces: Operator-facing runbook for one-time setup, tester onboarding, and mobile-triggered releases.
 
-- [ ] **Step 1: Write one-time setup checklist**
+- [x] **Step 1: Write one-time setup checklist**
 
 Document creating the App Store Connect app record, connecting GitHub to Xcode Cloud, and creating the TestFlight beta group.
 
-- [ ] **Step 2: Write repeatable release checklist**
+- [x] **Step 2: Write repeatable release checklist**
 
 Document the mobile-friendly flow: merge/push to `release/testflight`, Xcode Cloud archives and uploads, testers update through TestFlight.
 
-- [ ] **Step 3: Review documentation against approved design**
+- [x] **Step 3: Review documentation against approved design**
 
 Verify every approved flow element is represented and no unsupported automation claims are made.
 
-- [ ] **Step 4: Commit local preparation**
+- [x] **Step 4: Commit local preparation**
 
 Commit Info.plist, project version, and documentation changes with a focused conventional commit.
