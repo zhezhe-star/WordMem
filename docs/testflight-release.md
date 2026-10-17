@@ -7,7 +7,7 @@ This project uses Apple TestFlight as the official beta-distribution channel. Xc
 | Value | Value |
 | --- | --- |
 | App name | WordMem |
-| Bundle identifier | `zhezhe.WordMem` |
+| Bundle identifier | `com.zhezhe.wordmem` |
 | Apple development team | `C4JRX5Y34R` |
 | Marketing version | `0.1.0` |
 | Export compliance key | `ITSAppUsesNonExemptEncryption = NO` |
@@ -19,14 +19,14 @@ This project uses Apple TestFlight as the official beta-distribution channel. Xc
 Complete these steps once in a browser while signed in to the Apple account for team `C4JRX5Y34R`:
 
 1. Open [App Store Connect](https://appstoreconnect.apple.com/).
-2. Confirm that the `zhezhe.WordMem` App ID exists under **Certificates, IDs & Profiles**. Create it from the explicit App ID if necessary.
+2. Confirm that the `com.zhezhe.wordmem` App ID exists under **Certificates, IDs & Profiles**. Create it from the explicit App ID if necessary.
 3. Create the App Store Connect app record under **Apps**:
    - Platform: iOS
    - Name: `WordMem`
-   - Primary language: Simplified Chinese or English, according to the preferred App Store presentation
-   - Bundle ID: `zhezhe.WordMem`
-   - SKU: `WORDMEM`
-4. Open the app and select the **Xcode Cloud** section.
+   - Primary language: Simplified Chinese
+   - Bundle ID: `com.zhezhe.wordmem`
+   - SKU: `WORDMEM1`
+4. Confirm the created App Store Connect Apple ID is `6823975529`, then open the app and select the **Xcode Cloud** section.
 5. Connect the GitHub account/repository `zhezhe-star/WordMem` and grant Xcode Cloud access when GitHub prompts for authorization.
 
 ## One-time Xcode Cloud workflow setup

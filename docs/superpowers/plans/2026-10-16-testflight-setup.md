@@ -14,7 +14,7 @@
 
 - Preserve all existing app behavior and files except distribution/configuration metadata.
 - Do not implement iCloud synchronization or unrelated app features.
-- Keep bundle identifier `zhezhe.WordMem`.
+- Keep bundle identifier `com.zhezhe.wordmem`.
 - Keep development team `C4JRX5Y34R`.
 - Use marketing version `0.1.0` for the initial beta.
 - Do not store Apple credentials, API keys, or secrets in the repository.
