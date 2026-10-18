@@ -1,0 +1,9 @@
+{
+  "id" : "80ffccbe-e12c-4d33-bc54-d81605b34805",
+  "targets" : [
+    {
+      "id" : "7514a0e4-0655-4a40-877c-bbba4902deff",
+      "name" : "WordMem"
+    }
+  ]
+}
