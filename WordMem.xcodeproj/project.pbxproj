@@ -13,6 +13,7 @@
 		APP17 /* CloudStorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP18 /* CloudStorageManager.swift */; };
 		APP19 /* LocalStorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP1A /* LocalStorageManager.swift */; };
 		APP1B /* JSONImportManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP1C /* JSONImportManager.swift */; };
+		APP20 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = APP21 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -24,6 +25,7 @@
 		APP18 /* CloudStorageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudStorageManager.swift; sourceTree = "<group>"; };
 		APP1A /* LocalStorageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalStorageManager.swift; sourceTree = "<group>"; };
 		APP1C /* JSONImportManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONImportManager.swift; sourceTree = "<group>"; };
+		APP21 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -54,6 +56,7 @@
 				APP18 /* CloudStorageManager.swift */,
 				APP1A /* LocalStorageManager.swift */,
 				APP1C /* JSONImportManager.swift */,
+				APP21 /* Assets.xcassets */,
 				APP06 /* Info.plist */,
 			);
 			path = WordMem;
@@ -124,6 +127,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				APP20 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
