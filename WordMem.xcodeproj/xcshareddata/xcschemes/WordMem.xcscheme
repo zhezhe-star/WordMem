@@ -20,6 +20,20 @@
                ReferencedContainer = "container:WordMem.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "TEST07"
+               BuildableName = "WordMemTests.xctest"
+               BlueprintName = "WordMemTests"
+               ReferencedContainer = "container:WordMem.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction
@@ -37,6 +51,16 @@
          </BuildableReference>
       </MacroExpansion>
       <Testables>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "TEST07"
+               BuildableName = "WordMemTests.xctest"
+               BlueprintName = "WordMemTests"
+               ReferencedContainer = "container:WordMem.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction

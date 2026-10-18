@@ -2,74 +2,52 @@ import Foundation
 import SwiftUI
 
 class LocalStorageManager: ObservableObject {
-    private let userDefaults = UserDefaults.standard
+    private let userDefaults: UserDefaults
     private let wordsKey = "saved_words"
 
     @Published var words: [WordData] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
 
-    init() {
+    init(defaults: UserDefaults? = nil) {
+        self.userDefaults = defaults ?? .standard
         loadWords()
     }
 
     // MARK: - 保存单词列表
     func saveWords(_ words: [WordData]) {
-        isLoading = true
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            guard let self = self else { return }
-
-            do {
-                let encoder = JSONEncoder()
-                encoder.dateEncodingStrategy = .iso8601
-                let data = try encoder.encode(words)
-                self.userDefaults.set(data, forKey: self.wordsKey)
-
-                DispatchQueue.main.async {
-                    self.words = words
-                    self.isLoading = false
-                    self.errorMessage = nil
-                }
-            } catch {
-                DispatchQueue.main.async {
-                    self.isLoading = false
-                    self.errorMessage = "保存失败: \(error.localizedDescription)"
-                }
-            }
+        do {
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            let data = try encoder.encode(words)
+            userDefaults.set(data, forKey: wordsKey)
+            self.words = words
+            isLoading = false
+            errorMessage = nil
+        } catch {
+            isLoading = false
+            errorMessage = "保存失败: \(error.localizedDescription)"
         }
     }
 
     // MARK: - 加载单词列表
     func loadWords() {
-        isLoading = true
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            guard let self = self else { return }
+        guard let data = userDefaults.data(forKey: wordsKey) else {
+            isLoading = false
+            words = []
+            return
+        }
 
-            guard let data = self.userDefaults.data(forKey: self.wordsKey) else {
-                DispatchQueue.main.async {
-                    self.isLoading = false
-                    self.words = []
-                }
-                return
-            }
-
-            do {
-                let decoder = JSONDecoder()
-                decoder.dateDecodingStrategy = .iso8601
-                let decodedWords = try decoder.decode([WordData].self, from: data)
-
-                DispatchQueue.main.async {
-                    self.words = decodedWords
-                    self.isLoading = false
-                    self.errorMessage = nil
-                }
-            } catch {
-                DispatchQueue.main.async {
-                    self.isLoading = false
-                    self.errorMessage = "加载失败: \(error.localizedDescription)"
-                    self.words = []
-                }
-            }
+        do {
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            words = try decoder.decode([WordData].self, from: data)
+            isLoading = false
+            errorMessage = nil
+        } catch {
+            isLoading = false
+            errorMessage = "加载失败: \(error.localizedDescription)"
+            words = []
         }
     }
 
