@@ -90,6 +90,9 @@ class JSONImportManager: ObservableObject {
             if validatedWord.translatedExampleSentence?.isEmpty == true {
                 validatedWord.translatedExampleSentence = nil
             }
+            if validatedWord.note?.isEmpty == true {
+                validatedWord.note = nil
+            }
             if validatedWord.createDateString.isEmpty {
                 let dateFormatter = DateFormatter()
                 dateFormatter.dateFormat = "yyyy-MM-dd"

@@ -15,6 +15,11 @@
 		APP20 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = APP21 /* Assets.xcassets */; };
 		APP22 /* AddWordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP23 /* AddWordView.swift */; };
 		TEST01 /* WordMemTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = TEST03 /* WordMemTests.swift */; };
+		EXT01 /* WordMemShareExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = EXT02 /* WordMemShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		EXT03 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = EXT04 /* ShareViewController.swift */; };
+		EXT05 /* ShareTextExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = EXT06 /* ShareTextExtractor.swift */; };
+		EXT07 /* WordData.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP16 /* WordData.swift */; };
+		EXT08 /* LocalStorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP1A /* LocalStorageManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -29,9 +34,22 @@
 		APP23 /* AddWordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddWordView.swift; sourceTree = "<group>"; };
 		TEST03 /* WordMemTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordMemTests.swift; sourceTree = "<group>"; };
 		TEST04 /* WordMemTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WordMemTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		EXT02 /* WordMemShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = WordMemShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		EXT04 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
+		EXT06 /* ShareTextExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareTextExtractor.swift; sourceTree = "<group>"; };
+		EXT09 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		EXT10 /* WordMemShareExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = WordMemShareExtension.entitlements; sourceTree = "<group>"; };
+		APP24 /* WordMem.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = WordMem.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		EXT17 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		APP07 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -56,6 +74,13 @@
 			remoteGlobalIDString = APP0B;
 			remoteInfo = WordMem;
 		};
+		EXT12 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = APP0F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = EXT13;
+			remoteInfo = WordMemShareExtension;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXGroup section */
@@ -64,6 +89,7 @@
 			children = (
 				APP09 /* WordMem */,
 				TEST13 /* WordMemTests */,
+				EXT11 /* WordMemShareExtension */,
 				APP0A /* Products */,
 			);
 			sourceTree = "<group>";
@@ -79,6 +105,7 @@
 				APP1C /* JSONImportManager.swift */,
 				APP21 /* Assets.xcassets */,
 				APP06 /* Info.plist */,
+				APP24 /* WordMem.entitlements */,
 			);
 			path = WordMem;
 			sourceTree = "<group>";
@@ -88,6 +115,7 @@
 			children = (
 				APP05 /* WordMem.app */,
 				TEST04 /* WordMemTests.xctest */,
+				EXT02 /* WordMemShareExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -100,6 +128,17 @@
 			path = WordMemTests;
 			sourceTree = "<group>";
 		};
+		EXT11 /* WordMemShareExtension */ = {
+			isa = PBXGroup;
+			children = (
+				EXT04 /* ShareViewController.swift */,
+				EXT06 /* ShareTextExtractor.swift */,
+				EXT09 /* Info.plist */,
+				EXT10 /* WordMemShareExtension.entitlements */,
+			);
+			path = WordMemShareExtension;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -110,10 +149,12 @@
 				APP0D /* Sources */,
 				APP07 /* Frameworks */,
 				APP0E /* Resources */,
+				EXT30 /* Embed App Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				EXT14 /* PBXTargetDependency */,
 			);
 			name = WordMem;
 			productName = WordMem;
@@ -137,6 +178,24 @@
 			productReference = TEST04 /* WordMemTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		EXT13 /* WordMemShareExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EXT15 /* Build configuration list for PBXNativeTarget "WordMemShareExtension" */;
+			buildPhases = (
+				EXT16 /* Sources */,
+				EXT17 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = WordMemShareExtension;
+			packageProductDependencies = (
+			);
+			productName = WordMemShareExtension;
+			productReference = EXT02 /* WordMemShareExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXTargetDependency section */
@@ -144,6 +203,11 @@
 			isa = PBXTargetDependency;
 			target = APP0B /* WordMem */;
 			targetProxy = TEST11 /* PBXContainerItemProxy */;
+		};
+		EXT14 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = EXT13 /* WordMemShareExtension */;
+			targetProxy = EXT12 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -161,6 +225,9 @@
 						CreatedOnToolsVersion = 15.0;
 						TestTargetID = APP0B;
 					};
+					EXT13 = {
+						CreatedOnToolsVersion = 15.0;
+					};
 				};
 			};
 			buildConfigurationList = APP10 /* Build configuration list for PBXProject "WordMem" */;
@@ -177,10 +244,25 @@
 			projectRoot = "";
 			targets = (
 				APP0B /* WordMem */,
+				EXT13 /* WordMemShareExtension */,
 				TEST07 /* WordMemTests */,
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		EXT30 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				EXT01 /* WordMemShareExtension.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXResourcesBuildPhase section */
 		APP0E /* Resources */ = {
@@ -212,6 +294,17 @@
 			buildActionMask = 2147483647;
 			files = (
 				TEST01 /* WordMemTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EXT16 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EXT03 /* ShareViewController.swift in Sources */,
+				EXT05 /* ShareTextExtractor.swift in Sources */,
+				EXT07 /* WordData.swift in Sources */,
+				EXT08 /* LocalStorageManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -335,6 +428,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = WordMem/WordMem.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = C4JRX5Y34R;
@@ -363,6 +457,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = WordMem/WordMem.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = C4JRX5Y34R;
@@ -435,6 +530,64 @@
 			};
 			name = Release;
 		};
+		EXT18 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = WordMemShareExtension/WordMemShareExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = C4JRX5Y34R;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = WordMemShareExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = WordMem;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zhezhe.wordmem.ShareExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		EXT19 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = WordMemShareExtension/WordMemShareExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = C4JRX5Y34R;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = WordMemShareExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = WordMem;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zhezhe.wordmem.ShareExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -461,6 +614,15 @@
 			buildConfigurations = (
 				TEST08 /* Debug */,
 				TEST09 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		EXT15 /* Build configuration list for PBXNativeTarget "WordMemShareExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EXT18 /* Debug */,
+				EXT19 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -55,6 +55,13 @@ struct WordDataDetailView: View {
                         .textSelection(.enabled)
                 }
             }
+
+            if let note = wordData.note {
+                Section("笔记") {
+                    Text(note)
+                        .textSelection(.enabled)
+                }
+            }
         }
         .navigationTitle(wordData.word)
         .navigationBarTitleDisplayMode(.inline)
@@ -73,6 +80,7 @@ struct ContentView: View {
     @StateObject private var importManager = JSONImportManager()
     @State private var activeImportMode: ImportMode?
     @State private var importOutcome: ImportOutcome?
+    @State private var savedWord: WordData?
 
     private enum ImportMode: String, Identifiable {
         case manual
@@ -147,6 +155,16 @@ struct ContentView: View {
                     .accessibilityLabel("添加或导入单词")
                     .disabled(importManager.isImporting)
                 }
+            }
+        }
+        .onOpenURL { url in
+            guard url.absoluteString == "wordmem://saved" else { return }
+            storageManager.loadWords()
+            savedWord = storageManager.words.max { $0.createdAt < $1.createdAt }
+        }
+        .sheet(item: $savedWord) { word in
+            NavigationView {
+                WordDataDetailView(wordData: word)
             }
         }
         .sheet(item: $activeImportMode) { mode in

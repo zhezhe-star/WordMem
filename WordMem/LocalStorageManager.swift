@@ -2,16 +2,52 @@ import Foundation
 import SwiftUI
 
 class LocalStorageManager: ObservableObject {
+    static let appGroupSuiteName = "group.com.zhezhe.wordmem"
+    static let migrationCompletedKey = "did_migrate_standard_saved_words"
+
     private let userDefaults: UserDefaults
-    private let wordsKey = "saved_words"
+    private let wordsKey: String
+    private let legacyDefaults: UserDefaults?
 
     @Published var words: [WordData] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
 
-    init(defaults: UserDefaults? = nil) {
-        self.userDefaults = defaults ?? .standard
+    convenience init(defaults: UserDefaults? = nil) {
+        self.init(
+            defaults: defaults,
+            legacyDefaults: defaults == nil ? .standard : nil,
+            wordsKey: "saved_words"
+        )
+    }
+
+    init(
+        defaults: UserDefaults? = nil,
+        legacyDefaults: UserDefaults? = nil,
+        wordsKey: String = "saved_words"
+    ) {
+        if let defaults {
+            self.userDefaults = defaults
+        } else {
+            self.userDefaults = UserDefaults(suiteName: Self.appGroupSuiteName) ?? .standard
+        }
+        self.legacyDefaults = legacyDefaults
+        self.wordsKey = wordsKey
+        migrateLegacyStandardDefaultsIfNeeded()
         loadWords()
+    }
+
+    private func migrateLegacyStandardDefaultsIfNeeded() {
+        guard let legacyDefaults else { return }
+        guard !userDefaults.bool(forKey: Self.migrationCompletedKey) else { return }
+
+        if userDefaults.data(forKey: wordsKey) == nil,
+           let legacyData = legacyDefaults.data(forKey: wordsKey),
+           !legacyData.isEmpty {
+            userDefaults.set(legacyData, forKey: wordsKey)
+        }
+
+        userDefaults.set(true, forKey: Self.migrationCompletedKey)
     }
 
     // MARK: - 保存单词列表

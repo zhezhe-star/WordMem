@@ -10,10 +10,22 @@ struct WordData: Identifiable, Codable {
     var example: String?
     var exampleSentence: String?
     var translatedExampleSentence: String?
+    var note: String?
     var createdAt: Date
 
     // 用于兼容旧的初始化方法
-    init(word: String, translation: String, phonetic: String? = nil, createDateString: String = "", example: String? = nil, exampleSentence: String? = nil, translatedExampleSentence: String? = nil) {
+    init(
+        word: String,
+        translation: String,
+        phonetic: String? = nil,
+        createDateString: String = "",
+        example: String? = nil,
+        exampleSentence: String? = nil,
+        translatedExampleSentence: String? = nil,
+        note: String? = nil,
+        id: UUID = UUID(),
+        createdAt: Date = Date()
+    ) {
         self.word = word
         self.translation = translation
         self.phonetic = phonetic
@@ -21,19 +33,32 @@ struct WordData: Identifiable, Codable {
         self.example = example
         self.exampleSentence = exampleSentence
         self.translatedExampleSentence = translatedExampleSentence
-        self.createdAt = Date()
+        self.note = note
+        self.id = id
+        self.createdAt = createdAt
     }
 
     // 用于 JSON 导入的初始化
-    init(originText: String, translation: String, phonetic: String? = nil, createDateString: String = "", example: String? = nil, exampleSentence: String? = nil, translatedExampleSentence: String? = nil) {
-        self.word = originText
-        self.translation = translation
-        self.phonetic = phonetic
-        self.createDateString = createDateString
-        self.example = example
-        self.exampleSentence = exampleSentence
-        self.translatedExampleSentence = translatedExampleSentence
-        self.createdAt = Date()
+    init(
+        originText: String,
+        translation: String,
+        phonetic: String? = nil,
+        createDateString: String = "",
+        example: String? = nil,
+        exampleSentence: String? = nil,
+        translatedExampleSentence: String? = nil,
+        note: String? = nil
+    ) {
+        self.init(
+            word: originText,
+            translation: translation,
+            phonetic: phonetic,
+            createDateString: createDateString,
+            example: example,
+            exampleSentence: exampleSentence,
+            translatedExampleSentence: translatedExampleSentence,
+            note: note
+        )
     }
 
     // CodingKeys 用于映射 JSON 字段名
@@ -46,6 +71,26 @@ struct WordData: Identifiable, Codable {
         case example
         case exampleSentence
         case translatedExampleSentence
+        case note
         case createdAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        // Older saved data and some hand-edited JSON files omit optional fields.
+        id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        word = try container.decode(String.self, forKey: .word)
+        translation = try container.decode(String.self, forKey: .translation)
+        phonetic = try container.decodeIfPresent(String.self, forKey: .phonetic)
+        createDateString = try container.decodeIfPresent(String.self, forKey: .createDateString) ?? ""
+        example = try container.decodeIfPresent(String.self, forKey: .example)
+        exampleSentence = try container.decodeIfPresent(String.self, forKey: .exampleSentence)
+        translatedExampleSentence = try container.decodeIfPresent(
+            String.self,
+            forKey: .translatedExampleSentence
+        )
+        note = try container.decodeIfPresent(String.self, forKey: .note)
+        createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
     }
 }
