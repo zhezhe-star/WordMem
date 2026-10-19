@@ -15,11 +15,14 @@
 		MEM01 /* DictionaryModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM11 /* DictionaryModels.swift */; };
 		MEM02 /* WordInputNormalizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM12 /* WordInputNormalizer.swift */; };
 		MEM03 /* WordEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM13 /* WordEntry.swift */; };
-		MEM04 /* DevelopmentSeedDictionaryCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM14 /* DevelopmentSeedDictionaryCatalog.swift */; };
-		MEM05 /* BundledDictionaryLookupService.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM15 /* BundledDictionaryLookupService.swift */; };
 		MEM06 /* WordbookRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM18 /* WordbookRepository.swift */; };
 		MEM07 /* LegacyWordbookMigrator.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM19 /* LegacyWordbookMigrator.swift */; };
+		MEM08 /* SQLiteDictionaryLookupService.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM20 /* SQLiteDictionaryLookupService.swift */; };
+		MEM09 /* Dictionary.sqlite in Resources */ = {isa = PBXBuildFile; fileRef = MEM22 /* Dictionary.sqlite */; };
+		MEM10 /* ECDICT-LICENSE.txt in Resources */ = {isa = PBXBuildFile; fileRef = MEM23 /* ECDICT-LICENSE.txt */; };
+		MEM25 /* BareWordDictionaryLookupService.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM26 /* BareWordDictionaryLookupService.swift */; };
 		TEST02 /* DictionaryLookupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = TEST14 /* DictionaryLookupTests.swift */; };
+		TEST03 /* SQLiteDictionaryLookupServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = TEST17 /* SQLiteDictionaryLookupServiceTests.swift */; };
 		TEST15 /* WordbookRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = TEST16 /* WordbookRepositoryTests.swift */; };
 /* End PBXBuildFile section */
 
@@ -34,13 +37,20 @@
 		MEM11 /* DictionaryModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictionaryModels.swift; sourceTree = "<group>"; };
 		MEM12 /* WordInputNormalizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordInputNormalizer.swift; sourceTree = "<group>"; };
 		MEM13 /* WordEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordEntry.swift; sourceTree = "<group>"; };
-		MEM14 /* DevelopmentSeedDictionaryCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevelopmentSeedDictionaryCatalog.swift; sourceTree = "<group>"; };
-		MEM15 /* BundledDictionaryLookupService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundledDictionaryLookupService.swift; sourceTree = "<group>"; };
 		MEM18 /* WordbookRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordbookRepository.swift; sourceTree = "<group>"; };
 		MEM19 /* LegacyWordbookMigrator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyWordbookMigrator.swift; sourceTree = "<group>"; };
+		MEM20 /* SQLiteDictionaryLookupService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteDictionaryLookupService.swift; sourceTree = "<group>"; };
+		MEM22 /* Dictionary.sqlite */ = {isa = PBXFileReference; lastKnownFileType = file; path = Dictionary.sqlite; sourceTree = "<group>"; };
+		MEM23 /* ECDICT-LICENSE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "ECDICT-LICENSE.txt"; sourceTree = "<group>"; };
+		MEM26 /* BareWordDictionaryLookupService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BareWordDictionaryLookupService.swift; sourceTree = "<group>"; };
 		TEST04 /* WordMemTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WordMemTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		TEST14 /* DictionaryLookupTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictionaryLookupTests.swift; sourceTree = "<group>"; };
 		TEST16 /* WordbookRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordbookRepositoryTests.swift; sourceTree = "<group>"; };
+		TEST17 /* SQLiteDictionaryLookupServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteDictionaryLookupServiceTests.swift; sourceTree = "<group>"; };
+		TEST18 /* DevelopmentSeedDictionaryCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = TEST20 /* DevelopmentSeedDictionaryCatalog.swift */; };
+		TEST19 /* BundledDictionaryLookupService.swift in Sources */ = {isa = PBXBuildFile; fileRef = TEST21 /* BundledDictionaryLookupService.swift */; };
+		TEST20 /* DevelopmentSeedDictionaryCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevelopmentSeedDictionaryCatalog.swift; sourceTree = "<group>"; };
+		TEST21 /* BundledDictionaryLookupService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundledDictionaryLookupService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -88,6 +98,7 @@
 				APP23 /* AddWordView.swift */,
 				MEM16 /* Domain */,
 				MEM17 /* Services */,
+				MEM24 /* Resources */,
 				APP16 /* WordData.swift */,
 				APP21 /* Assets.xcassets */,
 				APP06 /* Info.plist */,
@@ -117,19 +128,31 @@
 		MEM17 /* Services */ = {
 			isa = PBXGroup;
 			children = (
-				MEM14 /* DevelopmentSeedDictionaryCatalog.swift */,
-				MEM15 /* BundledDictionaryLookupService.swift */,
 				MEM18 /* WordbookRepository.swift */,
 				MEM19 /* LegacyWordbookMigrator.swift */,
+				MEM20 /* SQLiteDictionaryLookupService.swift */,
+				MEM26 /* BareWordDictionaryLookupService.swift */,
 			);
 			path = Services;
+			sourceTree = "<group>";
+		};
+		MEM24 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				MEM22 /* Dictionary.sqlite */,
+				MEM23 /* ECDICT-LICENSE.txt */,
+			);
+			path = Resources;
 			sourceTree = "<group>";
 		};
 		TEST13 /* WordMemTests */ = {
 			isa = PBXGroup;
 			children = (
 				TEST14 /* DictionaryLookupTests.swift */,
+				TEST20 /* DevelopmentSeedDictionaryCatalog.swift */,
+				TEST21 /* BundledDictionaryLookupService.swift */,
 				TEST16 /* WordbookRepositoryTests.swift */,
+				TEST17 /* SQLiteDictionaryLookupServiceTests.swift */,
 			);
 			path = WordMemTests;
 			sourceTree = "<group>";
@@ -222,6 +245,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				APP20 /* Assets.xcassets in Resources */,
+				MEM09 /* Dictionary.sqlite in Resources */,
+				MEM10 /* ECDICT-LICENSE.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -238,10 +263,10 @@
 				MEM01 /* DictionaryModels.swift in Sources */,
 				MEM02 /* WordInputNormalizer.swift in Sources */,
 				MEM03 /* WordEntry.swift in Sources */,
-				MEM04 /* DevelopmentSeedDictionaryCatalog.swift in Sources */,
-				MEM05 /* BundledDictionaryLookupService.swift in Sources */,
 				MEM06 /* WordbookRepository.swift in Sources */,
 				MEM07 /* LegacyWordbookMigrator.swift in Sources */,
+				MEM08 /* SQLiteDictionaryLookupService.swift in Sources */,
+				MEM25 /* BareWordDictionaryLookupService.swift in Sources */,
 				APP15 /* WordData.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -251,7 +276,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				TEST02 /* DictionaryLookupTests.swift in Sources */,
+				TEST18 /* DevelopmentSeedDictionaryCatalog.swift in Sources */,
+				TEST19 /* BundledDictionaryLookupService.swift in Sources */,
 				TEST15 /* WordbookRepositoryTests.swift in Sources */,
+				TEST03 /* SQLiteDictionaryLookupServiceTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

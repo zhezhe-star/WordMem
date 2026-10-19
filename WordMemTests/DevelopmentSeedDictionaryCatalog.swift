@@ -1,3 +1,4 @@
+@testable import WordMem
 import Foundation
 
 enum DevelopmentSeedDictionaryCatalog {

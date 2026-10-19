@@ -1,3 +1,4 @@
+@testable import WordMem
 import Foundation
 
 actor BundledDictionaryLookupService: DictionaryLookupService {
@@ -6,7 +7,7 @@ actor BundledDictionaryLookupService: DictionaryLookupService {
     private let lemmaByKey: [String: String]
     private let dictionaryVersion: String
 
-    init(catalog: [DictionaryEntry] = DevelopmentSeedDictionaryCatalog.entries) {
+    init(catalog: [DictionaryEntry]) {
         var entriesByID: [String: DictionaryEntry] = [:]
         var entriesByKey: [String: DictionaryEntry] = [:]
         for entry in catalog {

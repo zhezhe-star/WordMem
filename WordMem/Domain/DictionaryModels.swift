@@ -26,6 +26,7 @@ struct WordSense: Codable, Hashable, Sendable {
 
 struct WordForm: Codable, Hashable, Sendable {
     enum Kind: String, Codable, Hashable, Sendable {
+        case inflection
         case plural
         case pastTense
         case pastParticiple

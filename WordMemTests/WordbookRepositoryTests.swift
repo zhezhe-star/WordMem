@@ -88,6 +88,22 @@ final class WordbookRepositoryTests: XCTestCase {
         XCTAssertEqual(try fixture.modelContext.fetch(FetchDescriptor<WordEntry>()).count, 1)
     }
 
+    func testStandaloneInflectedWordDoesNotCollapseToMappedLemma() async throws {
+        let fixture = try makeFixture()
+        fixture.modelContext.insert(
+            WordEntry(originalInput: "number", normalizedKey: "number", headword: "number")
+        )
+        try fixture.modelContext.save()
+
+        let outcome = try await fixture.repository.add("Number", using: fixture.dictionaryService)
+        guard case .duplicate(let entry) = outcome else {
+            return XCTFail("Expected the existing standalone entry")
+        }
+
+        XCTAssertEqual(entry.normalizedKey, "number")
+        XCTAssertEqual(try fixture.modelContext.fetch(FetchDescriptor<WordEntry>()).count, 1)
+    }
+
     func testUndoAddRemovesOnlyCreatedEntry() async throws {
         let fixture = try makeFixture()
         guard case .added(let entry) = try await fixture.repository.add(
@@ -149,7 +165,9 @@ final class LegacyWordbookMigrationTests: XCTestCase {
         XCTAssertEqual(migratedWord.legacyExampleSentence, "my saved sentence")
         XCTAssertEqual(migratedWord.legacyTranslatedExampleSentence, "我保存的句子翻译")
 
-        let enrichedResult = try await BundledDictionaryLookupService().lookup("run")
+        let enrichedResult = try await BundledDictionaryLookupService(
+            catalog: DevelopmentSeedDictionaryCatalog.entries
+        ).lookup("run")
         try XCTUnwrap(entries.first { $0.normalizedKey == "run" }).apply(enrichedResult)
 
         let enrichedWord = try XCTUnwrap(entries.first { $0.normalizedKey == "run" })

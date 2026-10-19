@@ -48,7 +48,7 @@ struct ContentView: View {
     @State private var feedback: AddWordFeedback?
     @State private var alertMessage: String?
 
-    @State private var dictionaryService: any DictionaryLookupService = BundledDictionaryLookupService()
+    @State private var dictionaryService: any DictionaryLookupService = BareWordDictionaryLookupService()
 
     var body: some View {
         NavigationStack(path: $route) {
@@ -104,6 +104,7 @@ struct ContentView: View {
             }
             .animation(.snappy, value: feedback)
             .task {
+                initializeDictionaryService()
                 migrateLegacyWordbook()
             }
             .task(id: feedback?.id) {
@@ -115,7 +116,6 @@ struct ContentView: View {
             }
         }
     }
-
     private var emptyState: some View {
         ContentUnavailableView {
             Label("单词本还是空的", systemImage: "book.closed")
@@ -175,6 +175,16 @@ struct ContentView: View {
             try LegacyWordbookMigrator.migrateIfNeeded(defaults: .standard, into: modelContext)
         } catch {
             alertMessage = "旧单词本迁移失败。WordMem 已保留原始数据。"
+        }
+    }
+
+    private func initializeDictionaryService() {
+        guard dictionaryService is BareWordDictionaryLookupService else { return }
+
+        do {
+            dictionaryService = try SQLiteDictionaryLookupService()
+        } catch {
+            alertMessage = "本地词典加载失败。核心记录功能仍可用。"
         }
     }
 }
@@ -410,6 +420,7 @@ struct WordEntryDetailView: View {
 
     private func formKindName(_ kind: WordForm.Kind) -> String {
         switch kind {
+        case .inflection: "变化形式"
         case .plural: "复数"
         case .pastTense: "过去式"
         case .pastParticiple: "过去分词"

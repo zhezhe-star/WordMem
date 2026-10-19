@@ -12,6 +12,10 @@ final class DictionaryLookupTests: XCTestCase {
     func testNormalizationTrimsCasePunctuationAndCurlyApostrophes() {
         XCTAssertEqual(WordInputNormalizer.normalizedKey(from: "  Beautiful! "), "beautiful")
         XCTAssertEqual(WordInputNormalizer.normalizedKey(from: "Don’t"), "don't")
+        XCTAssertEqual(WordInputNormalizer.normalizedKey(from: "Ｂｅａｕｔｉｆｕｌ！"), "beautiful")
+        XCTAssertEqual(WordInputNormalizer.normalizedKey(from: "Café"), "cafe")
+        XCTAssertEqual(WordInputNormalizer.normalizedKey(from: "mother-in-law"), "mother-in-law")
+        XCTAssertEqual(WordInputNormalizer.normalizedKey(from: "   "), "")
     }
 
     func testExactLookupEnrichesWord() async throws {
