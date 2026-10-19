@@ -227,7 +227,10 @@ struct CalendarHomeView: View {
         }
 
         let firstDayOffset = calendar.component(.weekday, from: monthInterval.start) - calendar.firstWeekday
-        let leadingBlanks = Array(repeating: CalendarDayItem(date: nil, id: "blank-\(monthInterval.start.timeIntervalSince1970)-\(firstDayOffset)"), count: max(0, firstDayOffset))
+        let blankCount = max(0, firstDayOffset)
+        let leadingBlanks = (0..<blankCount).map { offset in
+            CalendarDayItem(date: nil, id: "blank-\(monthInterval.start.timeIntervalSince1970)-\(offset)")
+        }
         let dayCount = calendar.range(of: .day, in: .month, for: monthInterval.start)?.count ?? 0
         let dayDates = (0..<dayCount).compactMap { offset in
             calendar.date(byAdding: .day, value: offset, to: monthInterval.start)
