@@ -1,102 +1,108 @@
+import SwiftData
 import SwiftUI
 
 struct AddWordView: View {
-    @ObservedObject var storageManager: LocalStorageManager
+    let dictionaryService: any DictionaryLookupService
+    let completion: (AddWordOutcome) -> Void
+
     @Environment(\.dismiss) private var dismiss
-
+    @Environment(\.modelContext) private var modelContext
     @State private var word = ""
-    @State private var translation = ""
-    @State private var phonetic = ""
-    @State private var exampleSentence = ""
-    @FocusState private var focusedField: Field?
+    @State private var isSaving = false
+    @State private var errorMessage: String?
+    @FocusState private var isInputFocused: Bool
 
-    enum Field: Hashable {
-        case word
-        case translation
-        case phonetic
-        case exampleSentence
+    private var repository: WordbookRepository {
+        WordbookRepository(modelContext: modelContext)
     }
 
-    private var canSave: Bool {
-        !word.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && !translation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    private var normalizedInput: String {
+        WordInputNormalizer.normalizedKey(from: word)
     }
 
     var body: some View {
-        NavigationView {
-            Form {
-                Section("单词") {
-                    TextField("要记住的单词", text: $word)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .focused($focusedField, equals: .word)
-                        .submitLabel(.next)
-                        .onSubmit { focusedField = .phonetic }
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("添加一个单词")
+                        .font(.largeTitle.bold())
 
-                    TextField("音标", text: $phonetic)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .focused($focusedField, equals: .phonetic)
-                        .submitLabel(.next)
-                        .onSubmit { focusedField = .translation }
+                    Text("音标、释义和词形会从本地词典自动补充。")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.top, 8)
+
+                TextField("输入英文单词", text: $word)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.title2)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .keyboardType(.alphabet)
+                    .submitLabel(.done)
+                    .focused($isInputFocused)
+                    .onSubmit(save)
+                    .disabled(isSaving)
+                    .accessibilityIdentifier("wordInputField")
+
+                if let errorMessage {
+                    Label(errorMessage, systemImage: "exclamationmark.triangle")
+                        .font(.footnote)
+                        .foregroundStyle(.red)
                 }
 
-                Section("解释") {
-                    TextField("释义", text: $translation)
-                        .focused($focusedField, equals: .translation)
-                        .submitLabel(.next)
-                        .onSubmit { focusedField = .exampleSentence }
-                        .onSubmit { focusedField = .exampleSentence }
+                Spacer(minLength: 0)
 
-                    TextField("例句", text: $exampleSentence)
-                        .focused($focusedField, equals: .exampleSentence)
-                        .submitLabel(.done)
+                Button(action: save) {
+                    HStack {
+                        if isSaving {
+                            ProgressView()
+                                .controlSize(.small)
+                        } else {
+                            Image(systemName: "plus.circle.fill")
+                        }
+                        Text(isSaving ? "正在补充" : "添加到单词本")
+                    }
+                    .frame(maxWidth: .infinity)
                 }
+                .buttonStyle(.glassProminent)
+                .controlSize(.large)
+                .disabled(normalizedInput.isEmpty || isSaving)
             }
+            .padding(20)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .background(Color(.systemBackground))
             .navigationTitle("添加单词")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("取消") {
-                        dismiss()
-                    }
-                }
-
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("保存", action: save)
-                        .disabled(!canSave)
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("取消") { dismiss() }
+                        .disabled(isSaving)
                 }
             }
-            .onAppear {
-                focusedField = .word
+            .task {
+                isInputFocused = true
             }
         }
     }
 
     private func save() {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
+        let input = word
+        guard !WordInputNormalizer.normalizedKey(from: input).isEmpty, !isSaving else { return }
 
-        let newWord = WordData(
-            word: word.trimmingCharacters(in: .whitespacesAndNewlines),
-            translation: translation.trimmingCharacters(in: .whitespacesAndNewlines),
-            phonetic: normalized(phonetic),
-            createDateString: formatter.string(from: Date()),
-            exampleSentence: normalized(exampleSentence)
-        )
+        isSaving = true
+        errorMessage = nil
 
-        storageManager.addWord(newWord)
-        dismiss()
-    }
+        Task {
+            defer { isSaving = false }
 
-    private func normalized(_ value: String) -> String? {
-        let trimmedValue = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmedValue.isEmpty ? nil : trimmedValue
-    }
-}
-
-struct AddWordView_Previews: PreviewProvider {
-    static var previews: some View {
-        AddWordView(storageManager: LocalStorageManager(defaults: UserDefaults(suiteName: "AddWordPreview")))
+            do {
+                let outcome = try await repository.add(input, using: dictionaryService)
+                completion(outcome)
+                dismiss()
+            } catch {
+                errorMessage = "本地词典补充失败，请重试。"
+            }
+        }
     }
 }
