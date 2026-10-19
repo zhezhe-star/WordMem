@@ -1,0 +1,186 @@
+import XCTest
+@testable import WordMem
+
+final class CalendarChallengeTests: XCTestCase {
+    private var calendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Shanghai")!
+        calendar.firstWeekday = 2
+        return calendar
+    }
+
+    private func makeDate(year: Int, month: Int, day: Int, hour: Int = 9) -> Date {
+        var components = DateComponents()
+        components.year = year
+        components.month = month
+        components.day = day
+        components.hour = hour
+        return calendar.date(from: components)!
+    }
+
+    private func makeWord(
+        _ text: String,
+        translation: String,
+        createdAt: Date,
+        example: String? = nil
+    ) -> WordData {
+        WordData(
+            word: text,
+            translation: translation,
+            createDateString: "2026-10-20",
+            example: example,
+            exampleSentence: example,
+            createdAt: createdAt
+        )
+    }
+
+    private func makeService(
+        suiteName: String = UUID().uuidString,
+        now: @escaping () -> Date = Date.init
+    ) -> (service: CalendarChallengeService, defaults: UserDefaults) {
+        let defaults = UserDefaults(suiteName: suiteName)!
+        let service = CalendarChallengeService(defaults: defaults, calendar: calendar, clock: now)
+        return (service, defaults)
+    }
+
+    func testDayKeyUsesInjectedAsiaCalendarAndDayBoundary() {
+        let (service, _) = makeService()
+        let evening = makeDate(year: 2026, month: 10, day: 20, hour: 23)
+        let nextMorning = makeDate(year: 2026, month: 10, day: 21, hour: 1)
+
+        XCTAssertEqual(service.dayKey(for: evening), "2026-10-20")
+        XCTAssertEqual(service.dayKey(for: nextMorning), "2026-10-21")
+        XCTAssertEqual(
+            service.startOfDay(for: evening),
+            service.startOfDay(for: makeDate(year: 2026, month: 10, day: 20, hour: 1))
+        )
+    }
+
+    func testDueSelectionIncludesScheduledPastDaysAndExcludesFutureWork() {
+        let (service, _) = makeService()
+        let base = makeDate(year: 2026, month: 10, day: 20)
+        let words = [
+            makeWord("apple", translation: "苹果", createdAt: base),
+            makeWord("banana", translation: "香蕉", createdAt: base),
+        ]
+
+        XCTAssertEqual(Set(service.dueWords(on: base, from: words).map(\.word)), ["apple", "banana"])
+        XCTAssertEqual(Set(service.dueWords(on: makeDate(year: 2026, month: 10, day: 21), from: words).map(\.word)), ["apple", "banana"])
+        XCTAssertEqual(service.dueWords(on: makeDate(year: 2026, month: 10, day: 22), from: words).count, 0)
+        XCTAssertEqual(service.dueWords(on: makeDate(year: 2026, month: 10, day: 23), from: words).count, 2)
+        XCTAssertEqual(service.dueWords(on: makeDate(year: 2026, month: 11, day: 3), from: words).count, 2)
+
+        let futureDay = makeDate(year: 2026, month: 10, day: 21)
+        let fixedService = makeService(now: { base }).service
+        XCTAssertEqual(fixedService.currentDate(), base)
+        XCTAssertEqual(service.dayStatus(on: futureDay, from: words, relativeTo: base), .future)
+        XCTAssertEqual(service.dayStatus(on: makeDate(year: 2026, month: 10, day: 22), from: words, relativeTo: base), .rest)
+        XCTAssertEqual(service.dayStatus(on: base, from: [], relativeTo: base), .empty)
+    }
+
+    func testQuestionGenerationIsMixedStableAndUsesAvailableContent() {
+        let (service, _) = makeService()
+        let base = makeDate(year: 2026, month: 10, day: 20)
+        let words = [
+            makeWord("apple", translation: "苹果", createdAt: base, example: "I eat an apple."),
+            makeWord("banana", translation: "香蕉", createdAt: base, example: "A banana is yellow."),
+            makeWord("cat", translation: "猫", createdAt: base, example: "The cat sleeps."),
+            makeWord("dog", translation: "狗", createdAt: base, example: "The dog runs."),
+            makeWord("egg", translation: "鸡蛋", createdAt: base, example: "I boiled an egg."),
+        ]
+
+        let questions = service.questions(on: base, from: words)
+        XCTAssertEqual(questions.count, 5)
+        XCTAssertEqual(Set(questions.map(\.wordID)), Set(words.map(\.id)))
+        XCTAssertEqual(Set(questions.map(\.form)).count >= 3, true)
+
+        let repeatedQuestions = service.questions(on: base, from: words)
+        XCTAssertEqual(questions, repeatedQuestions)
+        XCTAssertTrue(questions.allSatisfy { !$0.prompt.isEmpty && !$0.answer.isEmpty })
+    }
+
+    func testAnswerPersistenceSurvivesServiceReloadAndIsolatesSavedWords() throws {
+        let suiteName = "CalendarChallengeTests.\(UUID().uuidString)"
+        let (service, defaults) = makeService(suiteName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let base = makeDate(year: 2026, month: 10, day: 20)
+        let words = [
+            makeWord("apple", translation: "苹果", createdAt: base),
+            makeWord("banana", translation: "香蕉", createdAt: base),
+        ]
+        let questions = service.questions(on: base, from: words)
+        let firstAnswer = CalendarChallengeAnswer(
+            wordID: questions[0].wordID,
+            form: questions[0].form,
+            response: questions[0].answer,
+            isCorrect: true,
+            wasRevealed: false,
+            answeredAt: base
+        )
+        service.recordAnswer(firstAnswer, for: questions[0], on: base, expectedWords: words)
+
+        XCTAssertEqual(service.answeredCount(on: base, expectedWords: words), 1)
+        XCTAssertEqual(service.dayStatus(on: base, from: words, relativeTo: base), .partial)
+
+        let reloadedService = CalendarChallengeService(defaults: defaults, calendar: calendar)
+        XCTAssertEqual(reloadedService.answeredCount(on: base, expectedWords: words), 1)
+        XCTAssertEqual(reloadedService.answer(for: questions[0], on: base), firstAnswer)
+        XCTAssertEqual(reloadedService.progress.schemaVersion, 1)
+
+        XCTAssertNil(defaults.data(forKey: "saved_words"))
+    }
+
+    func testSchedulingTransitionPersistsCompletionState() {
+        let (service, defaults) = makeService()
+        defer {
+            let suiteName = UUID().uuidString
+            UserDefaults(suiteName: suiteName)?.removePersistentDomain(forName: suiteName)
+        }
+
+        let base = makeDate(year: 2026, month: 10, day: 20)
+        let words = [
+            makeWord("apple", translation: "苹果", createdAt: base),
+            makeWord("banana", translation: "香蕉", createdAt: base),
+        ]
+        let questions = service.questions(on: base, from: words)
+
+        XCTAssertEqual(service.dayStatus(on: base, from: words, relativeTo: base), .due)
+
+        for (index, question) in questions.enumerated() {
+            let answer = CalendarChallengeAnswer(
+                wordID: question.wordID,
+                form: question.form,
+                response: index == 0 ? question.answer : "wrong",
+                isCorrect: index == 0,
+                wasRevealed: index != 0,
+                answeredAt: base
+            )
+            service.recordAnswer(answer, for: question, on: base, expectedWords: words)
+        }
+
+        XCTAssertEqual(service.answeredCount(on: base, expectedWords: words), 2)
+        XCTAssertEqual(service.dayStatus(on: base, from: words, relativeTo: base), .complete)
+        XCTAssertNotNil(service.progress.days[service.dayKey(for: base)]?.completedAt)
+
+        let reloadedService = CalendarChallengeService(defaults: defaults, calendar: calendar)
+        XCTAssertEqual(reloadedService.progress.days[service.dayKey(for: base)]?.completedAt, base)
+    }
+
+    func testSavedWordsPayloadRemainsReadableByLocalStorageManager() throws {
+        let suiteName = "CalendarChallengeTests.savedWords.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let word = makeWord("serendipity", translation: "意外新发现", createdAt: makeDate(year: 2026, month: 10, day: 20))
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let encoded = try encoder.encode([word])
+        defaults.set(encoded, forKey: "saved_words")
+
+        let manager = LocalStorageManager(defaults: defaults)
+        XCTAssertEqual(manager.words.count, 1)
+        XCTAssertEqual(manager.words.first?.word, "serendipity")
+        XCTAssertEqual(manager.words.first?.translation, "意外新发现")
+    }
+}

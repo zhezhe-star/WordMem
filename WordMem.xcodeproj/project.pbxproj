@@ -14,7 +14,10 @@
 		APP1B /* JSONImportManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP1C /* JSONImportManager.swift */; };
 		APP20 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = APP21 /* Assets.xcassets */; };
 		APP22 /* AddWordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP23 /* AddWordView.swift */; };
+		CAL01 /* CalendarChallengeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAL02 /* CalendarChallengeService.swift */; };
+		CAL03 /* CalendarChallengeViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAL04 /* CalendarChallengeViews.swift */; };
 		TEST01 /* WordMemTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = TEST03 /* WordMemTests.swift */; };
+		CAL05 /* CalendarChallengeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAL06 /* CalendarChallengeTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -27,8 +30,11 @@
 		APP1C /* JSONImportManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONImportManager.swift; sourceTree = "<group>"; };
 		APP21 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		APP23 /* AddWordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddWordView.swift; sourceTree = "<group>"; };
+		CAL02 /* CalendarChallengeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarChallengeService.swift; sourceTree = "<group>"; };
+		CAL04 /* CalendarChallengeViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarChallengeViews.swift; sourceTree = "<group>"; };
 		TEST03 /* WordMemTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordMemTests.swift; sourceTree = "<group>"; };
 		TEST04 /* WordMemTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WordMemTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		CAL06 /* CalendarChallengeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarChallengeTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -77,6 +83,8 @@
 				APP16 /* WordData.swift */,
 				APP1A /* LocalStorageManager.swift */,
 				APP1C /* JSONImportManager.swift */,
+				CAL02 /* CalendarChallengeService.swift */,
+				CAL04 /* CalendarChallengeViews.swift */,
 				APP21 /* Assets.xcassets */,
 				APP06 /* Info.plist */,
 			);
@@ -96,6 +104,7 @@
 			isa = PBXGroup;
 			children = (
 				TEST03 /* WordMemTests.swift */,
+				CAL06 /* CalendarChallengeTests.swift */,
 			);
 			path = WordMemTests;
 			sourceTree = "<group>";
@@ -204,6 +213,8 @@
 				APP15 /* WordData.swift in Sources */,
 				APP19 /* LocalStorageManager.swift in Sources */,
 				APP1B /* JSONImportManager.swift in Sources */,
+				CAL01 /* CalendarChallengeService.swift in Sources */,
+				CAL03 /* CalendarChallengeViews.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -212,6 +223,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				TEST01 /* WordMemTests.swift in Sources */,
+				CAL05 /* CalendarChallengeTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

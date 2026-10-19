@@ -70,7 +70,30 @@ struct WordDataDetailView: View {
 
 struct ContentView: View {
     @StateObject private var storageManager = LocalStorageManager()
+    @StateObject private var challengeService = CalendarChallengeService()
     @StateObject private var importManager = JSONImportManager()
+
+    var body: some View {
+        TabView {
+            WordbookView(storageManager: storageManager, importManager: importManager)
+                .tabItem {
+                    Label("单词本", systemImage: "books.vertical")
+                }
+
+            CalendarHomeView(
+                storageManager: storageManager,
+                challengeService: challengeService
+            )
+            .tabItem {
+                Label("日历", systemImage: "calendar")
+            }
+        }
+    }
+}
+
+struct WordbookView: View {
+    @ObservedObject var storageManager: LocalStorageManager
+    @ObservedObject var importManager: JSONImportManager
     @State private var activeImportMode: ImportMode?
     @State private var importOutcome: ImportOutcome?
 
