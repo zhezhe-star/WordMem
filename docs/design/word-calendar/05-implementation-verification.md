@@ -89,3 +89,7 @@ The requested iPhone 17 Pro / iOS 26.4 simulator was available and used. The hea
 ## 6. Release readiness
 
 Recommend **release-ready for approved v1**. The implementation is coherent and local-only, preserves the wordbook contract, passes all tests, and has no remaining in-scope product defect. The review-only source fix and report/evidence artifacts remain uncommitted for normal review; do not push or open a PR until those intentional changes are accepted/committed under the repository’s normal workflow.
+
+## 7. Coordinator post-commit re-verification
+
+After independent verification, the leading-blank identity fix was committed as `bd83ceb`, and the design/review artifacts were committed in the documentation commit. The coordinator reran the same iPhone 17 Pro / iOS 26.4 test command from commit `27d835a`. The final result was `Executed 7 tests, with 0 failures (0 unexpected)` and `** TEST SUCCEEDED **`. No code changed after that test.
