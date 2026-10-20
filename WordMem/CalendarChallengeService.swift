@@ -41,6 +41,12 @@ struct CalendarChallengeQuestion: Identifiable, Codable, Equatable {
     let id: String
     let wordID: UUID
     let form: CalendarChallengeForm
+    /// The word being tested. The full-page card renders this as the visual
+    /// hero, so it is carried explicitly instead of parsed out of `prompt`.
+    let target: String
+    /// The word's display translation, carried so reverse-prompt cards can
+    /// render it as the hero without parsing `prompt`.
+    let targetTranslation: String
     let prompt: String
     let accessibilityPrompt: String
     let exampleText: String?
@@ -277,6 +283,8 @@ final class CalendarChallengeService: ObservableObject {
                 id: questionID(dayKey: dayKey, word: word, form: form),
                 wordID: word.id,
                 form: form,
+                target: word.word,
+                targetTranslation: word.translation,
                 prompt: "选择「\(word.word)」的正确释义",
                 accessibilityPrompt: "请选择单词 \(word.word) 的正确释义。",
                 exampleText: nil,
@@ -290,6 +298,8 @@ final class CalendarChallengeService: ObservableObject {
                 id: questionID(dayKey: dayKey, word: word, form: form),
                 wordID: word.id,
                 form: form,
+                target: word.word,
+                targetTranslation: word.translation,
                 prompt: "听发音，选择正确单词",
                 accessibilityPrompt: "这是听力选择题。播放发音后，请选择正确的单词。",
                 exampleText: nil,
@@ -303,6 +313,8 @@ final class CalendarChallengeService: ObservableObject {
                 id: questionID(dayKey: dayKey, word: word, form: form),
                 wordID: word.id,
                 form: form,
+                target: word.word,
+                targetTranslation: word.translation,
                 prompt: "选择「\(word.translation)」对应的英文",
                 accessibilityPrompt: "请选择释义 \(word.translation) 对应的英文单词。",
                 exampleText: nil,
@@ -323,6 +335,8 @@ final class CalendarChallengeService: ObservableObject {
                 id: questionID(dayKey: dayKey, word: word, form: form),
                 wordID: word.id,
                 form: form,
+                target: word.word,
+                targetTranslation: word.translation,
                 prompt: "根据语境补全例句",
                 accessibilityPrompt: "请根据语境，选择补充到例句中的单词。",
                 exampleText: cloze,
@@ -336,6 +350,8 @@ final class CalendarChallengeService: ObservableObject {
                 id: questionID(dayKey: dayKey, word: word, form: form),
                 wordID: word.id,
                 form: form,
+                target: word.word,
+                targetTranslation: word.translation,
                 prompt: "拼写「\(word.translation)」",
                 accessibilityPrompt: "请拼写出释义 \(word.translation) 对应的英文单词。",
                 exampleText: example,

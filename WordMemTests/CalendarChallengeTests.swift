@@ -207,4 +207,49 @@ final class CalendarChallengeTests: XCTestCase {
         )
         XCTAssertEqual(userOnlyEntry.calendarWord.translation, "自造词")
     }
+
+    func testGeneratedQuestionsCarryTargetAndTranslationForFullPageCards() {
+        let (service, _) = makeService()
+        let base = makeDate(year: 2026, month: 10, day: 20)
+        let words = [
+            makeWord("apple", translation: "苹果", createdAt: base),
+            makeWord("banana", translation: "香蕉", createdAt: base),
+        ]
+
+        let questions = service.questions(on: base, from: words)
+
+        XCTAssertEqual(questions.count, 2)
+        for question in questions {
+            let word = words.first { $0.id == question.wordID }!
+            XCTAssertEqual(question.target, word.word)
+            XCTAssertEqual(question.targetTranslation, word.translation)
+        }
+    }
+
+    func testSpellingHintSlotsRevealLettersInOrderAndKeepSeparatorsVisible() {
+        XCTAssertEqual(
+            SpellingHintSlots.tokens(for: "apple", revealedCount: 0),
+            ["", "", "", "", ""]
+        )
+        XCTAssertEqual(
+            SpellingHintSlots.tokens(for: "apple", revealedCount: 2),
+            ["a", "p", "", "", ""]
+        )
+        XCTAssertEqual(
+            SpellingHintSlots.tokens(for: "mother-in-law", revealedCount: 3),
+            ["m", "o", "t", "", "", "", "-", "", "", "-", "", "", ""]
+        )
+        // Spaces stay visible and do not consume hint budget.
+        XCTAssertEqual(
+            SpellingHintSlots.tokens(for: "ice cream", revealedCount: 1),
+            ["i", "", "", " ", "", "", "", "", ""]
+        )
+        XCTAssertEqual(SpellingHintSlots.letterCount(of: "mother-in-law"), 11)
+        XCTAssertEqual(SpellingHintSlots.letterCount(of: "ice cream"), 8)
+        // Over-revealing is clamped by the view layer; the helper itself stays total.
+        XCTAssertEqual(
+            SpellingHintSlots.tokens(for: "go", revealedCount: 5),
+            ["g", "o"]
+        )
+    }
 }

@@ -13,6 +13,7 @@
 		APP20 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = APP21 /* Assets.xcassets */; };
 		APP22 /* AddWordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP23 /* AddWordView.swift */; };
 		CAL01 /* CalendarChallengeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAL02 /* CalendarChallengeService.swift */; };
+		CAL07 /* CalendarChallengeFlowViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAL08 /* CalendarChallengeFlowViews.swift */; };
 		CAL03 /* CalendarChallengeViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAL04 /* CalendarChallengeViews.swift */; };
 		CAL05 /* CalendarChallengeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAL06 /* CalendarChallengeTests.swift */; };
 		MEM01 /* DictionaryModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM11 /* DictionaryModels.swift */; };
@@ -38,6 +39,7 @@
 		APP21 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		APP23 /* AddWordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddWordView.swift; sourceTree = "<group>"; };
 		CAL02 /* CalendarChallengeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarChallengeService.swift; sourceTree = "<group>"; };
+		CAL08 /* CalendarChallengeFlowViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarChallengeFlowViews.swift; sourceTree = "<group>"; };
 		CAL04 /* CalendarChallengeViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarChallengeViews.swift; sourceTree = "<group>"; };
 		CAL06 /* CalendarChallengeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarChallengeTests.swift; sourceTree = "<group>"; };
 		MEM11 /* DictionaryModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictionaryModels.swift; sourceTree = "<group>"; };
@@ -104,6 +106,7 @@
 				APP23 /* AddWordView.swift */,
 				CAL02 /* CalendarChallengeService.swift */,
 				CAL04 /* CalendarChallengeViews.swift */,
+				CAL08 /* CalendarChallengeFlowViews.swift */,
 				MEM16 /* Domain */,
 				MEM17 /* Services */,
 				MEM24 /* Resources */,
@@ -271,6 +274,7 @@
 				APP22 /* AddWordView.swift in Sources */,
 				CAL01 /* CalendarChallengeService.swift in Sources */,
 				CAL03 /* CalendarChallengeViews.swift in Sources */,
+				CAL07 /* CalendarChallengeFlowViews.swift in Sources */,
 				MEM01 /* DictionaryModels.swift in Sources */,
 				MEM02 /* WordInputNormalizer.swift in Sources */,
 				MEM03 /* WordEntry.swift in Sources */,

@@ -43,13 +43,15 @@ extension AddWordFeedback: Equatable {
 struct ContentView: View {
     @Query(sort: \WordEntry.createdAt) private var entries: [WordEntry]
     @StateObject private var challengeService = CalendarChallengeService()
+    @State private var selectedTab = 0
 
     var body: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             WordbookView()
                 .tabItem {
                     Label("单词本", systemImage: "books.vertical")
                 }
+                .tag(0)
 
             CalendarHomeView(
                 words: entries.map(\.calendarWord),
@@ -58,6 +60,14 @@ struct ContentView: View {
             .tabItem {
                 Label("日历", systemImage: "calendar")
             }
+            .tag(1)
+        }
+        .onAppear {
+            #if DEBUG
+            if DebugDeepLink.openChallenge {
+                selectedTab = 1
+            }
+            #endif
         }
     }
 }
