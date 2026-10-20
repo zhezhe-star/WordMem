@@ -1,5 +1,32 @@
 import Foundation
 
+// MARK: - Calendar word adapter
+
+/// Value-type snapshot of a wordbook entry consumed by the challenge engine.
+/// Keeping this decoupled from SwiftData models makes scheduling and question
+/// generation deterministic and unit-testable without a model container.
+struct CalendarWord: Identifiable, Equatable {
+    let id: UUID
+    let word: String
+    let translation: String
+    let phonetic: String?
+    let exampleSentence: String?
+    let createdAt: Date
+}
+
+extension WordEntry {
+    var calendarWord: CalendarWord {
+        CalendarWord(
+            id: id,
+            word: headword,
+            translation: displayTranslation,
+            phonetic: phonetic,
+            exampleSentence: legacyExampleSentence ?? legacyExample,
+            createdAt: createdAt
+        )
+    }
+}
+
 // MARK: - Local Calendar Challenge models
 
 enum CalendarChallengeForm: String, Codable, CaseIterable {
@@ -132,10 +159,10 @@ final class CalendarChallengeService: ObservableObject {
         return calendar.dateComponents([.day], from: start, to: target).day
     }
 
-    func dueWords(on date: Date, from words: [WordData]) -> [WordData] {
+    func dueWords(on date: Date, from words: [CalendarWord]) -> [CalendarWord] {
         let day = startOfDay(for: date)
         return words
-            .compactMap { word -> (WordData, Int)? in
+            .compactMap { word -> (CalendarWord, Int)? in
                 guard let offset = dayOffset(from: word.createdAt, to: day), offset >= 0 else {
                     return nil
                 }
@@ -150,7 +177,7 @@ final class CalendarChallengeService: ObservableObject {
             .map(\.0)
     }
 
-    func dayStatus(on date: Date, from words: [WordData], relativeTo now: Date? = nil) -> CalendarChallengeDayStatus {
+    func dayStatus(on date: Date, from words: [CalendarWord], relativeTo now: Date? = nil) -> CalendarChallengeDayStatus {
         let dueWords = dueWords(on: date, from: words)
         if dueWords.isEmpty {
             return words.isEmpty ? .empty : .rest
@@ -169,7 +196,7 @@ final class CalendarChallengeService: ObservableObject {
 
     // MARK: Answer and completion transitions
 
-    func questions(on date: Date, from words: [WordData]) -> [CalendarChallengeQuestion] {
+    func questions(on date: Date, from words: [CalendarWord]) -> [CalendarChallengeQuestion] {
         let dueWords = dueWords(on: date, from: words)
         let dayIdentifier = dayKey(for: date)
         let otherWords = words.sorted {
@@ -193,7 +220,7 @@ final class CalendarChallengeService: ObservableObject {
         progress.days[dayKey(for: date)]?.answers[question.id]
     }
 
-    func answeredCount(on date: Date, expectedWords: [WordData]) -> Int {
+    func answeredCount(on date: Date, expectedWords: [CalendarWord]) -> Int {
         let dayProgress = progress.days[dayKey(for: date)]
         let expectedIDs = Set(expectedWords.map(\.id))
         let answers = dayProgress?.answers.values.filter { expectedIDs.contains($0.wordID) } ?? []
@@ -204,7 +231,7 @@ final class CalendarChallengeService: ObservableObject {
         _ answer: CalendarChallengeAnswer,
         for question: CalendarChallengeQuestion,
         on date: Date,
-        expectedWords: [WordData]
+        expectedWords: [CalendarWord]
     ) {
         let key = dayKey(for: date)
         var dayProgress = progress.days[key] ?? CalendarChallengeDayProgress(answers: [:], completedAt: nil)
@@ -223,9 +250,9 @@ final class CalendarChallengeService: ObservableObject {
     // MARK: Pure question generation
 
     static func makeQuestion(
-        for word: WordData,
+        for word: CalendarWord,
         index: Int,
-        allWords: [WordData],
+        allWords: [CalendarWord],
         dayKey: String
     ) -> CalendarChallengeQuestion {
         var availableForms: [CalendarChallengeForm] = [
@@ -235,7 +262,7 @@ final class CalendarChallengeService: ObservableObject {
             .spellingInput,
         ]
 
-        let example = [word.exampleSentence, word.example].compactMap { $0 }.first { !$0.isEmpty }
+        let example = word.exampleSentence.flatMap { $0.isEmpty ? nil : $0 }
         if let example = example, example.localizedCaseInsensitiveContains(word.word) {
             availableForms.insert(.exampleCloze, at: min(3, availableForms.count))
         }
@@ -319,7 +346,7 @@ final class CalendarChallengeService: ObservableObject {
         }
     }
 
-    private static func questionID(dayKey: String, word: WordData, form: CalendarChallengeForm) -> String {
+    private static func questionID(dayKey: String, word: CalendarWord, form: CalendarChallengeForm) -> String {
         "\(dayKey):\(word.id.uuidString):\(form.rawValue)"
     }
 
@@ -333,8 +360,8 @@ final class CalendarChallengeService: ObservableObject {
     }
 
     private static func distractorTranslationsAndWords(
-        for word: WordData,
-        allWords: [WordData],
+        for word: CalendarWord,
+        allWords: [CalendarWord],
         form: CalendarChallengeForm
     ) -> (translations: [String], words: [String]) {
         let otherWords = allWords.filter { $0.id != word.id }

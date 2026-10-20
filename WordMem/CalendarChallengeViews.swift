@@ -4,7 +4,7 @@ import SwiftUI
 // MARK: - Calendar home
 
 struct CalendarHomeView: View {
-    @ObservedObject var storageManager: LocalStorageManager
+    var words: [CalendarWord]
     @ObservedObject private var challengeService: CalendarChallengeService
 
     @State private var displayedMonth = Date()
@@ -13,8 +13,8 @@ struct CalendarHomeView: View {
 
     private let calendar = Calendar.current
 
-    init(storageManager: LocalStorageManager, challengeService: CalendarChallengeService) {
-        self.storageManager = storageManager
+    init(words: [CalendarWord], challengeService: CalendarChallengeService) {
+        self.words = words
         self.challengeService = challengeService
     }
 
@@ -37,9 +37,9 @@ struct CalendarHomeView: View {
             .navigationTitle("日历")
             .navigationBarTitleDisplayMode(.large)
             .onAppear(perform: synchronizeCalendar)
-            .onReceive(storageManager.$words) { _ in
+            .onChange(of: words) { _, _ in
                 // Reading the current value in synchronizeCalendar keeps day summaries
-                // aligned after manual entry or JSON import.
+                // aligned after the wordbook changes.
                 synchronizeCalendar()
             }
         }
@@ -118,14 +118,14 @@ struct CalendarHomeView: View {
     private func dayCell(for date: Date) -> some View {
         let status = challengeService.dayStatus(
             on: date,
-            from: storageManager.words,
+            from: words,
             relativeTo: Date()
         )
         let isAvailable = status == .due || status == .partial || status == .complete
         let accessibility = accessibilityText(for: date, status: status)
 
         if isAvailable {
-            NavigationLink(destination: CalendarChallengeView(date: date, storageManager: storageManager, challengeService: challengeService)) {
+            NavigationLink(destination: CalendarChallengeView(date: date, words: words, challengeService: challengeService)) {
                 DayCellContent(date: date, status: status, isSelected: calendar.isDate(selectedDate, inSameDayAs: date))
             }
             .buttonStyle(.plain)
@@ -144,11 +144,11 @@ struct CalendarHomeView: View {
     }
 
     private var selectedDaySummary: some View {
-        let status = challengeService.dayStatus(on: selectedDate, from: storageManager.words)
-        let dueCount = challengeService.dueWords(on: selectedDate, from: storageManager.words).count
+        let status = challengeService.dayStatus(on: selectedDate, from: words)
+        let dueCount = challengeService.dueWords(on: selectedDate, from: words).count
         let answeredCount = challengeService.answeredCount(
             on: selectedDate,
-            expectedWords: challengeService.dueWords(on: selectedDate, from: storageManager.words)
+            expectedWords: challengeService.dueWords(on: selectedDate, from: words)
         )
         let isAvailable = status == .due || status == .partial || status == .complete
 
@@ -168,7 +168,7 @@ struct CalendarHomeView: View {
                 }
             }
 
-            if storageManager.words.isEmpty {
+            if words.isEmpty {
                 Text("单词本还没有单词。请回到「单词本」添加或导入。")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
@@ -184,7 +184,7 @@ struct CalendarHomeView: View {
                 NavigationLink(
                     destination: CalendarChallengeView(
                         date: selectedDate,
-                        storageManager: storageManager,
+                        words: words,
                         challengeService: challengeService
                     )
                 ) {
@@ -324,11 +324,11 @@ private struct DayCellContent: View {
 
 struct CalendarChallengeView: View {
     let date: Date
-    @ObservedObject var storageManager: LocalStorageManager
+    var words: [CalendarWord]
     @ObservedObject var challengeService: CalendarChallengeService
 
     private var questions: [CalendarChallengeQuestion] {
-        challengeService.questions(on: date, from: storageManager.words)
+        challengeService.questions(on: date, from: words)
     }
 
     private var answeredWords: Set<UUID> {
@@ -343,7 +343,7 @@ struct CalendarChallengeView: View {
     }
 
     private var completedCount: Int {
-        challengeService.answeredCount(on: date, expectedWords: challengeService.dueWords(on: date, from: storageManager.words))
+        challengeService.answeredCount(on: date, expectedWords: challengeService.dueWords(on: date, from: words))
     }
 
     var body: some View {
@@ -365,7 +365,7 @@ struct CalendarChallengeView: View {
 
                     LazyVStack(spacing: 14) {
                         ForEach(allQuestions) { question in
-                            ChallengeQuestionCard(date: date, question: question, storageManager: storageManager, challengeService: challengeService)
+                            ChallengeQuestionCard(date: date, question: question, words: words, challengeService: challengeService)
                         }
                     }
 
@@ -455,7 +455,7 @@ struct CalendarChallengeView: View {
 private struct ChallengeQuestionCard: View {
     let date: Date
     let question: CalendarChallengeQuestion
-    @ObservedObject var storageManager: LocalStorageManager
+    var words: [CalendarWord]
     @ObservedObject var challengeService: CalendarChallengeService
 
     @State private var selectedOption: String?
@@ -680,7 +680,7 @@ private struct ChallengeQuestionCard: View {
             ),
             for: question,
             on: date,
-            expectedWords: challengeService.dueWords(on: date, from: storageManager.words)
+            expectedWords: challengeService.dueWords(on: date, from: words)
         )
     }
 

@@ -23,12 +23,12 @@ final class CalendarChallengeTests: XCTestCase {
         translation: String,
         createdAt: Date,
         example: String? = nil
-    ) -> WordData {
-        WordData(
+    ) -> CalendarWord {
+        CalendarWord(
+            id: UUID(),
             word: text,
             translation: translation,
-            createDateString: "2026-10-20",
-            example: example,
+            phonetic: nil,
             exampleSentence: example,
             createdAt: createdAt
         )
@@ -167,20 +167,44 @@ final class CalendarChallengeTests: XCTestCase {
         XCTAssertEqual(reloadedService.progress.days[service.dayKey(for: base)]?.completedAt, base)
     }
 
-    func testSavedWordsPayloadRemainsReadableByLocalStorageManager() throws {
-        let suiteName = "CalendarChallengeTests.savedWords.\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
-        defer { defaults.removePersistentDomain(forName: suiteName) }
+    func testWordEntryMapsIntoCalendarWordAdapter() {
+        let createdAt = makeDate(year: 2026, month: 10, day: 20)
+        let entry = WordEntry(
+            originalInput: "serendipity",
+            normalizedKey: "serendipity",
+            headword: "serendipity",
+            phonetic: "/ˌserənˈdɪpəti/",
+            translation: "意外新发现",
+            userTranslation: "不期而遇的惊喜",
+            legacyExampleSentence: "A lucky serendipity brought us together.",
+            createdAt: createdAt,
+            updatedAt: createdAt
+        )
 
-        let word = makeWord("serendipity", translation: "意外新发现", createdAt: makeDate(year: 2026, month: 10, day: 20))
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        let encoded = try encoder.encode([word])
-        defaults.set(encoded, forKey: "saved_words")
+        let calendarWord = entry.calendarWord
+        XCTAssertEqual(calendarWord.id, entry.id)
+        XCTAssertEqual(calendarWord.word, "serendipity")
+        // displayTranslation prefers the dictionary translation; userTranslation is the fallback.
+        XCTAssertEqual(calendarWord.translation, "意外新发现")
+        XCTAssertEqual(calendarWord.phonetic, "/ˌserənˈdɪpəti/")
+        XCTAssertEqual(calendarWord.exampleSentence, "A lucky serendipity brought us together.")
+        XCTAssertEqual(calendarWord.createdAt, createdAt)
 
-        let manager = LocalStorageManager(defaults: defaults)
-        XCTAssertEqual(manager.words.count, 1)
-        XCTAssertEqual(manager.words.first?.word, "serendipity")
-        XCTAssertEqual(manager.words.first?.translation, "意外新发现")
+        let dictionaryEntry = WordEntry(
+            originalInput: "apple",
+            normalizedKey: "apple",
+            headword: "apple",
+            translation: "苹果"
+        )
+        XCTAssertEqual(dictionaryEntry.calendarWord.translation, "苹果")
+        XCTAssertNil(dictionaryEntry.calendarWord.exampleSentence)
+
+        let userOnlyEntry = WordEntry(
+            originalInput: "made-up-word",
+            normalizedKey: "made-up-word",
+            headword: "made-up-word",
+            userTranslation: "自造词"
+        )
+        XCTAssertEqual(userOnlyEntry.calendarWord.translation, "自造词")
     }
 }

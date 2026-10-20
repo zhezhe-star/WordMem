@@ -10,14 +10,23 @@
 		APP01 /* WordMemApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP02 /* WordMemApp.swift */; };
 		APP03 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP04 /* ContentView.swift */; };
 		APP15 /* WordData.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP16 /* WordData.swift */; };
-		APP19 /* LocalStorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP1A /* LocalStorageManager.swift */; };
-		APP1B /* JSONImportManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP1C /* JSONImportManager.swift */; };
 		APP20 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = APP21 /* Assets.xcassets */; };
 		APP22 /* AddWordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP23 /* AddWordView.swift */; };
 		CAL01 /* CalendarChallengeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAL02 /* CalendarChallengeService.swift */; };
 		CAL03 /* CalendarChallengeViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAL04 /* CalendarChallengeViews.swift */; };
-		TEST01 /* WordMemTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = TEST03 /* WordMemTests.swift */; };
 		CAL05 /* CalendarChallengeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAL06 /* CalendarChallengeTests.swift */; };
+		MEM01 /* DictionaryModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM11 /* DictionaryModels.swift */; };
+		MEM02 /* WordInputNormalizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM12 /* WordInputNormalizer.swift */; };
+		MEM03 /* WordEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM13 /* WordEntry.swift */; };
+		MEM06 /* WordbookRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM18 /* WordbookRepository.swift */; };
+		MEM07 /* LegacyWordbookMigrator.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM19 /* LegacyWordbookMigrator.swift */; };
+		MEM08 /* SQLiteDictionaryLookupService.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM20 /* SQLiteDictionaryLookupService.swift */; };
+		MEM09 /* Dictionary.sqlite in Resources */ = {isa = PBXBuildFile; fileRef = MEM22 /* Dictionary.sqlite */; };
+		MEM10 /* ECDICT-LICENSE.txt in Resources */ = {isa = PBXBuildFile; fileRef = MEM23 /* ECDICT-LICENSE.txt */; };
+		MEM25 /* BareWordDictionaryLookupService.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM26 /* BareWordDictionaryLookupService.swift */; };
+		TEST02 /* DictionaryLookupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = TEST14 /* DictionaryLookupTests.swift */; };
+		TEST03 /* SQLiteDictionaryLookupServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = TEST17 /* SQLiteDictionaryLookupServiceTests.swift */; };
+		TEST15 /* WordbookRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = TEST16 /* WordbookRepositoryTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -26,15 +35,28 @@
 		APP05 /* WordMem.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WordMem.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		APP06 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		APP16 /* WordData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordData.swift; sourceTree = "<group>"; };
-		APP1A /* LocalStorageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalStorageManager.swift; sourceTree = "<group>"; };
-		APP1C /* JSONImportManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONImportManager.swift; sourceTree = "<group>"; };
 		APP21 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		APP23 /* AddWordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddWordView.swift; sourceTree = "<group>"; };
 		CAL02 /* CalendarChallengeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarChallengeService.swift; sourceTree = "<group>"; };
 		CAL04 /* CalendarChallengeViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarChallengeViews.swift; sourceTree = "<group>"; };
-		TEST03 /* WordMemTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordMemTests.swift; sourceTree = "<group>"; };
-		TEST04 /* WordMemTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WordMemTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		CAL06 /* CalendarChallengeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarChallengeTests.swift; sourceTree = "<group>"; };
+		MEM11 /* DictionaryModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictionaryModels.swift; sourceTree = "<group>"; };
+		MEM12 /* WordInputNormalizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordInputNormalizer.swift; sourceTree = "<group>"; };
+		MEM13 /* WordEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordEntry.swift; sourceTree = "<group>"; };
+		MEM18 /* WordbookRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordbookRepository.swift; sourceTree = "<group>"; };
+		MEM19 /* LegacyWordbookMigrator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyWordbookMigrator.swift; sourceTree = "<group>"; };
+		MEM20 /* SQLiteDictionaryLookupService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteDictionaryLookupService.swift; sourceTree = "<group>"; };
+		MEM22 /* Dictionary.sqlite */ = {isa = PBXFileReference; lastKnownFileType = file; path = Dictionary.sqlite; sourceTree = "<group>"; };
+		MEM23 /* ECDICT-LICENSE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "ECDICT-LICENSE.txt"; sourceTree = "<group>"; };
+		MEM26 /* BareWordDictionaryLookupService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BareWordDictionaryLookupService.swift; sourceTree = "<group>"; };
+		TEST04 /* WordMemTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WordMemTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		TEST14 /* DictionaryLookupTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictionaryLookupTests.swift; sourceTree = "<group>"; };
+		TEST16 /* WordbookRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordbookRepositoryTests.swift; sourceTree = "<group>"; };
+		TEST17 /* SQLiteDictionaryLookupServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteDictionaryLookupServiceTests.swift; sourceTree = "<group>"; };
+		TEST18 /* DevelopmentSeedDictionaryCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = TEST20 /* DevelopmentSeedDictionaryCatalog.swift */; };
+		TEST19 /* BundledDictionaryLookupService.swift in Sources */ = {isa = PBXBuildFile; fileRef = TEST21 /* BundledDictionaryLookupService.swift */; };
+		TEST20 /* DevelopmentSeedDictionaryCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevelopmentSeedDictionaryCatalog.swift; sourceTree = "<group>"; };
+		TEST21 /* BundledDictionaryLookupService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundledDictionaryLookupService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -80,11 +102,12 @@
 				APP02 /* WordMemApp.swift */,
 				APP04 /* ContentView.swift */,
 				APP23 /* AddWordView.swift */,
-				APP16 /* WordData.swift */,
-				APP1A /* LocalStorageManager.swift */,
-				APP1C /* JSONImportManager.swift */,
 				CAL02 /* CalendarChallengeService.swift */,
 				CAL04 /* CalendarChallengeViews.swift */,
+				MEM16 /* Domain */,
+				MEM17 /* Services */,
+				MEM24 /* Resources */,
+				APP16 /* WordData.swift */,
 				APP21 /* Assets.xcassets */,
 				APP06 /* Info.plist */,
 			);
@@ -100,11 +123,45 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		MEM16 /* Domain */ = {
+			isa = PBXGroup;
+			children = (
+				MEM11 /* DictionaryModels.swift */,
+				MEM12 /* WordInputNormalizer.swift */,
+				MEM13 /* WordEntry.swift */,
+			);
+			path = Domain;
+			sourceTree = "<group>";
+		};
+		MEM17 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				MEM18 /* WordbookRepository.swift */,
+				MEM19 /* LegacyWordbookMigrator.swift */,
+				MEM20 /* SQLiteDictionaryLookupService.swift */,
+				MEM26 /* BareWordDictionaryLookupService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		MEM24 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				MEM22 /* Dictionary.sqlite */,
+				MEM23 /* ECDICT-LICENSE.txt */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
 		TEST13 /* WordMemTests */ = {
 			isa = PBXGroup;
 			children = (
-				TEST03 /* WordMemTests.swift */,
+				TEST14 /* DictionaryLookupTests.swift */,
 				CAL06 /* CalendarChallengeTests.swift */,
+				TEST20 /* DevelopmentSeedDictionaryCatalog.swift */,
+				TEST21 /* BundledDictionaryLookupService.swift */,
+				TEST16 /* WordbookRepositoryTests.swift */,
+				TEST17 /* SQLiteDictionaryLookupServiceTests.swift */,
 			);
 			path = WordMemTests;
 			sourceTree = "<group>";
@@ -160,14 +217,14 @@
 		APP0F /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastSwiftUpdateCheck = 1500;
-				LastUpgradeCheck = 1500;
+				LastSwiftUpdateCheck = 2710;
+				LastUpgradeCheck = 2710;
 				TargetAttributes = {
 					APP0B = {
-						CreatedOnToolsVersion = 15.0;
+						CreatedOnToolsVersion = 27.1;
 					};
 					TEST07 = {
-						CreatedOnToolsVersion = 15.0;
+						CreatedOnToolsVersion = 27.1;
 						TestTargetID = APP0B;
 					};
 				};
@@ -197,6 +254,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				APP20 /* Assets.xcassets in Resources */,
+				MEM09 /* Dictionary.sqlite in Resources */,
+				MEM10 /* ECDICT-LICENSE.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -210,11 +269,16 @@
 				APP01 /* WordMemApp.swift in Sources */,
 				APP03 /* ContentView.swift in Sources */,
 				APP22 /* AddWordView.swift in Sources */,
-				APP15 /* WordData.swift in Sources */,
-				APP19 /* LocalStorageManager.swift in Sources */,
-				APP1B /* JSONImportManager.swift in Sources */,
 				CAL01 /* CalendarChallengeService.swift in Sources */,
 				CAL03 /* CalendarChallengeViews.swift in Sources */,
+				MEM01 /* DictionaryModels.swift in Sources */,
+				MEM02 /* WordInputNormalizer.swift in Sources */,
+				MEM03 /* WordEntry.swift in Sources */,
+				MEM06 /* WordbookRepository.swift in Sources */,
+				MEM07 /* LegacyWordbookMigrator.swift in Sources */,
+				MEM08 /* SQLiteDictionaryLookupService.swift in Sources */,
+				MEM25 /* BareWordDictionaryLookupService.swift in Sources */,
+				APP15 /* WordData.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -222,8 +286,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				TEST01 /* WordMemTests.swift in Sources */,
+				TEST02 /* DictionaryLookupTests.swift in Sources */,
 				CAL05 /* CalendarChallengeTests.swift in Sources */,
+				TEST18 /* DevelopmentSeedDictionaryCatalog.swift in Sources */,
+				TEST19 /* BundledDictionaryLookupService.swift in Sources */,
+				TEST15 /* WordbookRepositoryTests.swift in Sources */,
+				TEST03 /* SQLiteDictionaryLookupServiceTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -280,7 +348,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -334,7 +402,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
@@ -366,8 +434,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.zhezhe.wordmem;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 			};
 			name = Debug;
 		};
@@ -394,8 +463,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.zhezhe.wordmem;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 			};
 			name = Release;
 		};
@@ -407,7 +477,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = C4JRX5Y34R;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -417,7 +487,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.zhezhe.wordmemTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/WordMem.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/WordMem";
 			};
@@ -431,7 +501,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = C4JRX5Y34R;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -441,7 +511,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.zhezhe.wordmemTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/WordMem.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/WordMem";
 			};
