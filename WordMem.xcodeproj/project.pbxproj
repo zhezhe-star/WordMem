@@ -20,6 +20,12 @@
 		EXT05 /* ShareTextExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = EXT06 /* ShareTextExtractor.swift */; };
 		EXT07 /* WordData.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP16 /* WordData.swift */; };
 		EXT08 /* LocalStorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP1A /* LocalStorageManager.swift */; };
+		TPR01 /* WordMemTranslationProvider.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = TPR02 /* WordMemTranslationProvider.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		TPR03 /* TranslationProviderMain.swift in Sources */ = {isa = PBXBuildFile; fileRef = TPR04 /* TranslationProviderMain.swift */; };
+		TPR05 /* TranslationCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = TPR06 /* TranslationCardView.swift */; };
+		TPR07 /* WordPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = TPR08 /* WordPickerView.swift */; };
+		TPR09 /* WordData.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP16 /* WordData.swift */; };
+		TPR10 /* LocalStorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP1A /* LocalStorageManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -39,6 +45,12 @@
 		EXT06 /* ShareTextExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareTextExtractor.swift; sourceTree = "<group>"; };
 		EXT09 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		EXT10 /* WordMemShareExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = WordMemShareExtension.entitlements; sourceTree = "<group>"; };
+		TPR02 /* WordMemTranslationProvider.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = WordMemTranslationProvider.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		TPR04 /* TranslationProviderMain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationProviderMain.swift; sourceTree = "<group>"; };
+		TPR06 /* TranslationCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationCardView.swift; sourceTree = "<group>"; };
+		TPR08 /* WordPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordPickerView.swift; sourceTree = "<group>"; };
+		TPR11 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		TPR12 /* WordMemTranslationProvider.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = WordMemTranslationProvider.entitlements; sourceTree = "<group>"; };
 		APP24 /* WordMem.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = WordMem.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -64,6 +76,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		TPR16 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXContainerItemProxy section */
@@ -81,6 +100,13 @@
 			remoteGlobalIDString = EXT13;
 			remoteInfo = WordMemShareExtension;
 		};
+		TPR21 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = APP0F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = TPR14;
+			remoteInfo = WordMemTranslationProvider;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXGroup section */
@@ -90,6 +116,7 @@
 				APP09 /* WordMem */,
 				TEST13 /* WordMemTests */,
 				EXT11 /* WordMemShareExtension */,
+				TPR13 /* WordMemTranslationProvider */,
 				APP0A /* Products */,
 			);
 			sourceTree = "<group>";
@@ -116,6 +143,7 @@
 				APP05 /* WordMem.app */,
 				TEST04 /* WordMemTests.xctest */,
 				EXT02 /* WordMemShareExtension.appex */,
+				TPR02 /* WordMemTranslationProvider.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -139,6 +167,18 @@
 			path = WordMemShareExtension;
 			sourceTree = "<group>";
 		};
+		TPR13 /* WordMemTranslationProvider */ = {
+			isa = PBXGroup;
+			children = (
+				TPR04 /* TranslationProviderMain.swift */,
+				TPR06 /* TranslationCardView.swift */,
+				TPR08 /* WordPickerView.swift */,
+				TPR12 /* WordMemTranslationProvider.entitlements */,
+				TPR11 /* Info.plist */,
+			);
+			path = WordMemTranslationProvider;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -150,11 +190,13 @@
 				APP07 /* Frameworks */,
 				APP0E /* Resources */,
 				EXT30 /* Embed App Extensions */,
+				TPR30 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				EXT14 /* PBXTargetDependency */,
+				TPR22 /* PBXTargetDependency */,
 			);
 			name = WordMem;
 			productName = WordMem;
@@ -196,6 +238,22 @@
 			productReference = EXT02 /* WordMemShareExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		TPR14 /* WordMemTranslationProvider */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = TPR20 /* Build configuration list for PBXNativeTarget "WordMemTranslationProvider" */;
+			buildPhases = (
+				TPR15 /* Sources */,
+				TPR16 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = WordMemTranslationProvider;
+			productName = WordMemTranslationProvider;
+			productReference = TPR02 /* WordMemTranslationProvider.appex */;
+			productType = "com.apple.product-type.extensionkit-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXTargetDependency section */
@@ -208,6 +266,11 @@
 			isa = PBXTargetDependency;
 			target = EXT13 /* WordMemShareExtension */;
 			targetProxy = EXT12 /* PBXContainerItemProxy */;
+		};
+		TPR22 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = TPR14 /* WordMemTranslationProvider */;
+			targetProxy = TPR21 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -228,6 +291,9 @@
 					EXT13 = {
 						CreatedOnToolsVersion = 15.0;
 					};
+					TPR14 = {
+						CreatedOnToolsVersion = 15.0;
+					};
 				};
 			};
 			buildConfigurationList = APP10 /* Build configuration list for PBXProject "WordMem" */;
@@ -245,6 +311,7 @@
 			targets = (
 				APP0B /* WordMem */,
 				EXT13 /* WordMemShareExtension */,
+				TPR14 /* WordMemTranslationProvider */,
 				TEST07 /* WordMemTests */,
 			);
 		};
@@ -260,6 +327,17 @@
 				EXT01 /* WordMemShareExtension.appex in Embed App Extensions */,
 			);
 			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		TPR30 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = Extensions;
+			dstSubfolderSpec = 1;
+			files = (
+				TPR01 /* WordMemTranslationProvider.appex in Embed App Extensions */,
+			);
+			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -305,6 +383,18 @@
 				EXT05 /* ShareTextExtractor.swift in Sources */,
 				EXT07 /* WordData.swift in Sources */,
 				EXT08 /* LocalStorageManager.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		TPR15 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				TPR03 /* TranslationProviderMain.swift in Sources */,
+				TPR05 /* TranslationCardView.swift in Sources */,
+				TPR07 /* WordPickerView.swift in Sources */,
+				TPR09 /* WordData.swift in Sources */,
+				TPR10 /* LocalStorageManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -588,6 +678,62 @@
 			};
 			name = Release;
 		};
+		TPR18 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = WordMemTranslationProvider/WordMemTranslationProvider.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = C4JRX5Y34R;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = WordMemTranslationProvider/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = WordMem;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.4;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zhezhe.wordmem.TranslationProvider;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		TPR19 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = WordMemTranslationProvider/WordMemTranslationProvider.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = C4JRX5Y34R;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = WordMemTranslationProvider/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = WordMem;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.4;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zhezhe.wordmem.TranslationProvider;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -623,6 +769,15 @@
 			buildConfigurations = (
 				EXT18 /* Debug */,
 				EXT19 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		TPR20 /* Build configuration list for PBXNativeTarget "WordMemTranslationProvider" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				TPR18 /* Debug */,
+				TPR19 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
