@@ -41,6 +41,28 @@ extension AddWordFeedback: Equatable {
 }
 
 struct ContentView: View {
+    @Query(sort: \WordEntry.createdAt) private var entries: [WordEntry]
+    @StateObject private var challengeService = CalendarChallengeService()
+
+    var body: some View {
+        TabView {
+            WordbookView()
+                .tabItem {
+                    Label("单词本", systemImage: "books.vertical")
+                }
+
+            CalendarHomeView(
+                words: entries.map(\.calendarWord),
+                challengeService: challengeService
+            )
+            .tabItem {
+                Label("日历", systemImage: "calendar")
+            }
+        }
+    }
+}
+
+struct WordbookView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \WordEntry.updatedAt, order: .reverse) private var words: [WordEntry]
     @State private var route: [WordMemRoute] = []

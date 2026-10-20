@@ -13,7 +13,16 @@ struct WordData: Identifiable, Codable {
     var createdAt: Date
 
     // 用于兼容旧的初始化方法
-    init(word: String, translation: String, phonetic: String? = nil, createDateString: String = "", example: String? = nil, exampleSentence: String? = nil, translatedExampleSentence: String? = nil) {
+    init(
+        word: String,
+        translation: String,
+        phonetic: String? = nil,
+        createDateString: String = "",
+        example: String? = nil,
+        exampleSentence: String? = nil,
+        translatedExampleSentence: String? = nil,
+        createdAt: Date = Date()
+    ) {
         self.word = word
         self.translation = translation
         self.phonetic = phonetic
@@ -21,7 +30,7 @@ struct WordData: Identifiable, Codable {
         self.example = example
         self.exampleSentence = exampleSentence
         self.translatedExampleSentence = translatedExampleSentence
-        self.createdAt = Date()
+        self.createdAt = createdAt
     }
 
     // 用于 JSON 导入的初始化

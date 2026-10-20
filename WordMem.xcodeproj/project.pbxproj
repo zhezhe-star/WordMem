@@ -12,6 +12,9 @@
 		APP15 /* WordData.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP16 /* WordData.swift */; };
 		APP20 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = APP21 /* Assets.xcassets */; };
 		APP22 /* AddWordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP23 /* AddWordView.swift */; };
+		CAL01 /* CalendarChallengeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAL02 /* CalendarChallengeService.swift */; };
+		CAL03 /* CalendarChallengeViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAL04 /* CalendarChallengeViews.swift */; };
+		CAL05 /* CalendarChallengeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAL06 /* CalendarChallengeTests.swift */; };
 		MEM01 /* DictionaryModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM11 /* DictionaryModels.swift */; };
 		MEM02 /* WordInputNormalizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM12 /* WordInputNormalizer.swift */; };
 		MEM03 /* WordEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM13 /* WordEntry.swift */; };
@@ -34,6 +37,9 @@
 		APP16 /* WordData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordData.swift; sourceTree = "<group>"; };
 		APP21 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		APP23 /* AddWordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddWordView.swift; sourceTree = "<group>"; };
+		CAL02 /* CalendarChallengeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarChallengeService.swift; sourceTree = "<group>"; };
+		CAL04 /* CalendarChallengeViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarChallengeViews.swift; sourceTree = "<group>"; };
+		CAL06 /* CalendarChallengeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarChallengeTests.swift; sourceTree = "<group>"; };
 		MEM11 /* DictionaryModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictionaryModels.swift; sourceTree = "<group>"; };
 		MEM12 /* WordInputNormalizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordInputNormalizer.swift; sourceTree = "<group>"; };
 		MEM13 /* WordEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordEntry.swift; sourceTree = "<group>"; };
@@ -96,6 +102,8 @@
 				APP02 /* WordMemApp.swift */,
 				APP04 /* ContentView.swift */,
 				APP23 /* AddWordView.swift */,
+				CAL02 /* CalendarChallengeService.swift */,
+				CAL04 /* CalendarChallengeViews.swift */,
 				MEM16 /* Domain */,
 				MEM17 /* Services */,
 				MEM24 /* Resources */,
@@ -149,6 +157,7 @@
 			isa = PBXGroup;
 			children = (
 				TEST14 /* DictionaryLookupTests.swift */,
+				CAL06 /* CalendarChallengeTests.swift */,
 				TEST20 /* DevelopmentSeedDictionaryCatalog.swift */,
 				TEST21 /* BundledDictionaryLookupService.swift */,
 				TEST16 /* WordbookRepositoryTests.swift */,
@@ -260,6 +269,8 @@
 				APP01 /* WordMemApp.swift in Sources */,
 				APP03 /* ContentView.swift in Sources */,
 				APP22 /* AddWordView.swift in Sources */,
+				CAL01 /* CalendarChallengeService.swift in Sources */,
+				CAL03 /* CalendarChallengeViews.swift in Sources */,
 				MEM01 /* DictionaryModels.swift in Sources */,
 				MEM02 /* WordInputNormalizer.swift in Sources */,
 				MEM03 /* WordEntry.swift in Sources */,
@@ -276,6 +287,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				TEST02 /* DictionaryLookupTests.swift in Sources */,
+				CAL05 /* CalendarChallengeTests.swift in Sources */,
 				TEST18 /* DevelopmentSeedDictionaryCatalog.swift in Sources */,
 				TEST19 /* BundledDictionaryLookupService.swift in Sources */,
 				TEST15 /* WordbookRepositoryTests.swift in Sources */,
