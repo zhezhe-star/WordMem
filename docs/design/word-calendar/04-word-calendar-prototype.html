@@ -1,0 +1,1004 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Word Calendar — Owner-Approved v1 Prototype</title>
+  <style>
+    :root {
+      --paper: #F7F4EE;
+      --card: #FFFFFF;
+      --ink: #1D2A32;
+      --slate: #5D6B74;
+      --line: #E7DFD1;
+      --moss: #2F7B5C;
+      --moss-soft: #E4F2EB;
+      --coral: #C65D44;
+      --coral-soft: #F8E8E3;
+      --amber: #B8722C;
+      --amber-soft: #F7EBD7;
+      --blue: #3C6B8E;
+      --blue-soft: #E5EEF4;
+      --radius: 20px;
+      font-size: 16px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: #EFEAE1;
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      line-height: 1.45;
+    }
+    .page {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 28px 20px 60px;
+    }
+    .page-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 18px;
+      margin-bottom: 16px;
+    }
+    .package-title {
+      font-size: clamp(27px, 4vw, 40px);
+      line-height: 1.1;
+      letter-spacing: -.035em;
+      margin: 0;
+    }
+    .approval-pill {
+      flex: 0 0 auto;
+      background: var(--ink);
+      color: #FFF;
+      padding: 9px 14px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 12px;
+      letter-spacing: .03em;
+    }
+    .scope-note {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 18px 20px;
+      box-shadow: 0 18px 45px #27211912;
+    }
+    .scope-note strong { display: block; margin-bottom: 5px; }
+    .scope-note p { margin: 0; color: var(--slate); }
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(380px, 430px) minmax(300px, 1fr);
+      gap: 24px;
+      align-items: start;
+      margin-top: 24px;
+    }
+    .phone-wrap { position: sticky; top: 20px; }
+    .phone {
+      width: 390px;
+      max-width: 100%;
+      height: 770px;
+      margin: 0 auto;
+      background: #101416;
+      border: 10px solid #101416;
+      border-radius: 47px;
+      box-shadow: 0 24px 70px #281f1456;
+      overflow: hidden;
+      position: relative;
+    }
+    .app {
+      width: 100%;
+      height: 100%;
+      background: var(--paper);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .screens { flex: 1; position: relative; overflow: hidden; }
+    .screen {
+      position: absolute;
+      inset: 0;
+      overflow-y: auto;
+      padding: 24px 20px 28px;
+      background: var(--paper);
+      opacity: 0;
+      visibility: hidden;
+      transform: translateX(14px);
+      transition: opacity .2s ease, transform .2s ease, visibility 0s .2s;
+      scrollbar-width: none;
+    }
+    .screen::-webkit-scrollbar { display: none; }
+    .screen.active {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(0);
+      transition: opacity .2s ease, transform .2s ease;
+    }
+    .eyebrow {
+      color: var(--slate);
+      font-size: 11px;
+      font-weight: 850;
+      letter-spacing: .11em;
+      text-transform: uppercase;
+      margin: 0 0 4px;
+    }
+    .h1 { font-size: 28px; letter-spacing: -.03em; line-height: 1.15; margin: 0; }
+    .muted { color: var(--slate); }
+    .small { font-size: 12px; }
+    .header-row { display: flex; justify-content: space-between; align-items: start; gap: 12px; }
+    .icon-btn {
+      width: 44px;
+      height: 44px;
+      border: 0;
+      border-radius: 14px;
+      background: #FFF;
+      color: var(--ink);
+      font-size: 18px;
+      font-weight: 800;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      box-shadow: 0 3px 10px #1d2a3212;
+    }
+    .btn {
+      border: 0;
+      min-height: 44px;
+      padding: 11px 16px;
+      border-radius: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform .15s ease, filter .15s ease;
+      font-size: 14px;
+    }
+    .btn:active { transform: scale(.98); }
+    .btn:focus-visible, .tab:focus-visible, .day:focus-visible, .option:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+    .primary { background: var(--ink); color: #FFF; }
+    .secondary { background: #FFF; color: var(--ink); box-shadow: 0 2px 8px #1d2a320f; }
+    .tertiary {
+      background: transparent;
+      color: var(--blue);
+      min-height: 34px;
+      padding: 4px 8px;
+      border-radius: 9px;
+    }
+    .ghost { background: var(--blue-soft); color: var(--blue); }
+    .danger { background: var(--coral-soft); color: var(--coral); }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 18px;
+      box-shadow: 0 12px 30px #2721190b;
+      margin-top: 16px;
+    }
+    .section-title { font-size: 19px; margin: 0 0 8px; letter-spacing: -.02em; }
+    .word-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      gap: 12px;
+      padding: 15px 4px;
+      border: 0;
+      border-bottom: 1px solid var(--line);
+      background: transparent;
+      text-align: left;
+      cursor: pointer;
+      min-height: 58px;
+    }
+    .word-row:last-child { border-bottom: 0; }
+    .word-row strong { display: block; font-size: 16px; }
+    .word-row span { color: var(--slate); font-size: 12px; }
+    .speak {
+      flex: 0 0 auto;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 0;
+      background: var(--blue-soft);
+      color: var(--blue);
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .toolbar { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+    .compat-note {
+      margin-top: 16px;
+      background: var(--moss-soft);
+      color: #245E48;
+      border-radius: 16px;
+      padding: 12px 14px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .month-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; }
+    .month-title { font-weight: 900; font-size: 15px; }
+    .weekdays, .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
+    .weekdays { margin-top: 14px; color: var(--slate); font-size: 10px; font-weight: 850; text-align: center; padding-bottom: 4px; }
+    .day {
+      position: relative;
+      aspect-ratio: 1;
+      min-width: 38px;
+      min-height: 38px;
+      border: 1px solid transparent;
+      border-radius: 13px;
+      background: #FFF;
+      color: var(--ink);
+      font-weight: 850;
+      font-size: 13px;
+      cursor: pointer;
+      padding: 0;
+    }
+    .day::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      bottom: 5px;
+      transform: translateX(-50%);
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #C9BFB1;
+    }
+    .day.done { background: var(--moss-soft); color: var(--moss); }
+    .day.done::after { background: var(--moss); }
+    .day.partial { background: #FFF; color: var(--moss); box-shadow: inset 0 0 0 2px var(--moss); }
+    .day.partial::after { background: transparent; box-shadow: inset 0 0 0 2px var(--moss); }
+    .day.recovery { background: var(--coral-soft); color: var(--coral); }
+    .day.recovery::after { background: var(--coral); }
+    .day.today { background: var(--amber-soft); color: var(--amber); border-color: var(--amber); }
+    .day.today::after { background: var(--amber); }
+    .day.future { background: #EFECE5; color: #948C7F; cursor: not-allowed; }
+    .day.empty { background: #F3F0EA; color: #948C7F; }
+    .day[aria-pressed="true"] { outline: 3px solid var(--blue); outline-offset: 2px; }
+    .legend { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 16px; color: var(--slate); font-size: 11px; font-weight: 700; }
+    .legend span { display: flex; align-items: center; gap: 5px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; }
+    .day-detail-title { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--paper);
+      color: var(--slate);
+      font-size: 12px;
+      font-weight: 850;
+      white-space: nowrap;
+    }
+    .challenge-header {
+      position: sticky;
+      top: -24px;
+      z-index: 5;
+      background: var(--paper);
+      padding: 24px 0 12px;
+      margin: -24px 0 4px;
+      border-bottom: 1px solid var(--line);
+    }
+    .progress-track { height: 7px; background: #E5DFD3; border-radius: 99px; overflow: hidden; margin-top: 12px; }
+    .progress-fill { height: 100%; width: 0; border-radius: inherit; background: var(--moss); transition: width .2s ease; }
+    .question-list { display: grid; gap: 12px; margin-top: 14px; }
+    .question-card {
+      background: #FFF;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 17px;
+      box-shadow: 0 10px 26px #27211908;
+    }
+    .question-card.answered { border-color: var(--moss); box-shadow: 0 0 0 1px var(--moss); }
+    .form-tag {
+      display: inline-block;
+      background: var(--blue-soft);
+      color: var(--blue);
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      padding: 4px 8px;
+      border-radius: 999px;
+    }
+    .prompt { font-size: 17px; font-weight: 850; margin: 10px 0 4px; }
+    .word-prompt { font-size: 22px; font-weight: 900; letter-spacing: -.02em; }
+    .options { display: grid; gap: 8px; margin-top: 13px; }
+    .option {
+      min-height: 44px;
+      width: 100%;
+      border: 1px solid var(--line);
+      background: #FCFAF6;
+      color: var(--ink);
+      border-radius: 14px;
+      padding: 10px 14px;
+      text-align: left;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .option[aria-pressed="true"] { border-color: var(--ink); background: #F0F3F5; }
+    .option.correct { border-color: var(--moss); background: var(--moss-soft); color: var(--moss); }
+    .option.wrong { border-color: var(--coral); background: var(--coral-soft); color: var(--coral); }
+    .input-row { display: flex; gap: 8px; margin-top: 13px; }
+    .answer-input {
+      flex: 1;
+      min-width: 0;
+      min-height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 0 14px;
+      font: inherit;
+      background: #FCFAF6;
+      color: var(--ink);
+    }
+    .play-btn { display: inline-flex; align-items: center; gap: 7px; margin-top: 10px; min-height: 40px; border: 0; background: var(--blue-soft); color: var(--blue); border-radius: 12px; padding: 7px 12px; font-weight: 850; cursor: pointer; }
+    .audio-fallback { margin: 9px 0 0; color: var(--blue); font-size: 13px; font-weight: 850; }
+    .audio-fallback[hidden] { display: none; }
+    .feedback { margin-top: 12px; border-radius: 13px; padding: 11px 12px; font-size: 12px; font-weight: 750; display: none; }
+    .feedback.show { display: block; }
+    .feedback.correct { background: var(--moss-soft); color: #245E48; }
+    .feedback.wrong { background: var(--coral-soft); color: #95402F; }
+    .feedback-actions { display: flex; gap: 8px; margin-top: 9px; flex-wrap: wrap; }
+    .mini-btn { min-height: 36px; border: 0; border-radius: 10px; padding: 6px 10px; background: #F0EBE1; color: var(--ink); font-weight: 850; font-size: 12px; cursor: pointer; }
+    .completion {
+      border: 1px solid var(--moss);
+      background: var(--moss-soft);
+      color: #245E48;
+      border-radius: 20px;
+      padding: 16px;
+      margin-top: 14px;
+    }
+    .tabbar {
+      height: 74px;
+      flex: 0 0 auto;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      align-items: center;
+      background: #FFF;
+      border-top: 1px solid var(--line);
+      padding: 8px 8px 14px;
+    }
+    .tab {
+      height: 52px;
+      width: 100%;
+      border: 0;
+      background: transparent;
+      color: var(--slate);
+      display: grid;
+      place-items: center;
+      gap: 2px;
+      font-weight: 850;
+      font-size: 11px;
+      cursor: pointer;
+      border-radius: 14px;
+    }
+    .tab svg { width: 21px; height: 21px; }
+    .tab[aria-selected="true"] { color: var(--ink); background: var(--paper); }
+    .review {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 20px;
+      box-shadow: 0 18px 45px #27211912;
+    }
+    .review h2 { letter-spacing: -.03em; margin: 0 0 8px; }
+    .review p { color: var(--slate); margin-top: 0; }
+    .review-tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 16px; }
+    .review-tile { background: var(--paper); border-radius: 16px; padding: 13px; min-height: 92px; }
+    .review-tile h3 { margin: 0 0 4px; font-size: 14px; }
+    .review-tile p { margin: 0; font-size: 12px; }
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 24px;
+      transform: translateX(-50%);
+      z-index: 99;
+      max-width: min(90vw, 420px);
+      background: var(--ink);
+      color: #FFF;
+      padding: 12px 18px;
+      border-radius: 999px;
+      font-weight: 750;
+      font-size: 13px;
+      box-shadow: 0 10px 28px #0004;
+      opacity: 0;
+      visibility: hidden;
+      transition: .2s ease;
+    }
+    .toast.show { opacity: 1; visibility: visible; }
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      white-space: nowrap;
+    }
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      .phone-wrap { position: static; }
+      .phone { height: 720px; }
+      .review-tiles { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 430px) {
+      .page { padding: 18px 12px 48px; }
+      .phone-wrap { margin: 0 -12px; }
+      .phone { border-radius: 0; border: 0; height: calc(100vh - 180px); min-height: 580px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      * { transition: none !important; scroll-behavior: auto !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="page-top">
+      <h1 class="package-title">Word Calendar v1</h1>
+      <p class="approval-pill">Owner-approved · 2026-10-20</p>
+    </div>
+
+    <section class="scope-note" aria-label="Approved scope note">
+      <strong>Exact v1 IA</strong>
+      <p>Root TabView with exactly two bottom tabs: 单词本 and 日历. “Camera 栏” is interpreted as “Calendar 栏.” Microphone/speech recognition and all camera work are out of v1 scope. Listening uses on-device TTS playback only.</p>
+    </section>
+
+    <div class="layout">
+      <section class="phone-wrap" aria-label="Static iPhone prototype">
+        <div class="phone">
+          <div class="app">
+            <main class="screens">
+
+              <section id="screen-wordbook" class="screen active" role="tabpanel" aria-labelledby="wordbook-title" tabindex="-1">
+                <div class="header-row">
+                  <div>
+                    <p class="eyebrow">Existing behavior</p>
+                    <h2 class="h1" id="wordbook-title">单词本</h2>
+                  </div>
+                  <button class="icon-btn" type="button" aria-label="添加或导入，演示保留现有入口" onclick="showNotice('演示：保留现有添加 / 导入入口')">＋</button>
+                </div>
+
+                <div class="toolbar">
+                  <button class="btn secondary" type="button" onclick="showNotice('演示：打开现有 AddWordView')">添加</button>
+                  <button class="btn secondary" type="button" onclick="showNotice('演示：打开现有 JSON 导入')">导入</button>
+                </div>
+
+                <section class="card" aria-label="Existing wordbook list">
+                  <div class="header-row" style="align-items:center;">
+                    <h3 class="section-title" style="margin:0;">12 个单词</h3>
+                    <span class="badge">本地</span>
+                  </div>
+                  <div>
+                    <button class="word-row" type="button" onclick="speakEnglish('resilient'); showNotice('演示：现有详情与 TTS 播放')">
+                      <span><strong>resilient</strong><span>adj. 有韧性的</span></span>
+                      <span class="speak" aria-hidden="true">▶</span>
+                    </button>
+                    <button class="word-row" type="button" onclick="speakEnglish('meticulous'); showNotice('演示：现有详情与 TTS 播放')">
+                      <span><strong>meticulous</strong><span>adj. 一丝不苟的</span></span>
+                      <span class="speak" aria-hidden="true">▶</span>
+                    </button>
+                    <button class="word-row" type="button" onclick="speakEnglish('concise'); showNotice('演示：现有详情与 TTS 播放')">
+                      <span><strong>concise</strong><span>adj. 简洁的</span></span>
+                      <span class="speak" aria-hidden="true">▶</span>
+                    </button>
+                  </div>
+                </section>
+
+                <p class="compat-note">兼容边界：saved_words / WordData 保持现有语义；日历只读派生任务，不重写单词本。</p>
+              </section>
+
+              <section id="screen-calendar" class="screen" role="tabpanel" aria-labelledby="calendar-title" tabindex="-1">
+                <div class="header-row">
+                  <div>
+                    <p class="eyebrow">Challenge index</p>
+                    <h2 class="h1" id="calendar-title">日历</h2>
+                  </div>
+                  <span class="badge">2026 · 10月</span>
+                </div>
+
+                <div class="month-nav">
+                  <button class="btn tertiary" type="button" onclick="showNotice('原型固定展示 2026 年 10 月')">‹ 上月</button>
+                  <span class="month-title">2026年10月</span>
+                  <button class="btn tertiary" type="button" onclick="showNotice('未来任务在 v1 不可打开')">下月 ›</button>
+                </div>
+
+                <div class="weekdays" aria-hidden="true"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+                <div id="calendar-grid" class="calendar-grid" role="grid" aria-label="2026年10月日历任务"></div>
+
+                <div class="legend" aria-hidden="true">
+                  <span><i class="dot" style="background:var(--moss)"></i>已完成</span>
+                  <span><i class="dot" style="background:transparent;box-shadow:inset 0 0 0 2px var(--moss)"></i>还剩</span>
+                  <span><i class="dot" style="background:var(--coral)"></i>可恢复</span>
+                  <span><i class="dot" style="background:var(--amber)"></i>今日</span>
+                  <span><i class="dot" style="background:#C9BFB1"></i>未来</span>
+                </div>
+
+                <section id="calendar-detail" class="card" aria-live="polite">
+                  <div class="day-detail-title">
+                    <h3 class="section-title" id="detail-date">10月20日</h3>
+                    <span class="badge" id="detail-status">今日 · 4</span>
+                  </div>
+                  <p class="small muted" id="detail-copy">今日有 4 个待复习词。打开后进入按词组织的混合题型挑战列表。</p>
+                  <button class="btn primary" id="detail-action" type="button" onclick="openSelectedDay()">打开今日挑战</button>
+                </section>
+              </section>
+
+              <section id="screen-challenge" class="screen" role="region" aria-labelledby="challenge-date" tabindex="-1">
+                <header class="challenge-header">
+                  <button class="btn tertiary" type="button" onclick="showScreen('calendar')">‹ 返回日历</button>
+                  <div class="header-row" style="align-items:center;">
+                    <div>
+                      <p class="eyebrow" id="challenge-kicker">当日挑战</p>
+                      <h2 class="h1" id="challenge-date">10月20日挑战</h2>
+                    </div>
+                    <span class="badge" id="challenge-progress">0 / 4</span>
+                  </div>
+                  <div class="progress-track"><div class="progress-fill" id="challenge-fill"></div></div>
+                </header>
+
+                <p class="small muted">滚动作答。系统按词出题，并混合展示不同形式；没有仪表盘，也没有麦克风或语音识别。</p>
+                <div id="question-list" class="question-list"></div>
+
+                <section id="challenge-completion" class="completion" hidden>
+                  <h3 style="margin:0 0 5px;">今日挑战完成</h3>
+                  <p class="small" id="completion-copy" style="margin:0;">已保留 4 个词，修复 0 个，跳过 0 个。</p>
+                  <div class="feedback-actions">
+                    <button class="btn primary" type="button" onclick="showScreen('calendar')">回到日历</button>
+                    <button class="btn secondary" type="button" onclick="resetChallenge()">重做演示</button>
+                  </div>
+                </section>
+              </section>
+
+            </main>
+
+            <nav class="tabbar" role="tablist" aria-label="Root tabs">
+              <button id="tab-wordbook" class="tab" role="tab" aria-selected="true" aria-controls="screen-wordbook" type="button" onclick="showScreen('wordbook')">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5h9.5A3.5 3.5 0 0 1 18 8v11.5H8.5A3.5 3.5 0 0 1 5 16V4.5Zm0 0A1.5 1.5 0 0 0 3.5 6v9.8M9 9h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>
+                单词本
+              </button>
+              <button id="tab-calendar" class="tab" role="tab" aria-selected="false" aria-controls="screen-calendar" type="button" onclick="showScreen('calendar')">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 7.5A2.5 2.5 0 0 1 7 5h10a2.5 2.5 0 0 1 2.5 2.5v10A2.5 2.5 0 0 1 17 20H7a2.5 2.5 0 0 1-2.5-2.5v-10Zm4-3.5v4m7-4v4m-11 4h15m-11 3h2m3 0h2m-7 3.5h2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>
+                日历
+              </button>
+            </nav>
+          </div>
+        </div>
+      </section>
+
+      <aside class="review" aria-label="Prototype review notes">
+        <h2>Calendar as the complete challenge index</h2>
+        <p>Every local October day is a task cell. Available days open a day Challenge: a compact header plus one scrollable question list. The Challenge is reached only from the selected day and is not a tab or dashboard.</p>
+        <div class="review-tiles">
+          <div class="review-tile"><h3>Two tabs only</h3><p>单词本 stays protected; 日历 is the sole review index.</p></div>
+          <div class="review-tile"><h3>Mixed forms</h3><p>Meaning, TTS listening, reverse translation, and spelling appear together.</p></div>
+          <div class="review-tile"><h3>Day states</h3><p>Complete, partial, recovery, today, no-task, and future states are represented.</p></div>
+          <div class="review-tile"><h3>Out of v1</h3><p>No microphone, speech recognition, camera capture, account, cloud, or analytics.</p></div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    "use strict";
+
+    const screens = ["wordbook", "calendar", "challenge"];
+    let selectedDay = 20;
+    let currentChallengeDay = null;
+    let challengeState = {};
+    let toastTimer;
+
+    const wordBank = [
+      { word: "resilient", meaning: "adj. 有韧性的", example: "A resilient learner can recover after a hard week." },
+      { word: "meticulous", meaning: "adj. 一丝不苟的", example: "She kept a meticulous list of new words." },
+      { word: "concise", meaning: "adj. 简洁的", example: "A concise answer uses only necessary words." },
+      { word: "persistent", meaning: "adj. 坚持的", example: "Persistent review makes memory stronger." },
+      { word: "diligent", meaning: "adj. 勤奋的", example: "A diligent student returns to difficult words." },
+      { word: "adaptable", meaning: "adj. 适应性强的", example: "An adaptable plan fits a busy day." },
+      { word: "reliable", meaning: "adj. 可靠的", example: "A reliable habit does not need pressure." },
+      { word: "vivid", meaning: "adj. 生动的", example: "A vivid example makes meaning easier to recall." }
+    ];
+
+    const dayStates = {
+      12: "partial",
+      13: "recovery",
+      14: "partial",
+      15: "recovery",
+      20: "today"
+    };
+
+    function dayStatus(day) {
+      if (day < 20) return dayStates[day] || "done";
+      if (day === 20) return "today";
+      return "future";
+    }
+
+    function statusLabel(status) {
+      return {
+        done: "已完成",
+        partial: "还剩",
+        recovery: "可恢复",
+        today: "今日 · 4",
+        future: "未来",
+        empty: "无任务"
+      }[status] || "计划";
+    }
+
+    function questionsForDay(day) {
+      const first = (day - 1) % wordBank.length;
+      const forms = ["meaning_match", "listening_choice", "reverse_translation", "spelling"];
+      return forms.map((form, offset) => {
+        const source = wordBank[(first + offset) % wordBank.length];
+        const otherA = wordBank[(first + offset + 1) % wordBank.length];
+        const otherB = wordBank[(first + offset + 3) % wordBank.length];
+        if (form === "meaning_match") {
+          return {
+            id: day + "-meaning",
+            form,
+            title: "释义选择",
+            source,
+            prompt: "选择正确释义",
+            options: shuffle([
+              { key: "a", text: source.meaning, correct: true },
+              { key: "b", text: otherA.meaning, correct: false },
+              { key: "c", text: otherB.meaning, correct: false }
+            ])
+          };
+        }
+        if (form === "listening_choice") {
+          return {
+            id: day + "-listening",
+            form,
+            title: "听音选择 · 仅 TTS",
+            source,
+            prompt: "听发音，选择正确释义",
+            options: shuffle([
+              { key: "a", text: source.meaning, correct: true },
+              { key: "b", text: otherA.meaning, correct: false },
+              { key: "c", text: otherB.meaning, correct: false }
+            ])
+          };
+        }
+        if (form === "reverse_translation") {
+          return {
+            id: day + "-reverse",
+            form,
+            title: "反向翻译",
+            source,
+            prompt: "写出英文单词",
+            meaningOnly: source.meaning
+          };
+        }
+        return {
+          id: day + "-spelling",
+          form,
+          title: "拼写",
+          source,
+          prompt: "根据释义拼写英文单词",
+          meaningOnly: source.meaning
+        };
+      });
+    }
+
+    function shuffle(list) {
+      const arr = list.slice();
+      for (let i = arr.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function showScreen(name) {
+      if (!screens.includes(name)) return;
+      screens.forEach(function(screenName) {
+        const section = document.getElementById("screen-" + screenName);
+        const active = screenName === name;
+        section.classList.toggle("active", active);
+        if (active) section.focus({ preventScroll: true });
+      });
+      const tabName = name === "challenge" ? "calendar" : name;
+      document.getElementById("tab-wordbook").setAttribute("aria-selected", tabName === "wordbook" ? "true" : "false");
+      document.getElementById("tab-calendar").setAttribute("aria-selected", tabName === "calendar" ? "true" : "false");
+    }
+
+    function buildCalendar() {
+      const grid = document.getElementById("calendar-grid");
+      grid.innerHTML = "";
+      const firstWeekday = new Date(2026, 9, 1).getDay();
+      const daysInMonth = new Date(2026, 10, 0).getDate();
+      for (let blank = 0; blank < firstWeekday; blank += 1) {
+        const blankCell = document.createElement("span");
+        grid.appendChild(blankCell);
+      }
+      for (let day = 1; day <= daysInMonth; day += 1) {
+        const status = dayStatus(day);
+        const available = status !== "future";
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "day " + status;
+        button.textContent = String(day);
+        button.setAttribute("aria-pressed", String(day === selectedDay));
+        const description = available
+          ? `10月${day}日，${statusLabel(status)}，可打开挑战`
+          : `10月${day}日，未来任务，不可用`;
+        button.setAttribute("aria-label", description);
+        if (available) {
+          button.addEventListener("click", function() { selectDay(day); openSelectedDay(); });
+        } else {
+          button.disabled = true;
+        }
+        grid.appendChild(button);
+      }
+    }
+
+    function selectDay(day) {
+      selectedDay = day;
+      const status = dayStatus(day);
+      document.querySelectorAll(".day").forEach(function(cell, index) {
+        cell.setAttribute("aria-pressed", String(index + 1 === day));
+      });
+      document.getElementById("detail-date").textContent = `10月${day}日`;
+      document.getElementById("detail-status").textContent = statusLabel(status);
+      const copy = {
+        done: "这一天已完成。可以重新打开作复习，不会把已完成记录改成失败。",
+        partial: "这一天还有未完成词。打开后会定位到第一张未作答卡片。",
+        recovery: "这一天有剩余任务。打开恢复挑战，完成剩余单词。",
+        today: "今日有 4 个待复习词。打开后进入按词组织的混合题型挑战列表。",
+        future: "未来任务在 v1 不可打开。"
+      }[status] || "这一天暂无任务。";
+      document.getElementById("detail-copy").textContent = copy;
+      const action = document.getElementById("detail-action");
+      action.textContent = status === "today" ? "打开今日挑战" : status === "recovery" ? "打开恢复挑战" : status === "future" ? "未来不可用" : "打开该日挑战";
+      action.disabled = status === "future";
+    }
+
+    function openSelectedDay() {
+      if (dayStatus(selectedDay) === "future") return;
+      currentChallengeDay = selectedDay;
+      challengeState = {};
+      document.getElementById("challenge-kicker").textContent = dayStatus(selectedDay) === "recovery" ? "恢复挑战" : "当日挑战";
+      document.getElementById("challenge-date").textContent = `10月${selectedDay}日挑战`;
+      buildChallenge();
+      showScreen("challenge");
+      document.getElementById("screen-challenge").scrollTop = 0;
+    }
+
+    function buildChallenge() {
+      const list = document.getElementById("question-list");
+      list.innerHTML = "";
+      questionsForDay(currentChallengeDay).forEach(function(question, index) {
+        const card = document.createElement("article");
+        card.className = "question-card";
+        card.id = "card-" + question.id;
+        const heading = document.createElement("h3");
+        heading.className = "visually-hidden";
+        heading.textContent = `第 ${index + 1} 题：${question.title}`;
+        const tag = document.createElement("span");
+        tag.className = "form-tag";
+        tag.textContent = question.title;
+        const prompt = document.createElement("p");
+        prompt.className = "prompt";
+        prompt.textContent = question.prompt;
+
+        card.append(heading, tag, prompt);
+        if (question.options) {
+          if (question.form === "listening_choice") {
+            const play = document.createElement("button");
+            play.type = "button";
+            play.className = "play-btn";
+            play.textContent = "🔊 播放 / 慢速";
+            play.setAttribute("aria-label", "播放听音选择题，仅使用设备 TTS");
+            play.addEventListener("click", function() { speakEnglish(question.source.word); });
+            card.appendChild(play);
+            const fallbackText = document.createElement("p");
+            fallbackText.className = "audio-fallback";
+            fallbackText.hidden = true;
+            fallbackText.textContent = `无声音回退：${question.source.word}`;
+            const fallbackButton = document.createElement("button");
+            fallbackButton.type = "button";
+            fallbackButton.className = "mini-btn";
+            fallbackButton.textContent = "无声音？显示文字";
+            fallbackButton.addEventListener("click", function() { fallbackText.hidden = !fallbackText.hidden; });
+            card.appendChild(fallbackButton);
+            card.appendChild(fallbackText);
+          } else {
+            const wordLine = document.createElement("p");
+            wordLine.className = "word-prompt";
+            wordLine.textContent = question.source.word;
+            card.appendChild(wordLine);
+          }
+          const options = document.createElement("div");
+          options.className = "options";
+          question.options.forEach(function(option) {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "option";
+            button.textContent = option.text;
+            button.setAttribute("aria-pressed", "false");
+            button.addEventListener("click", function() { answerChoice(question, option, button, card); });
+            options.appendChild(button);
+          });
+          card.appendChild(options);
+        } else {
+          const meaning = document.createElement("p");
+          meaning.className = "word-prompt";
+          meaning.textContent = question.meaningOnly;
+          card.appendChild(meaning);
+          const row = document.createElement("div");
+          row.className = "input-row";
+          const input = document.createElement("input");
+          input.className = "answer-input";
+          input.type = "text";
+          input.inputMode = "text";
+          input.autocomplete = "off";
+          input.dataset.word = question.source.word;
+          input.setAttribute("aria-label", "输入英文答案");
+          const check = document.createElement("button");
+          check.type = "button";
+          check.className = "btn primary";
+          check.textContent = "检查";
+          check.addEventListener("click", function() { answerText(question, input.value, card); });
+          input.addEventListener("keydown", function(event) {
+            if (event.key === "Enter") { event.preventDefault(); answerText(question, input.value, card); }
+          });
+          row.append(input, check);
+          card.appendChild(row);
+        }
+
+        const feedback = document.createElement("div");
+        feedback.className = "feedback";
+        feedback.id = "feedback-" + question.id;
+        feedback.setAttribute("aria-live", "polite");
+        card.appendChild(feedback);
+        list.appendChild(card);
+      });
+      updateProgress();
+    }
+
+    function answerChoice(question, option, clickedButton, card) {
+      if (challengeState[question.id]) return;
+      const feedback = document.getElementById("feedback-" + question.id);
+      card.querySelectorAll(".option").forEach(function(button) { button.setAttribute("aria-pressed", "false"); });
+      clickedButton.setAttribute("aria-pressed", "true");
+      if (option.correct) {
+        clickedButton.classList.add("correct");
+        challengeState[question.id] = "correct";
+        feedback.className = "feedback correct show";
+        feedback.textContent = "答对了。明天再见面。";
+        markAnswered(card);
+      } else {
+        clickedButton.classList.add("wrong");
+        feedback.className = "feedback wrong show";
+        feedback.innerHTML = `再想想。正确答案是 <strong>${question.source.meaning}</strong>。`;
+        const retry = document.createElement("button");
+        retry.type = "button";
+        retry.className = "mini-btn";
+        retry.textContent = "再试一次";
+        retry.addEventListener("click", function() {
+          feedback.classList.remove("show");
+          card.querySelectorAll(".option").forEach(function(button) {
+            button.classList.remove("wrong");
+            button.setAttribute("aria-pressed", "false");
+          });
+        });
+        const reveal = document.createElement("button");
+        reveal.type = "button";
+        reveal.className = "mini-btn";
+        reveal.textContent = "揭示答案";
+        reveal.addEventListener("click", function() {
+          challengeState[question.id] = "revealed";
+          feedback.className = "feedback wrong show";
+          feedback.textContent = `已揭示：${question.source.meaning}。这个词今天不计为已保留。`;
+          markAnswered(card);
+        });
+        const actions = document.createElement("div");
+        actions.className = "feedback-actions";
+        actions.append(retry, reveal);
+        feedback.appendChild(actions);
+      }
+      updateProgress();
+    }
+
+    function answerText(question, value, card) {
+      if (challengeState[question.id]) return;
+      const feedback = document.getElementById("feedback-" + question.id);
+      const normalized = normalizeText(value);
+      if (normalized === normalizeText(question.source.word)) {
+        challengeState[question.id] = "correct";
+        feedback.className = "feedback correct show";
+        feedback.textContent = "答对了。明天再见面。";
+        markAnswered(card);
+      } else if (!normalized) {
+        feedback.className = "feedback wrong show";
+        feedback.textContent = "请先输入一个答案。";
+      } else {
+        feedback.className = "feedback wrong show";
+        feedback.textContent = `还不对。词形提示：${shapeHint(question.source.word)}`;
+        const reveal = document.createElement("button");
+        reveal.type = "button";
+        reveal.className = "mini-btn";
+        reveal.textContent = "揭示答案";
+        reveal.addEventListener("click", function() {
+          challengeState[question.id] = "revealed";
+          feedback.className = "feedback wrong show";
+          feedback.textContent = `已揭示：${question.source.word}。这个词今天不计为已保留。`;
+          markAnswered(card);
+        });
+        feedback.appendChild(reveal);
+      }
+      updateProgress();
+    }
+
+    function markAnswered(card) {
+      card.classList.add("answered");
+      const next = card.nextElementSibling;
+      if (next) next.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+
+    function normalizeText(value) {
+      return String(value || "").trim().toLowerCase().replace(/[.,!?;:'"()]+$/, "");
+    }
+
+    function shapeHint(word) {
+      return word[0] + " " + word.slice(1, -1).split("").join(" ") + " " + word.slice(-1);
+    }
+
+    function updateProgress() {
+      const total = 4;
+      const answered = Object.keys(challengeState).length;
+      const retained = Object.values(challengeState).filter(function(value) { return value === "correct"; }).length;
+      document.getElementById("challenge-progress").textContent = `${answered} / ${total}`;
+      document.getElementById("challenge-fill").style.width = `${answered / total * 100}%`;
+      const completion = document.getElementById("challenge-completion");
+      if (answered === total) {
+        const repaired = answered - retained;
+        document.getElementById("completion-copy").textContent = `已保留 ${retained} 个，修复 ${repaired} 个，跳过 0 个。完成状态会写入本地进度，不会改变单词本。`;
+        completion.hidden = false;
+      } else {
+        completion.hidden = true;
+      }
+    }
+
+    function resetChallenge() {
+      challengeState = {};
+      buildChallenge();
+      document.getElementById("screen-challenge").scrollTop = 0;
+    }
+
+    function speakEnglish(text) {
+      if (!("speechSynthesis" in window)) {
+        showNotice("此浏览器不支持演示播放；实现中会回退为文字/自评，不用麦克风。");
+        return;
+      }
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "en-US";
+      utterance.rate = 0.75;
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function showNotice(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.classList.add("show");
+      window.clearTimeout(toastTimer);
+      toastTimer = window.setTimeout(function() { toast.classList.remove("show"); }, 2400);
+    }
+
+    document.addEventListener("keydown", function(event) {
+      if (event.key !== "Tab") return;
+      const focusables = Array.from(document.querySelectorAll(".screen.active button, .screen.active input, .tabbar .tab")).filter(function(item) {
+        return !item.disabled && item.offsetParent !== null;
+      });
+      if (!focusables.length) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    });
+
+    buildCalendar();
+    selectDay(20);
+    showScreen("wordbook");
+  </script>
+</body>
+</html>
