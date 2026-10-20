@@ -1,4 +1,3 @@
-import AVFoundation
 import SwiftUI
 
 // MARK: - Calendar home
@@ -10,6 +9,9 @@ struct CalendarHomeView: View {
     @State private var displayedMonth = Date()
     @State private var selectedDate = Date()
     @State private var monthTitle = ""
+    #if DEBUG
+    @State private var deepLinkedChallenge = false
+    #endif
 
     private let calendar = Calendar.current
 
@@ -37,6 +39,25 @@ struct CalendarHomeView: View {
             .navigationTitle("日历")
             .navigationBarTitleDisplayMode(.large)
             .onAppear(perform: synchronizeCalendar)
+            #if DEBUG
+            .background(
+                NavigationLink(isActive: $deepLinkedChallenge) {
+                    CalendarChallengeView(
+                        date: calendar.date(byAdding: .day, value: DebugDeepLink.challengeDateOffset, to: Date()) ?? Date(),
+                        words: words,
+                        challengeService: challengeService
+                    )
+                } label: {
+                    EmptyView()
+                }
+                .hidden()
+            )
+            .onAppear {
+                if DebugDeepLink.openChallenge {
+                    deepLinkedChallenge = true
+                }
+            }
+            #endif
             .onChange(of: words) { _, _ in
                 // Reading the current value in synchronizeCalendar keeps day summaries
                 // aligned after the wordbook changes.
@@ -316,409 +337,6 @@ private struct DayCellContent: View {
                     .cornerRadius(4)
                     .offset(y: -3)
             }
-        }
-    }
-}
-
-// MARK: - Day challenge
-
-struct CalendarChallengeView: View {
-    let date: Date
-    var words: [CalendarWord]
-    @ObservedObject var challengeService: CalendarChallengeService
-
-    private var questions: [CalendarChallengeQuestion] {
-        challengeService.questions(on: date, from: words)
-    }
-
-    private var answeredWords: Set<UUID> {
-        let expectedIDs = Set(questions.map(\.wordID))
-        return Set(
-            questions.compactMap { question in
-                challengeService.answer(for: question, on: date)
-            }
-            .filter { expectedIDs.contains($0.wordID) }
-            .map(\.wordID)
-        )
-    }
-
-    private var completedCount: Int {
-        challengeService.answeredCount(on: date, expectedWords: challengeService.dueWords(on: date, from: words))
-    }
-
-    var body: some View {
-        let allQuestions = questions
-        let completed = !allQuestions.isEmpty && completedCount == allQuestions.count
-
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                progressHeader(total: allQuestions.count, completed: completedCount, isComplete: completed)
-
-                if allQuestions.isEmpty {
-                    emptyState
-                } else {
-                    if completed {
-                        completionSummary(correctCount: allQuestions.filter { question in
-                            challengeService.answer(for: question, on: date)?.isCorrect == true
-                        }.count, totalCount: allQuestions.count)
-                    }
-
-                    LazyVStack(spacing: 14) {
-                        ForEach(allQuestions) { question in
-                            ChallengeQuestionCard(date: date, question: question, words: words, challengeService: challengeService)
-                        }
-                    }
-
-                    Text("记录只保存在这台 iPhone 上。")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .padding(16)
-            .frame(maxWidth: 680)
-            .frame(maxWidth: .infinity)
-        }
-        .background(Color(.systemGroupedBackground).ignoresSafeArea())
-        .navigationTitle("\(shortDateFormatter.string(from: date))挑战")
-        .navigationBarTitleDisplayMode(.inline)
-    }
-
-    @ViewBuilder
-    private var emptyState: some View {
-        VStack(spacing: 10) {
-            Image(systemName: "tray")
-                .font(.system(size: 44))
-                .foregroundStyle(.secondary)
-            Text("这一天没有可挑战单词")
-                .font(.headline)
-            Text("请选择有任务的日期。")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(24)
-        .background(Color(.secondarySystemGroupedBackground))
-        .cornerRadius(16)
-    }
-
-    private func progressHeader(total: Int, completed: Int, isComplete: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text(isComplete ? "挑战完成" : "进行中")
-                    .font(.headline)
-                Spacer()
-                Text("\(completed)/\(total)")
-                    .font(.headline.monospacedDigit())
-                    .foregroundStyle(.secondary)
-            }
-            ProgressView(value: total == 0 ? 1 : Double(completed), total: Double(total))
-                .tint(isComplete ? .green : .accentColor)
-            if !isComplete {
-                Text("可随时离开，已提交的答案会保留。")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(16)
-        .background(Color(.secondarySystemGroupedBackground))
-        .cornerRadius(16)
-    }
-
-    private func completionSummary(correctCount: Int, totalCount: Int) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: "checkmark.seal.fill")
-                .font(.title2)
-                .foregroundStyle(.green)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("已完成 \(correctCount)/\(totalCount) 题正确")
-                    .font(.headline)
-                Text("答案已保存在本机。")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
-        }
-        .padding(16)
-        .background(Color.green.opacity(0.12))
-        .cornerRadius(16)
-        .accessibilityElement(children: .combine)
-    }
-
-    private var shortDateFormatter: DateFormatter {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "M月d日"
-        formatter.locale = .current
-        return formatter
-    }
-}
-
-private struct ChallengeQuestionCard: View {
-    let date: Date
-    let question: CalendarChallengeQuestion
-    var words: [CalendarWord]
-    @ObservedObject var challengeService: CalendarChallengeService
-
-    @State private var selectedOption: String?
-    @State private var spelling = ""
-    @State private var attemptCount = 0
-    @State private var feedback: ChallengeFeedback?
-    @StateObject private var speaker = ChallengeSpeaker()
-
-    private var savedAnswer: CalendarChallengeAnswer? {
-        challengeService.answer(for: question, on: date)
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top) {
-                Text(question.form.title)
-                    .font(.caption.weight(.bold))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.accentColor.opacity(0.12))
-                    .cornerRadius(8)
-                Spacer()
-                if savedAnswer != nil {
-                    Image(systemName: savedAnswer?.isCorrect == true ? "checkmark.circle.fill" : "xmark.circle.fill")
-                        .foregroundStyle(savedAnswer?.isCorrect == true ? .green : .red)
-                }
-            }
-
-            Text(question.prompt)
-                .font(.headline)
-
-            if let exampleText = question.exampleText {
-                Text(exampleText)
-                    .font(.body)
-                    .padding(12)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color(.tertiarySystemBackground))
-                    .cornerRadius(10)
-            }
-
-            if question.form == .listeningChoice {
-                HStack(spacing: 10) {
-                    Button {
-                        speaker.play(question.answer)
-                    } label: {
-                        Label("播放发音", systemImage: "speaker.wave.2.fill")
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                    }
-                    .buttonStyle(.bordered)
-
-                    Button {
-                        speaker.play(question.answer, rate: 0.28)
-                    } label: {
-                        Label("慢速", systemImage: "tortoise")
-                            .frame(minHeight: 44)
-                    }
-                    .buttonStyle(.bordered)
-                }
-                if !speaker.isAvailable {
-                    Text("当前设备没有英文语音。可切换到其他题目形式。")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Text("可见提示：\(question.answer)")
-                        .font(.subheadline.weight(.semibold))
-                }
-            }
-
-            if savedAnswer == nil {
-                answerControls
-            } else {
-                Text(savedAnswer?.isCorrect == true ? "回答正确。" : "已记录。正确答案：\(question.answer)")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(savedAnswer?.isCorrect == true ? .green : .secondary)
-            }
-
-            if let feedback = feedback {
-                Text(feedback.text)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(feedback.isCorrect ? .green : .red)
-                    .accessibilityAddTraits(.updatesFrequently)
-            }
-
-            if let hint = question.hint, savedAnswer == nil {
-                Text("提示：\(hint)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(16)
-        .background(Color(.secondarySystemGroupedBackground))
-        .cornerRadius(16)
-        .accessibilityElement(children: .contain)
-    }
-
-    @ViewBuilder
-    private var answerControls: some View {
-        if question.options.isEmpty {
-            spellingControls
-        } else {
-            optionControls
-        }
-    }
-
-    private var optionControls: some View {
-        VStack(spacing: 10) {
-            ForEach(question.options, id: \.self) { option in
-                Button {
-                    selectedOption = option
-                    submit(response: option)
-                } label: {
-                    Text(option)
-                        .font(.body)
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                        .padding(.horizontal, 12)
-                }
-                .buttonStyle(.bordered)
-                .disabled(feedback?.isRetry == true)
-            }
-
-            if feedback?.isRetry == true {
-                Button {
-                    feedback = nil
-                    selectedOption = nil
-                    attemptCount = 0
-                } label: {
-                    Label("重试", systemImage: "arrow.clockwise")
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                }
-                .buttonStyle(.borderedProminent)
-
-                Button {
-                    reveal()
-                } label: {
-                    Label("跳过并显示答案", systemImage: "eye")
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                }
-                .buttonStyle(.bordered)
-            }
-        }
-    }
-
-    private var spellingControls: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            TextField("输入英文单词", text: $spelling)
-                .textFieldStyle(.roundedBorder)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .submitLabel(.done)
-                .onSubmit(submitSpelling)
-
-            HStack(spacing: 10) {
-                Button {
-                    submitSpelling()
-                } label: {
-                    Text("提交")
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(spelling.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-
-                if feedback?.isRetry == true {
-                    Button {
-                        feedback = nil
-                        spelling = ""
-                    } label: {
-                        Text("重试")
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                    }
-                    .buttonStyle(.bordered)
-                }
-
-                if feedback?.isRetry == true {
-                    Button {
-                        reveal()
-                    } label: {
-                        Text("跳过")
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                    }
-                    .buttonStyle(.bordered)
-                }
-            }
-        }
-    }
-
-    private func submitSpelling() {
-        let response = spelling.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !response.isEmpty else { return }
-        submit(response: response)
-    }
-
-    private func submit(response: String) {
-        let isCorrect = normalized(response) == normalized(question.answer)
-        if isCorrect {
-            feedback = ChallengeFeedback(text: "回答正确！", isCorrect: true, isRetry: false)
-            save(response: response, isCorrect: true, revealed: false)
-        } else if attemptCount < 1 {
-            attemptCount += 1
-            feedback = ChallengeFeedback(text: "不对，请再试一次。", isCorrect: false, isRetry: true)
-        } else {
-            feedback = ChallengeFeedback(text: "仍不对。可跳过查看答案。", isCorrect: false, isRetry: true)
-        }
-    }
-
-    private func reveal() {
-        feedback = ChallengeFeedback(text: "已显示答案。", isCorrect: false, isRetry: false)
-        save(
-            response: question.answer,
-            isCorrect: false,
-            revealed: true
-        )
-    }
-
-    private func save(response: String, isCorrect: Bool, revealed: Bool) {
-        challengeService.recordAnswer(
-            CalendarChallengeAnswer(
-                wordID: question.wordID,
-                form: question.form,
-                response: response,
-                isCorrect: isCorrect,
-                wasRevealed: revealed,
-                answeredAt: Date()
-            ),
-            for: question,
-            on: date,
-            expectedWords: challengeService.dueWords(on: date, from: words)
-        )
-    }
-
-    private func normalized(_ value: String) -> String {
-        value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-    }
-}
-
-// MARK: - Local presentation helpers
-
-private struct ChallengeFeedback {
-    let text: String
-    let isCorrect: Bool
-    let isRetry: Bool
-}
-
-final class ChallengeSpeaker: ObservableObject {
-    @Published private(set) var isSpeaking = false
-    let isAvailable = AVSpeechSynthesisVoice(language: "en-US") != nil
-    private let synthesizer = AVSpeechSynthesizer()
-
-    func play(_ text: String, rate: Float = 0.5) {
-        guard isAvailable, !text.isEmpty else { return }
-        let utterance = AVSpeechUtterance(string: text)
-        utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
-        utterance.rate = rate
-        synthesizer.speak(utterance)
-    }
-}
-
-extension CalendarChallengeForm {
-    var title: String {
-        switch self {
-        case .meaningChoice: return "释义选择"
-        case .listeningChoice: return "听力选择"
-        case .reverseTranslation: return "反向翻译"
-        case .exampleCloze: return "例句填空"
-        case .spellingInput: return "拼写"
         }
     }
 }
