@@ -98,7 +98,6 @@ struct WordbookRepository {
 
         for candidate in orderedInputs {
             let result = try await dictionaryService.lookup(candidate.input)
-            let key = result.entry?.normalizedKey ?? WordInputNormalizer.normalizedKey(from: candidate.input)
             lookups.append((candidate.input, result))
         }
 
@@ -240,13 +239,15 @@ struct WordbookRepository {
     }
 
     private func deleteImportContexts(for entries: [WordEntry]) throws {
-        let entryIDs = entries.map(\.id)
-        try modelContext.fetch(FetchDescriptor<WordImportContext>())
-            .filter { context in
-                guard let id = context.entry?.id else { return false }
-                return entryIDs.contains(id)
-            }
-            .forEach(modelContext.delete)
+        for entry in entries {
+            let entryID = entry.id
+            try modelContext.delete(
+                model: WordImportContext.self,
+                where: #Predicate<WordImportContext> { context in
+                    context.entryID == entryID
+                }
+            )
+        }
     }
 }
 
@@ -256,16 +257,42 @@ enum WordImportError: Error {
 
 @MainActor
 enum WordImportContextMigrator {
-    static func backfillEntryIDs(in modelContext: ModelContext) throws {
-        let legacyContexts = try modelContext
-            .fetch(FetchDescriptor<WordImportContext>())
-            .filter { $0.entryID == nil }
+    static let backfillCompletedKey = "wordImportContextEntryIDBackfill.v1.completed"
+
+    static func backfillEntryIDs(
+        in modelContext: ModelContext,
+        defaults: UserDefaults = .standard,
+        save saveAction: ((ModelContext) throws -> Void)? = nil
+    ) throws {
+        guard !defaults.bool(forKey: backfillCompletedKey) else { return }
+
+        let migrationContext = ModelContext(modelContext.container)
+        var descriptor = FetchDescriptor<WordImportContext>(
+            predicate: #Predicate<WordImportContext> { context in
+                context.entryID == nil
+            }
+        )
+        descriptor.propertiesToFetch = [\.entryID, \.entry]
+        let legacyContexts = try migrationContext.fetch(descriptor)
 
         for context in legacyContexts {
             context.entryID = context.entry?.id
         }
 
-        guard legacyContexts.contains(where: { $0.entryID != nil }) else { return }
-        try modelContext.save()
+        guard legacyContexts.contains(where: { $0.entryID != nil }) else {
+            defaults.set(true, forKey: backfillCompletedKey)
+            return
+        }
+
+        let performSave = saveAction ?? { context in
+            try context.save()
+        }
+        do {
+            try performSave(migrationContext)
+        } catch {
+            migrationContext.rollback()
+            throw error
+        }
+        defaults.set(true, forKey: backfillCompletedKey)
     }
 }

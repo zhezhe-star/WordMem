@@ -294,7 +294,14 @@ struct ImageImportView: View {
             }
             .sheet(isPresented: $isCameraPresented) {
                 CameraImagePicker { data in
-                    Task { await processImageData(data) }
+                    switch data {
+                    case .success(let data):
+                        Task { await processImageData(data) }
+                    case .cancelled:
+                        break
+                    case .processingFailed:
+                        errorMessage = "无法保存拍摄的照片，请重试。"
+                    }
                 }
                 .ignoresSafeArea()
             }
@@ -304,41 +311,59 @@ struct ImageImportView: View {
     private func loadImage(from item: PhotosPickerItem?) async {
         guard let item else { return }
 
-        do {
-            let data = try await item.loadTransferable(type: Data.self)
-            await processImageData(data)
-        } catch {
-            errorMessage = "无法读取所选图片，请更换图片后重试。"
-        }
-    }
-
-    private func processImageData(_ data: Data?) async {
         let token = processingCoordinator.begin()
+        isRecognizing = true
         defer {
             if processingCoordinator.finish(token) {
                 isRecognizing = false
             }
         }
 
-        guard let data, let image = UIImage(data: data), !data.isEmpty else {
+        do {
+            let data = try await item.loadTransferable(type: Data.self)
             guard processingCoordinator.shouldCommit(token) else { return }
+            await processImageData(data, inheritedToken: token)
+        } catch {
+            guard !Task.isCancelled, processingCoordinator.shouldCommit(token) else { return }
+            errorMessage = "无法读取所选图片，请更换图片后重试。"
+        }
+    }
+
+    private func processImageData(_ data: Data?, inheritedToken token: UUID? = nil) async {
+        // When loading supplies a token, the load phase already owns processing state.
+        let ownsProcessing: Bool
+        let activeToken: UUID
+        if let token {
+            ownsProcessing = false
+            activeToken = token
+        } else {
+            ownsProcessing = true
+            activeToken = processingCoordinator.begin()
+        }
+        defer {
+            if ownsProcessing, processingCoordinator.finish(activeToken) {
+                isRecognizing = false
+            }
+        }
+
+        guard let data, let image = UIImage(data: data), !data.isEmpty else {
+            guard processingCoordinator.shouldCommit(activeToken) else { return }
             errorMessage = "无法读取所选图片，请更换图片后重试。"
             return
         }
 
-        guard processingCoordinator.shouldCommit(token) else { return }
+        guard processingCoordinator.shouldCommit(activeToken) else { return }
         let preparedData = WordImagePreparer.prepare(data) ?? data
         imageData = preparedData
         capturedImage = image
-        isRecognizing = true
 
-        if processingCoordinator.shouldCommit(token) {
+        if processingCoordinator.shouldCommit(activeToken) {
             errorMessage = nil
         }
 
         do {
             let lines = try await recognitionService.recognizeText(in: preparedData)
-            guard processingCoordinator.shouldCommit(token) else { return }
+            guard processingCoordinator.shouldCommit(activeToken) else { return }
             let text = lines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
             guard !text.isEmpty else { throw WordImageImportError.noRecognizedText }
 
@@ -350,7 +375,8 @@ struct ImageImportView: View {
             selection = WordImportSelection()
 
         } catch {
-            guard processingCoordinator.shouldCommit(token) else { return }
+            guard processingCoordinator.shouldCommit(activeToken) else { return }
+            guard !Task.isCancelled else { return }
             recognizedText = ""
             candidates = []
             selection = WordImportSelection()
@@ -397,7 +423,7 @@ struct ImageImportView: View {
 }
 
 struct CameraImagePicker: UIViewControllerRepresentable {
-    let completion: @MainActor (Data?) -> Void
+    let completion: @MainActor (CameraCaptureResult) -> Void
 
     func makeUIViewController(context: Context) -> UIImagePickerController {
         let controller = UIImagePickerController()
@@ -413,9 +439,9 @@ struct CameraImagePicker: UIViewControllerRepresentable {
     }
 
     final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
-        private let completion: @MainActor (Data?) -> Void
+        private let completion: @MainActor (CameraCaptureResult) -> Void
 
-        init(completion: @MainActor @escaping (Data?) -> Void) {
+        init(completion: @MainActor @escaping (CameraCaptureResult) -> Void) {
             self.completion = completion
         }
 
@@ -427,15 +453,29 @@ struct CameraImagePicker: UIViewControllerRepresentable {
             let data = image?.jpegData(compressionQuality: 0.85)
             picker.dismiss(animated: true)
             Task { @MainActor in
-                completion(data)
+                completion(CameraCaptureResult.resolve(image: image, jpegData: data))
             }
         }
 
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
             picker.dismiss(animated: true)
             Task { @MainActor in
-                completion(nil)
+                completion(.cancelled)
             }
+        }
+    }
+}
+
+enum CameraCaptureResult: Equatable {
+    case success(Data)
+    case cancelled
+    case processingFailed
+
+    static func resolve(image: UIImage?, jpegData: Data?) -> CameraCaptureResult {
+        switch (image, jpegData) {
+        case (.some, .some(let data)): .success(data)
+        case (.none, _): .cancelled
+        case (.some, .none): .processingFailed
         }
     }
 }

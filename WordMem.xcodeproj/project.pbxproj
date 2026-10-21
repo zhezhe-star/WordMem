@@ -21,6 +21,7 @@
 		MEM03 /* WordEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM13 /* WordEntry.swift */; };
 		MEM06 /* WordbookRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM18 /* WordbookRepository.swift */; };
 		IMP03 /* WordImportModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = IMP04 /* WordImportModels.swift */; };
+		IMP09 /* WordMemMigrationPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = IMP10 /* WordMemMigrationPlan.swift */; };
 		IMP05 /* VisionTextRecognitionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = IMP06 /* VisionTextRecognitionService.swift */; };
 		IMP07 /* WordImportViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = IMP08 /* WordImportViews.swift */; };
 		IMP01 /* WordImportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = IMP02 /* WordImportTests.swift */; };
@@ -51,6 +52,7 @@
 		MEM13 /* WordEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordEntry.swift; sourceTree = "<group>"; };
 		MEM18 /* WordbookRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordbookRepository.swift; sourceTree = "<group>"; };
 		IMP04 /* WordImportModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordImportModels.swift; sourceTree = "<group>"; };
+		IMP10 /* WordMemMigrationPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordMemMigrationPlan.swift; sourceTree = "<group>"; };
 		IMP06 /* VisionTextRecognitionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisionTextRecognitionService.swift; sourceTree = "<group>"; };
 		IMP08 /* WordImportViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordImportViews.swift; sourceTree = "<group>"; };
 		IMP02 /* WordImportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordImportTests.swift; sourceTree = "<group>"; };
@@ -142,6 +144,7 @@
 				MEM12 /* WordInputNormalizer.swift */,
 				MEM13 /* WordEntry.swift */,
 				IMP04 /* WordImportModels.swift */,
+				IMP10 /* WordMemMigrationPlan.swift */,
 			);
 			path = Domain;
 			sourceTree = "<group>";
@@ -291,6 +294,7 @@
 				MEM02 /* WordInputNormalizer.swift in Sources */,
 				MEM03 /* WordEntry.swift in Sources */,
 				IMP03 /* WordImportModels.swift in Sources */,
+				IMP09 /* WordMemMigrationPlan.swift in Sources */,
 				IMP05 /* VisionTextRecognitionService.swift in Sources */,
 				IMP07 /* WordImportViews.swift in Sources */,
 				MEM06 /* WordbookRepository.swift in Sources */,

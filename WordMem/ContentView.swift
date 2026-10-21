@@ -169,7 +169,10 @@ struct WordbookView: View {
                 initializeDictionaryService()
                 migrateLegacyWordbook()
                 do {
-                    try WordImportContextMigrator.backfillEntryIDs(in: modelContext)
+                    try WordImportContextMigrator.backfillEntryIDs(
+                        in: modelContext,
+                        defaults: .standard
+                    )
                 } catch {
                     alertMessage = "导入记录迁移失败。WordMem 已保留原始数据。"
                 }

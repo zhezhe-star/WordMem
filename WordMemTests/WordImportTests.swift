@@ -38,7 +38,6 @@ final class WordImportTests: XCTestCase {
         XCTAssertEqual(candidates.map(\.normalizedKey), [
             "the", "cat", "saw", "two", "cats", "it", "didnt", "blink",
         ])
-        XCTAssertTrue(candidates.allSatisfy(\.isSelected))
     }
 
     func testCandidateSplittingKeepsHyphenatedCompoundAsOneCandidate() {
@@ -144,6 +143,9 @@ final class WordImportTests: XCTestCase {
 
     func testBackfillEntryIDsPreservesLegacyImportContexts() async throws {
         let fixture = try makeFixture()
+        let defaultsSuiteName = "WordImportBackfill.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: defaultsSuiteName)!
+        defer { defaults.removePersistentDomain(forName: defaultsSuiteName) }
         guard case .added(let entry) = try await fixture.repository.add(
             "run",
             using: fixture.dictionaryService
@@ -156,12 +158,166 @@ final class WordImportTests: XCTestCase {
         legacyContext.entryID = nil
         try fixture.modelContext.save()
 
-        try WordImportContextMigrator.backfillEntryIDs(in: fixture.modelContext)
+        try WordImportContextMigrator.backfillEntryIDs(
+            in: fixture.modelContext,
+            defaults: defaults
+        )
         let backfilledContext = try XCTUnwrap(
             fixture.modelContext.fetch(FetchDescriptor<WordImportContext>()).first
         )
 
         XCTAssertEqual(backfilledContext.entryID, entry.id)
+        XCTAssertTrue(defaults.bool(forKey: WordImportContextMigrator.backfillCompletedKey))
+
+        backfilledContext.entryID = nil
+        try fixture.modelContext.save()
+        try WordImportContextMigrator.backfillEntryIDs(
+            in: fixture.modelContext,
+            defaults: defaults
+        )
+        XCTAssertNil(backfilledContext.entryID)
+    }
+
+    func testBackfillSaveFailureRollsBackAndDoesNotMarkComplete() async throws {
+        let fixture = try makeFixture()
+        let defaultsSuiteName = "WordImportBackfillFailure.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: defaultsSuiteName)!
+        defer { defaults.removePersistentDomain(forName: defaultsSuiteName) }
+        struct SaveFailure: Error {}
+
+        guard case .added(let entry) = try await fixture.repository.add(
+            "run",
+            using: fixture.dictionaryService
+        ) else {
+            return XCTFail("Expected a new word")
+        }
+
+        let context = try XCTUnwrap(
+            fixture.modelContext.fetch(FetchDescriptor<WordImportContext>()).first
+        )
+        context.entryID = nil
+        try fixture.modelContext.save()
+
+        do {
+            try WordImportContextMigrator.backfillEntryIDs(
+                in: fixture.modelContext,
+                defaults: defaults
+            ) { _ in
+                throw SaveFailure()
+            }
+            XCTFail("Expected backfill save failure")
+        } catch {
+            guard error is SaveFailure else {
+                return XCTFail("Unexpected error \(error)")
+            }
+        }
+
+        let verificationContext = ModelContext(fixture.modelContext.container)
+        let rolledBackContext = try XCTUnwrap(
+            verificationContext.fetch(FetchDescriptor<WordImportContext>()).first
+        )
+        // The failed backfill must not persist its provisional entryID.
+        XCTAssertNil(rolledBackContext.entryID)
+        XCTAssertFalse(defaults.bool(forKey: WordImportContextMigrator.backfillCompletedKey))
+    }
+
+    func testA0MigrationPlanPreservesContextAndBackfillsEntryID() throws {
+        let storeURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("WordMemA0Migration-\(UUID().uuidString).store")
+        try? FileManager.default.removeItem(at: storeURL)
+        try? FileManager.default.removeItem(at: WordMemMigrationPlan.legacyImportPayloadURL)
+        defer {
+            try? FileManager.default.removeItem(at: storeURL)
+            try? FileManager.default.removeItem(at: WordMemMigrationPlan.legacyImportPayloadURL)
+        }
+
+        let configuration = ModelConfiguration(url: storeURL)
+        var legacyContainer: ModelContainer? = try ModelContainer(
+            for: Schema(versionedSchema: WordMemSchemaA0.self),
+            configurations: configuration
+        )
+        var migratedEntryID: UUID?
+        var expectedImageData: Data?
+        do {
+            let legacyContext = ModelContext(try XCTUnwrap(legacyContainer))
+            let entry = LegacyA0WordEntry(
+                id: UUID(),
+                originalInput: "run",
+                normalizedKey: "run",
+                headword: "run",
+                phonetic: nil,
+                translation: "跑",
+                userTranslation: "",
+                legacyExample: nil,
+                legacyExampleSentence: nil,
+                legacyTranslatedExampleSentence: nil,
+                senses: [],
+                forms: [],
+                tags: [],
+                lookupStatus: .notFound,
+                dictionaryID: nil,
+                dictionaryVersion: nil,
+                createdAt: .now,
+                updatedAt: .now
+            )
+            let imageData = Data([0x89, 0x50, 0x4e, 0x47])
+            migratedEntryID = entry.id
+            expectedImageData = imageData
+            legacyContext.insert(entry)
+            legacyContext.insert(
+                LegacyA0WordImportContext(
+                    id: UUID(),
+                    entry: entry,
+                    sourceRawValue: WordImportSource.image.rawValue,
+                    sourceText: "Beautiful mountain",
+                    selectedCandidate: "mountain",
+                    recognizedText: "Beautiful mountain",
+                    imageData: imageData,
+                    metadata: ["imageByteCount": "\(imageData.count)"],
+                    createdAt: .now
+                )
+            )
+            try legacyContext.save()
+        }
+        legacyContainer = nil
+
+        let migratedContainer = try ModelContainer(
+            for: Schema(versionedSchema: WordMemSchemaCurrent.self),
+            migrationPlan: WordMemMigrationPlan.self,
+            configurations: [configuration]
+        )
+        let migratedContext = ModelContext(migratedContainer)
+        let entries = try migratedContext.fetch(FetchDescriptor<WordEntry>())
+        let contexts = try migratedContext.fetch(FetchDescriptor<WordImportContext>())
+        XCTAssertEqual(entries.count, 1)
+        XCTAssertEqual(contexts.count, 1)
+        let migratedImport = try XCTUnwrap(contexts.first)
+        XCTAssertEqual(migratedImport.entryID, try XCTUnwrap(migratedEntryID))
+        XCTAssertEqual(migratedImport.entry?.id, try XCTUnwrap(migratedEntryID))
+        XCTAssertEqual(migratedImport.source, .image)
+        XCTAssertEqual(migratedImport.sourceText, "Beautiful mountain")
+        XCTAssertEqual(migratedImport.selectedCandidate, "mountain")
+        XCTAssertEqual(migratedImport.recognizedText, "Beautiful mountain")
+        XCTAssertEqual(migratedImport.imageData, expectedImageData)
+        XCTAssertEqual(
+            migratedImport.metadata["imageByteCount"],
+            expectedImageData.map { "\($0.count)" }
+        )
+
+        let defaultsSuiteName = "WordImportA0MigrationBackfill.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: defaultsSuiteName)!
+        defer { defaults.removePersistentDomain(forName: defaultsSuiteName) }
+        migratedImport.entryID = nil
+        try migratedContext.save()
+        try WordImportContextMigrator.backfillEntryIDs(
+            in: migratedContext,
+            defaults: defaults
+        )
+        let verificationContext = ModelContext(migratedContainer)
+        let backfilledImport = try XCTUnwrap(
+            verificationContext.fetch(FetchDescriptor<WordImportContext>()).first
+        )
+        XCTAssertEqual(backfilledImport.entryID, try XCTUnwrap(migratedEntryID))
     }
 
     func testDuplicateImportAttachesNewContextAndKeepsPriorHistory() async throws {
@@ -393,9 +549,49 @@ final class WordImageImportSupportTests: XCTestCase {
         let preparedImage = try XCTUnwrap(UIImage(data: prepared))
 
         XCTAssertEqual(prepared.prefix(4), Data([0xff, 0xd8, 0xff, 0xe0]))
-        XCTAssertLessThanOrEqual(preparedImage.size.width * preparedImage.scale, 1_601)
-        XCTAssertLessThanOrEqual(preparedImage.size.height * preparedImage.scale, 1_001)
+        XCTAssertLessThanOrEqual(preparedImage.size.width * preparedImage.scale, 2_049)
+        XCTAssertLessThanOrEqual(preparedImage.size.height * preparedImage.scale, 1_281)
         XCTAssertLessThan(prepared.count, original.count)
+    }
+
+    func testPreparedImageRetainsTextForVision() async throws {
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 2_600, height: 1_200))
+        let image = renderer.image { context in
+            UIColor.white.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 2_600, height: 1_200))
+
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 180, weight: .bold),
+                .foregroundColor: UIColor.black,
+            ]
+            ("Beautiful" as NSString).draw(at: CGPoint(x: 220, y: 300), withAttributes: attributes)
+            ("Mountain" as NSString).draw(at: CGPoint(x: 220, y: 650), withAttributes: attributes)
+        }
+        let prepared = try XCTUnwrap(WordImagePreparer.prepare(image.jpegData(compressionQuality: 1)!))
+
+        let lines = try await VisionTextRecognitionService().recognizeText(in: prepared)
+        let text = lines.joined(separator: "\n")
+        XCTAssertTrue(text.localizedCaseInsensitiveContains("Beautiful"))
+        XCTAssertTrue(text.localizedCaseInsensitiveContains("Mountain"))
+        XCTAssertLessThanOrEqual(try XCTUnwrap(UIImage(data: prepared)).size.width, 2_048)
+        XCTAssertLessThanOrEqual(prepared.count, 2_000_000)
+    }
+
+    func testCameraCaptureResultDistinguishesProcessingFailureFromCancellation() {
+        let image = UIGraphicsImageRenderer(size: CGSize(width: 2, height: 2)).image { context in
+            UIColor.systemBlue.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 2, height: 2))
+        }
+
+        XCTAssertEqual(
+            CameraCaptureResult.resolve(image: image, jpegData: Data([1, 2])),
+            .success(Data([1, 2]))
+        )
+        XCTAssertEqual(CameraCaptureResult.resolve(image: nil, jpegData: nil), .cancelled)
+        XCTAssertEqual(
+            CameraCaptureResult.resolve(image: image, jpegData: nil),
+            .processingFailed
+        )
     }
 
     func testCameraAvailabilityProvidesChineseFallbackAndKeepsPhotoLibraryUsable() {

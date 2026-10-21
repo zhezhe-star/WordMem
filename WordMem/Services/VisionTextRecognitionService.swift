@@ -28,8 +28,8 @@ actor VisionTextRecognitionService: TextRecognitionService {
 enum WordImagePreparer {
     static func prepare(
         _ data: Data,
-        maxPixelDimension: CGFloat = 1_600,
-        compressionQuality: CGFloat = 0.72
+        maxPixelDimension: CGFloat = 2_048,
+        compressionQuality: CGFloat = 0.8
     ) -> Data? {
         guard let image = UIImage(data: data) else { return nil }
 

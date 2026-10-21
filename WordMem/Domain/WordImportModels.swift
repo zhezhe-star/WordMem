@@ -81,7 +81,6 @@ final class WordImportContext {
 struct WordImportCandidate: Identifiable, Hashable {
     var text: String
     var normalizedKey: String
-    var isSelected: Bool = true
 
     var id: String { normalizedKey }
 }
