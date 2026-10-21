@@ -35,7 +35,7 @@ struct TextImportView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var sourceText = ""
     @State private var candidates: [WordImportCandidate] = []
-    @State private var selectedKeys: Set<String> = []
+    @State private var selection = WordImportSelection()
     @State private var isSaving = false
     @State private var errorMessage: String?
 
@@ -44,9 +44,7 @@ struct TextImportView: View {
     }
 
     private var selectedWords: [String] {
-        candidates
-            .filter { selectedKeys.contains($0.normalizedKey) }
-            .map(\.text)
+        selection.selectedWords(in: candidates)
     }
 
     var body: some View {
@@ -86,7 +84,7 @@ struct TextImportView: View {
                 } else {
                     WordCandidateListView(
                         candidates: candidates,
-                        selectedKeys: $selectedKeys
+                        selection: $selection
                     )
                 }
 
@@ -125,7 +123,6 @@ struct TextImportView: View {
 
     private func refreshCandidates() {
         candidates = EnglishWordCandidateSplitter.candidates(from: sourceText)
-        selectedKeys = Set(candidates.map(\.normalizedKey))
     }
 
     private func importSelectedWords() {
@@ -164,23 +161,23 @@ struct ImageImportView: View {
     @State private var imageData: Data?
     @State private var recognizedText = ""
     @State private var candidates: [WordImportCandidate] = []
-    @State private var selectedKeys: Set<String> = []
+    @State private var selection = WordImportSelection()
     @State private var isRecognizing = false
     @State private var isSaving = false
     @State private var isCameraPresented = false
+    @State private var cameraAvailability: CameraAvailability = .notDetermined
+    @State private var cameraFallbackMessage: String?
     @State private var errorMessage: String?
 
     private let recognitionService: any TextRecognitionService = VisionTextRecognitionService()
-    private var isCameraAvailable: Bool { UIImagePickerController.isSourceTypeAvailable(.camera) }
+    private let processingCoordinator = WordImageProcessingCoordinator()
 
     private var repository: WordbookRepository {
         WordbookRepository(modelContext: modelContext)
     }
 
     private var selectedWords: [String] {
-        candidates
-            .filter { selectedKeys.contains($0.normalizedKey) }
-            .map(\.text)
+        selection.selectedWords(in: candidates)
     }
 
     var body: some View {
@@ -199,14 +196,20 @@ struct ImageImportView: View {
                     .controlSize(.large)
 
                     Button {
-                        isCameraPresented = true
+                        presentCameraIfAvailable()
                     } label: {
                         Label("拍照", systemImage: "camera")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.glass)
                     .controlSize(.large)
-                    .disabled(!isCameraAvailable || isRecognizing || isSaving)
+                    .disabled(isRecognizing || isSaving)
+                }
+
+                if !cameraAvailability.fallbackMessage.isEmpty {
+                    Text(cameraAvailability.fallbackMessage)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
 
                 if let capturedImage {
@@ -238,7 +241,7 @@ struct ImageImportView: View {
                 if !candidates.isEmpty {
                     WordCandidateListView(
                         candidates: candidates,
-                        selectedKeys: $selectedKeys
+                        selection: $selection
                     )
                 }
 
@@ -275,6 +278,20 @@ struct ImageImportView: View {
             .task(id: photoItem) {
                 await loadImage(from: photoItem)
             }
+            .task {
+                cameraAvailability = CameraAvailability.current()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+                cameraAvailability = CameraAvailability.current()
+            }
+            .alert("无法使用相机", isPresented: .init(
+                get: { cameraFallbackMessage != nil },
+                set: { if !$0 { cameraFallbackMessage = nil } }
+            )) {
+                Button("好", role: .cancel) {}
+            } message: {
+                Text(cameraFallbackMessage ?? cameraAvailability.fallbackMessage)
+            }
             .sheet(isPresented: $isCameraPresented) {
                 CameraImagePicker { data in
                     Task { await processImageData(data) }
@@ -296,36 +313,59 @@ struct ImageImportView: View {
     }
 
     private func processImageData(_ data: Data?) async {
+        let token = processingCoordinator.begin()
+        defer {
+            if processingCoordinator.finish(token) {
+                isRecognizing = false
+            }
+        }
+
         guard let data, let image = UIImage(data: data), !data.isEmpty else {
+            guard processingCoordinator.shouldCommit(token) else { return }
             errorMessage = "无法读取所选图片，请更换图片后重试。"
             return
         }
 
-        let preparedData = image.jpegData(compressionQuality: 0.85) ?? data
+        guard processingCoordinator.shouldCommit(token) else { return }
+        let preparedData = WordImagePreparer.prepare(data) ?? data
         imageData = preparedData
         capturedImage = image
         isRecognizing = true
-        errorMessage = nil
 
-        defer { isRecognizing = false }
+        if processingCoordinator.shouldCommit(token) {
+            errorMessage = nil
+        }
 
         do {
             let lines = try await recognitionService.recognizeText(in: preparedData)
+            guard processingCoordinator.shouldCommit(token) else { return }
             let text = lines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
             guard !text.isEmpty else { throw WordImageImportError.noRecognizedText }
 
-            recognizedText = text
-            candidates = EnglishWordCandidateSplitter.candidates(from: text)
-            selectedKeys = Set(candidates.map(\.normalizedKey))
+            let refreshedCandidates = EnglishWordCandidateSplitter.candidates(from: text)
+            guard !refreshedCandidates.isEmpty else { throw WordImageImportError.noRecognizedText }
 
-            if candidates.isEmpty {
-                throw WordImageImportError.noRecognizedText
-            }
+            recognizedText = text
+            candidates = refreshedCandidates
+            selection = WordImportSelection()
+
         } catch {
+            guard processingCoordinator.shouldCommit(token) else { return }
             recognizedText = ""
             candidates = []
-            selectedKeys = []
+            selection = WordImportSelection()
             errorMessage = (error as? WordImageImportError)?.errorDescription ?? "文字识别失败，请重试。"
+        }
+    }
+
+    private func presentCameraIfAvailable() {
+        let availability = CameraAvailability.current()
+        cameraAvailability = availability
+
+        if availability.canOpenCamera {
+            isCameraPresented = true
+        } else {
+            cameraFallbackMessage = availability.fallbackMessage
         }
     }
 
@@ -402,16 +442,12 @@ struct CameraImagePicker: UIViewControllerRepresentable {
 
 private struct WordCandidateListView: View {
     let candidates: [WordImportCandidate]
-    @Binding var selectedKeys: Set<String>
+    @Binding var selection: WordImportSelection
 
     var body: some View {
         List(candidates) { candidate in
             Button {
-                if selectedKeys.contains(candidate.normalizedKey) {
-                    selectedKeys.remove(candidate.normalizedKey)
-                } else {
-                    selectedKeys.insert(candidate.normalizedKey)
-                }
+                selection.toggle(candidate.normalizedKey)
             } label: {
                 HStack {
                     Text(candidate.text)
@@ -420,10 +456,14 @@ private struct WordCandidateListView: View {
 
                     Spacer()
 
-                    Image(systemName: selectedKeys.contains(candidate.normalizedKey) ? "checkmark.circle.fill" : "circle")
+                    Image(systemName: selection.isSelected(candidate.normalizedKey) ? "checkmark.circle.fill" : "circle")
                         .foregroundStyle(.tint)
                 }
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("选择 \(candidate.text)")
+            .accessibilityValue(selection.isSelected(candidate.normalizedKey) ? "已选择" : "未选择")
+            .accessibilityAddTraits(selection.isSelected(candidate.normalizedKey) ? [.isButton, .isSelected] : [.isButton])
             .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
         }
         .listStyle(.insetGrouped)

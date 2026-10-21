@@ -33,7 +33,8 @@ final class WordImportContext {
     var sourceText: String?
     var selectedCandidate: String?
     var recognizedText: String?
-    var imageData: Data?
+    @Attribute(.externalStorage) var imageData: Data?
+    var entryID: UUID?
     private var metadataData: Data
     var createdAt: Date
     @Relationship var entry: WordEntry?
@@ -70,6 +71,7 @@ final class WordImportContext {
         self.sourceText = sourceText
         self.selectedCandidate = selectedCandidate
         self.recognizedText = recognizedText
+        self.entryID = entry?.id
         self.imageData = imageData
         self.metadataData = (try? JSONEncoder().encode(metadata)) ?? Data()
         self.createdAt = createdAt
@@ -82,17 +84,31 @@ struct WordImportCandidate: Identifiable, Hashable {
     var isSelected: Bool = true
 
     var id: String { normalizedKey }
+}
 
-    func selecting(_ selected: Bool) -> WordImportCandidate {
-        var copy = self
-        copy.isSelected = selected
-        return copy
+struct WordImportSelection: Equatable {
+    private(set) var deselectedKeys: Set<String> = []
+
+    mutating func toggle(_ key: String) {
+        if deselectedKeys.contains(key) {
+            deselectedKeys.remove(key)
+        } else {
+            deselectedKeys.insert(key)
+        }
+    }
+
+    func isSelected(_ key: String) -> Bool {
+        !deselectedKeys.contains(key)
+    }
+
+    func selectedWords(in candidates: [WordImportCandidate]) -> [String] {
+        candidates.filter { isSelected($0.normalizedKey) }.map(\.text)
     }
 }
 
 enum EnglishWordCandidateSplitter {
     private static let expression = try! NSRegularExpression(
-        pattern: #"[A-Za-z]+(?:['’][A-Za-z]+)?"#,
+        pattern: #"[A-Za-z]+(?:['’][A-Za-z]+|-[A-Za-z]+)*"#,
         options: []
     )
 
@@ -101,16 +117,15 @@ enum EnglishWordCandidateSplitter {
         var seenKeys = Set<String>()
 
         let range = NSRange(sourceText.startIndex..., in: sourceText)
-        expression.enumerateMatches(in: sourceText, range: range) { match, _, _ in
-            guard let match, let matchRange = Range(match.range, in: sourceText) else { return }
+        for match in expression.matches(in: sourceText, range: range) {
+            guard let matchRange = Range(match.range, in: sourceText) else { continue }
             let text = String(sourceText[matchRange])
             // Contraction apostrophes are spelling details; candidate identity uses the bare word.
             let key = WordInputNormalizer.normalizedKey(from: text)
                 .replacingOccurrences(of: "'", with: "")
-            guard !key.isEmpty, seenKeys.insert(key).inserted else { return }
-
+            guard !key.isEmpty, seenKeys.insert(key).inserted else { continue }
             candidates.append(
-                WordImportCandidate(text: String(sourceText[matchRange]), normalizedKey: key, isSelected: true)
+                WordImportCandidate(text: text, normalizedKey: key)
             )
         }
 

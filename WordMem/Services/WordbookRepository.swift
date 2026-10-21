@@ -17,9 +17,16 @@ enum AddWordOutcome {
 @MainActor
 struct WordbookRepository {
     private let modelContext: ModelContext
+    private let saveAction: @MainActor (ModelContext) throws -> Void
 
-    init(modelContext: ModelContext) {
+    init(
+        modelContext: ModelContext,
+        save saveAction: (@MainActor (ModelContext) throws -> Void)? = nil
+    ) {
         self.modelContext = modelContext
+        self.saveAction = saveAction ?? { context in
+            try context.save()
+        }
     }
 
     func add(_ rawInput: String, using dictionaryService: any DictionaryLookupService) async throws -> AddWordOutcome {
@@ -39,7 +46,7 @@ struct WordbookRepository {
             modelContext.insert(context)
 
             do {
-                try modelContext.save()
+                try saveAction(modelContext)
             } catch {
                 modelContext.rollback()
                 throw error
@@ -55,11 +62,12 @@ struct WordbookRepository {
             selectedCandidate: rawInput
         )
         modelContext.insert(entry)
+        // iOS 27 SwiftData can reset values assigned before insert, so enrich after registration.
         entry.apply(result)
         modelContext.insert(context)
 
         do {
-            try modelContext.save()
+            try saveAction(modelContext)
         } catch {
             modelContext.rollback()
             throw error
@@ -77,7 +85,6 @@ struct WordbookRepository {
         using dictionaryService: any DictionaryLookupService
     ) async throws -> [AddWordOutcome] {
         var orderedInputs: [(input: String, initialKey: String)] = []
-        var resolvedKeyByInitialKey: [String: String] = [:]
         var seenKeys = Set<String>()
 
         for rawWord in rawWords {
@@ -92,14 +99,15 @@ struct WordbookRepository {
         for candidate in orderedInputs {
             let result = try await dictionaryService.lookup(candidate.input)
             let key = result.entry?.normalizedKey ?? WordInputNormalizer.normalizedKey(from: candidate.input)
-            resolvedKeyByInitialKey[candidate.initialKey] = key
             lookups.append((candidate.input, result))
         }
 
-        var outcomeByKey: [String: AddWordOutcome] = [:]
+        // Key by the caller's input so distinct words that resolve to one lemma keep distinct outcomes.
+        var outcomeByInitialKey: [String: AddWordOutcome] = [:]
 
         do {
-            for lookup in lookups {
+            for (index, lookup) in lookups.enumerated() {
+                let initialKey = orderedInputs[index].initialKey
                 let key = lookup.result.entry?.normalizedKey
                     ?? WordInputNormalizer.normalizedKey(from: lookup.input)
 
@@ -116,7 +124,7 @@ struct WordbookRepository {
                         imageData: imageData,
                         recognizedText: recognizedText
                     )
-                    outcomeByKey[key] = .duplicate(existing)
+                    outcomeByInitialKey[initialKey] = .duplicate(existing)
                 } else {
                     let entry = WordEntry(
                         originalInput: lookup.input,
@@ -124,6 +132,7 @@ struct WordbookRepository {
                         headword: key
                     )
                     modelContext.insert(entry)
+                    // See add(_:using:) for the iOS 27 SwiftData registration workaround.
                     entry.apply(lookup.result)
                     insertImportContext(
                         for: entry,
@@ -133,14 +142,13 @@ struct WordbookRepository {
                         imageData: imageData,
                         recognizedText: recognizedText
                     )
-                    outcomeByKey[key] = .added(entry)
+                    outcomeByInitialKey[initialKey] = .added(entry)
                 }
             }
 
-            try modelContext.save()
+            try saveAction(modelContext)
             return orderedInputs.compactMap { candidate in
-                guard let key = resolvedKeyByInitialKey[candidate.initialKey] else { return nil }
-                return outcomeByKey[key]
+                outcomeByInitialKey[candidate.initialKey]
             }
         } catch {
             modelContext.rollback()
@@ -171,7 +179,7 @@ struct WordbookRepository {
         try deleteImportContexts(for: [entry])
         modelContext.delete(entry)
         do {
-            try modelContext.save()
+            try saveAction(modelContext)
         } catch {
             modelContext.rollback()
             throw error
@@ -182,7 +190,7 @@ struct WordbookRepository {
         try deleteImportContexts(for: entries)
         entries.forEach(modelContext.delete)
         do {
-            try modelContext.save()
+            try saveAction(modelContext)
         } catch {
             modelContext.rollback()
             throw error
@@ -244,4 +252,20 @@ struct WordbookRepository {
 
 enum WordImportError: Error {
     case emptySelection
+}
+
+@MainActor
+enum WordImportContextMigrator {
+    static func backfillEntryIDs(in modelContext: ModelContext) throws {
+        let legacyContexts = try modelContext
+            .fetch(FetchDescriptor<WordImportContext>())
+            .filter { $0.entryID == nil }
+
+        for context in legacyContexts {
+            context.entryID = context.entry?.id
+        }
+
+        guard legacyContexts.contains(where: { $0.entryID != nil }) else { return }
+        try modelContext.save()
+    }
 }

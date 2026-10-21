@@ -1,4 +1,5 @@
 import SwiftData
+import UIKit
 import XCTest
 @testable import WordMem
 
@@ -40,6 +41,28 @@ final class WordImportTests: XCTestCase {
         XCTAssertTrue(candidates.allSatisfy(\.isSelected))
     }
 
+    func testCandidateSplittingKeepsHyphenatedCompoundAsOneCandidate() {
+        let candidates = EnglishWordCandidateSplitter.candidates(
+            from: "A mother-in-law visited Mother-in-Law."
+        )
+
+        XCTAssertEqual(candidates.map(\.text), ["A", "mother-in-law", "visited"])
+        XCTAssertEqual(candidates.map(\.normalizedKey), ["a", "mother-in-law", "visited"])
+    }
+
+    func testCandidateRefreshPreservesDeselectionsAndSelectsNewCandidates() {
+        var selection = WordImportSelection()
+        let initialCandidates = EnglishWordCandidateSplitter.candidates(from: "The cat")
+        XCTAssertEqual(selection.selectedWords(in: initialCandidates), ["The", "cat"])
+
+        selection.toggle("cat")
+        let refreshedCandidates = EnglishWordCandidateSplitter.candidates(from: "The cat and dog")
+
+        XCTAssertFalse(selection.isSelected("cat"))
+        XCTAssertTrue(selection.isSelected("dog"))
+        XCTAssertEqual(selection.selectedWords(in: refreshedCandidates), ["The", "and", "dog"])
+    }
+
     func testTextBatchImportCreatesSelectedWordsWithSharedSourceSentence() async throws {
         let fixture = try makeFixture()
         let sourceSentence = "The quick brown fox jumps over the lazy dog."
@@ -64,6 +87,81 @@ final class WordImportTests: XCTestCase {
             Set(contexts.map(\.selectedCandidate)),
             ["quick", "fox"]
         )
+        XCTAssertEqual(
+            Set(contexts.compactMap(\.entryID)),
+            Set(outcomes.map(\.entry.id))
+        )
+    }
+
+    func testLemmaCollisionPreservesPerInputOutcomeSemanticsAndHistory() async throws {
+        let fixture = try makeFixture()
+
+        let outcomes = try await fixture.repository.importWords(
+            ["run", "running"],
+            source: .text,
+            sourceText: "I run after running.",
+            using: fixture.dictionaryService
+        )
+
+        guard case .added = outcomes.first else {
+            return XCTFail("Expected first lemma input to be added, got \(String(describing: outcomes.first))")
+        }
+        guard case .duplicate = outcomes.last else {
+            return XCTFail("Expected second lemma input to duplicate, got \(String(describing: outcomes.last))")
+        }
+
+        let summary = WordImportSummary(outcomes: outcomes)
+        XCTAssertEqual(summary.addedCount, 1)
+        XCTAssertEqual(summary.duplicateCount, 1)
+        XCTAssertEqual(try fixture.modelContext.fetch(FetchDescriptor<WordEntry>()).count, 1)
+        XCTAssertEqual(try fixture.modelContext.fetch(FetchDescriptor<WordImportContext>()).count, 2)
+    }
+
+    func testSaveFailureRollsBackEntriesAndImportContexts() async throws {
+        let fixture = try makeFixture()
+        struct SaveFailure: Error {}
+        let repository = WordbookRepository(modelContext: fixture.modelContext) { _ in
+            throw SaveFailure()
+        }
+
+        do {
+            _ = try await repository.importWords(
+                ["quick", "fox"],
+                source: .text,
+                sourceText: "The quick fox.",
+                using: fixture.dictionaryService
+            )
+            XCTFail("Expected save failure")
+        } catch {
+            guard error is SaveFailure else {
+                return XCTFail("Unexpected error \(error)")
+            }
+        }
+
+        XCTAssertEqual(try fixture.modelContext.fetch(FetchDescriptor<WordEntry>()).count, 0)
+        XCTAssertEqual(try fixture.modelContext.fetch(FetchDescriptor<WordImportContext>()).count, 0)
+    }
+
+    func testBackfillEntryIDsPreservesLegacyImportContexts() async throws {
+        let fixture = try makeFixture()
+        guard case .added(let entry) = try await fixture.repository.add(
+            "run",
+            using: fixture.dictionaryService
+        ) else {
+            return XCTFail("Expected a new word")
+        }
+
+        let contexts = try fixture.modelContext.fetch(FetchDescriptor<WordImportContext>())
+        let legacyContext = try XCTUnwrap(contexts.first)
+        legacyContext.entryID = nil
+        try fixture.modelContext.save()
+
+        try WordImportContextMigrator.backfillEntryIDs(in: fixture.modelContext)
+        let backfilledContext = try XCTUnwrap(
+            fixture.modelContext.fetch(FetchDescriptor<WordImportContext>()).first
+        )
+
+        XCTAssertEqual(backfilledContext.entryID, entry.id)
     }
 
     func testDuplicateImportAttachesNewContextAndKeepsPriorHistory() async throws {
@@ -265,5 +363,82 @@ private enum WordImportTestError: Error, Equatable {
 private struct ThrowingDictionaryLookupService: DictionaryLookupService {
     func lookup(_ rawInput: String) async throws -> DictionaryLookupResult {
         throw WordImportTestError.lookupFailed
+    }
+}
+
+@MainActor
+final class WordImageImportSupportTests: XCTestCase {
+    func testImportImageAttributeUsesExternalStorage() throws {
+        let attribute = try XCTUnwrap(
+            Schema([WordImportContext.self]).entitiesByName["WordImportContext"]?.attributesByName["imageData"]
+        )
+
+        XCTAssertTrue(try XCTUnwrap(attribute).options.contains(.externalStorage))
+    }
+
+    func testImagePreparationBoundsDimensionsAndPreservesDecodableJPEG() throws {
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 3_200, height: 2_000))
+        let image = renderer.image { context in
+            UIColor.systemBlue.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 3_200, height: 2_000))
+
+            UIColor.systemRed.setFill()
+            for row in 0..<40 {
+                context.fill(CGRect(x: 0, y: CGFloat(row * 50), width: 3_200, height: 25))
+            }
+        }
+        let original = try XCTUnwrap(image.jpegData(compressionQuality: 1))
+
+        let prepared = try XCTUnwrap(WordImagePreparer.prepare(original))
+        let preparedImage = try XCTUnwrap(UIImage(data: prepared))
+
+        XCTAssertEqual(prepared.prefix(4), Data([0xff, 0xd8, 0xff, 0xe0]))
+        XCTAssertLessThanOrEqual(preparedImage.size.width * preparedImage.scale, 1_601)
+        XCTAssertLessThanOrEqual(preparedImage.size.height * preparedImage.scale, 1_001)
+        XCTAssertLessThan(prepared.count, original.count)
+    }
+
+    func testCameraAvailabilityProvidesChineseFallbackAndKeepsPhotoLibraryUsable() {
+        XCTAssertEqual(
+            CameraAvailability.status(isSourceTypeAvailable: true, authorization: .authorized),
+            .ready
+        )
+        XCTAssertEqual(
+            CameraAvailability.status(isSourceTypeAvailable: false, authorization: .authorized),
+            .unavailable
+        )
+
+        let denied = CameraAvailability.status(isSourceTypeAvailable: true, authorization: .denied)
+        XCTAssertEqual(denied, .denied)
+        XCTAssertFalse(denied.canOpenCamera)
+        XCTAssertTrue(denied.fallbackMessage.contains("系统设置"))
+        XCTAssertTrue(denied.fallbackMessage.contains("相册"))
+
+        let restricted = CameraAvailability.status(isSourceTypeAvailable: true, authorization: .restricted)
+        XCTAssertEqual(restricted, .restricted)
+        XCTAssertFalse(restricted.canOpenCamera)
+        XCTAssertFalse(restricted.fallbackMessage.isEmpty)
+
+        let unavailable = CameraAvailability.status(isSourceTypeAvailable: false, authorization: .authorized)
+        XCTAssertEqual(unavailable.fallbackMessage, "此设备没有可用相机，可以从相册选择包含英文的图片。")
+    }
+}
+
+@MainActor
+final class WordImageProcessingCoordinatorTests: XCTestCase {
+    func testStalePhotoCannotCommitOrResetProcessingAfterNewPhotoBegins() {
+        let coordinator = WordImageProcessingCoordinator()
+
+        let staleToken = coordinator.begin()
+        XCTAssertTrue(coordinator.shouldCommit(staleToken))
+
+        let currentToken = coordinator.begin()
+        XCTAssertFalse(coordinator.shouldCommit(staleToken))
+        XCTAssertFalse(coordinator.finish(staleToken))
+        XCTAssertTrue(coordinator.isProcessing)
+
+        XCTAssertTrue(coordinator.shouldCommit(currentToken))
+        XCTAssertTrue(coordinator.finish(currentToken))
+        XCTAssertFalse(coordinator.isProcessing)
     }
 }

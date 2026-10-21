@@ -168,6 +168,11 @@ struct WordbookView: View {
             .task {
                 initializeDictionaryService()
                 migrateLegacyWordbook()
+                do {
+                    try WordImportContextMigrator.backfillEntryIDs(in: modelContext)
+                } catch {
+                    alertMessage = "导入记录迁移失败。WordMem 已保留原始数据。"
+                }
             }
             .task(id: feedback?.id) {
                 guard feedback != nil else { return }
@@ -344,11 +349,18 @@ extension LookupStatus {
 
 struct WordEntryDetailView: View {
     let entry: WordEntry
-    @Query(sort: \WordImportContext.createdAt, order: .reverse) private var allImportContexts: [WordImportContext]
+    @Query private var importContexts: [WordImportContext]
     @State private var synthesizer = AVSpeechSynthesizer()
 
-    private var importContexts: [WordImportContext] {
-        allImportContexts.filter { $0.entry?.id == entry.id }
+    init(entry: WordEntry) {
+        self.entry = entry
+        let entryID = entry.id
+        _importContexts = Query(
+            filter: #Predicate<WordImportContext> { context in
+                context.entryID == entryID
+            },
+            sort: [SortDescriptor(\WordImportContext.createdAt, order: .reverse)]
+        )
     }
 
     var body: some View {

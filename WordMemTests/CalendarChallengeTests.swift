@@ -22,10 +22,11 @@ final class CalendarChallengeTests: XCTestCase {
         _ text: String,
         translation: String,
         createdAt: Date,
-        example: String? = nil
+        example: String? = nil,
+        id: UUID = UUID()
     ) -> CalendarWord {
         CalendarWord(
-            id: UUID(),
+            id: id,
             word: text,
             translation: translation,
             phonetic: nil,
@@ -82,11 +83,41 @@ final class CalendarChallengeTests: XCTestCase {
         let (service, _) = makeService()
         let base = makeDate(year: 2026, month: 10, day: 20)
         let words = [
-            makeWord("apple", translation: "苹果", createdAt: base, example: "I eat an apple."),
-            makeWord("banana", translation: "香蕉", createdAt: base, example: "A banana is yellow."),
-            makeWord("cat", translation: "猫", createdAt: base, example: "The cat sleeps."),
-            makeWord("dog", translation: "狗", createdAt: base, example: "The dog runs."),
-            makeWord("egg", translation: "鸡蛋", createdAt: base, example: "I boiled an egg."),
+            makeWord(
+                "apple",
+                translation: "苹果",
+                createdAt: base,
+                example: "I eat an apple.",
+                id: UUID(uuidString: "00000000-0000-0000-0000-000000000004")!
+            ),
+            makeWord(
+                "banana",
+                translation: "香蕉",
+                createdAt: base,
+                example: "A banana is yellow.",
+                id: UUID(uuidString: "00000000-0000-0000-0000-000000000005")!
+            ),
+            makeWord(
+                "cat",
+                translation: "猫",
+                createdAt: base,
+                example: "The cat sleeps.",
+                id: UUID(uuidString: "00000000-0000-0000-0000-000000000006")!
+            ),
+            makeWord(
+                "dog",
+                translation: "狗",
+                createdAt: base,
+                example: "The dog runs.",
+                id: UUID(uuidString: "00000000-0000-0000-0000-000000000007")!
+            ),
+            makeWord(
+                "egg",
+                translation: "鸡蛋",
+                createdAt: base,
+                example: "I boiled an egg.",
+                id: UUID(uuidString: "00000000-0000-0000-0000-000000000008")!
+            ),
         ]
 
         let questions = service.questions(on: base, from: words)
