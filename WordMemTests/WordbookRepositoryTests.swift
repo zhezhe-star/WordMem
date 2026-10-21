@@ -13,7 +13,11 @@ final class WordbookRepositoryTests: XCTestCase {
 
     private func makeFixture() throws -> Fixture {
         let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try ModelContainer(for: WordEntry.self, configurations: configuration)
+        let container = try ModelContainer(
+            for: WordEntry.self,
+            WordImportContext.self,
+            configurations: configuration
+        )
         let modelContext = ModelContext(container)
 
         return Fixture(

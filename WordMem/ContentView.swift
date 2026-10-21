@@ -76,7 +76,8 @@ struct WordbookView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \WordEntry.updatedAt, order: .reverse) private var words: [WordEntry]
     @State private var route: [WordMemRoute] = []
-    @State private var isAddWordPresented = false
+    @State private var activeImportSheet: WordImportSheet?
+    @State private var batchImportMessage: String?
     @State private var feedback: AddWordFeedback?
     @State private var alertMessage: String?
 
@@ -94,9 +95,16 @@ struct WordbookView: View {
             .navigationTitle("WordMem")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        isAddWordPresented = true
-                    } label: {
+                    Menu {
+                        ForEach(WordImportSheet.allCases) { sheet in
+                            Button {
+                                activeImportSheet = sheet
+                            } label: {
+                                Label(sheet.title, systemImage: sheet.systemImage)
+                            }
+                        }
+                    }
+                    label: {
                         Label("添加单词", systemImage: "plus")
                     }
                     .accessibilityIdentifier("addWordButton")
@@ -110,12 +118,26 @@ struct WordbookView: View {
                     }
                 }
             }
-            .sheet(isPresented: $isAddWordPresented) {
-                AddWordView(dictionaryService: dictionaryService) { outcome in
-                    presentFeedback(for: outcome)
+            .sheet(item: $activeImportSheet) { sheet in
+                switch sheet {
+                case .manual:
+                    AddWordView(dictionaryService: dictionaryService) { outcome in
+                        presentFeedback(for: outcome)
+                    }
+                    .presentationDetents([.height(280)])
+                    .presentationDragIndicator(.visible)
+                case .image:
+                    ImageImportView(dictionaryService: dictionaryService) { summary in
+                        batchImportMessage = summary.message
+                    }
+                    .presentationDragIndicator(.visible)
+                case .text:
+                    TextImportView(dictionaryService: dictionaryService) { summary in
+                        batchImportMessage = summary.message
+                    }
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
                 }
-                .presentationDetents([.height(280)])
-                .presentationDragIndicator(.visible)
             }
             .alert("添加失败", isPresented: .init(
                 get: { alertMessage != nil },
@@ -135,6 +157,14 @@ struct WordbookView: View {
                 }
             }
             .animation(.snappy, value: feedback)
+            .alert("导入完成", isPresented: .init(
+                get: { batchImportMessage != nil },
+                set: { if !$0 { batchImportMessage = nil } }
+            )) {
+                Button("好", role: .cancel) {}
+            } message: {
+                Text(batchImportMessage ?? "")
+            }
             .task {
                 initializeDictionaryService()
                 migrateLegacyWordbook()
@@ -155,7 +185,7 @@ struct WordbookView: View {
             Text("输入一个单词，WordMem 会从本地词典补充它的完整信息。")
         } actions: {
             Button("添加第一个单词") {
-                isAddWordPresented = true
+                activeImportSheet = .manual
             }
             .buttonStyle(.glassProminent)
         }
@@ -192,10 +222,9 @@ struct WordbookView: View {
 
     private func deleteWords(at offsets: IndexSet) {
         let entries = offsets.map { words[$0] }
-        entries.forEach(modelContext.delete)
 
         do {
-            try modelContext.save()
+            try WordbookRepository(modelContext: modelContext).deleteWords(entries)
         } catch {
             modelContext.rollback()
             alertMessage = "删除失败，请重试。"
@@ -315,7 +344,12 @@ extension LookupStatus {
 
 struct WordEntryDetailView: View {
     let entry: WordEntry
+    @Query(sort: \WordImportContext.createdAt, order: .reverse) private var allImportContexts: [WordImportContext]
     @State private var synthesizer = AVSpeechSynthesizer()
+
+    private var importContexts: [WordImportContext] {
+        allImportContexts.filter { $0.entry?.id == entry.id }
+    }
 
     var body: some View {
         List {
@@ -414,6 +448,17 @@ struct WordEntryDetailView: View {
                 }
             }
 
+            Section("导入记录") {
+                if importContexts.isEmpty {
+                    Text("没有导入来源记录。")
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(importContexts) { context in
+                        WordImportContextView(context: context)
+                    }
+                }
+            }
+
             if !entry.forms.isEmpty {
                 Section("词形") {
                     ForEach(entry.forms, id: \.self) { form in
@@ -463,6 +508,55 @@ struct WordEntryDetailView: View {
         case .adverb: "副词"
         case .verb: "动词"
         }
+    }
+}
+
+private struct WordImportContextView: View {
+    let context: WordImportContext
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Label(context.source.displayName, systemImage: context.source.systemImage)
+                    .font(.caption.weight(.semibold))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(.tint.opacity(0.10), in: .capsule)
+
+                Spacer()
+
+                Text(context.createdAt, format: .dateTime.month().day().hour().minute())
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+
+            if let sourceText = context.sourceText, !sourceText.isEmpty {
+                Text("来源文本")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+
+                Text(sourceText)
+                    .font(.subheadline)
+                    .lineLimit(4)
+            }
+
+            if let imageData = context.imageData, !imageData.isEmpty,
+               let image = UIImage(data: imageData) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxHeight: 180)
+                    .frame(maxWidth: .infinity)
+                    .clipShape(.rect(cornerRadius: 10))
+            }
+
+            if let candidate = context.selectedCandidate, !candidate.isEmpty {
+                Text("选择词：\(candidate)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 3)
     }
 }
 
