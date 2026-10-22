@@ -15,7 +15,7 @@ struct WordPickerView: View {
     @State private var configuration: TranslationSession.Configuration?
 
     private var chips: [String] {
-        TranslationWordTokenizer.wordChips(from: sourceText)
+        TranslationWordTokenizer.pickerChips(from: sourceText)
     }
 
     var body: some View {
@@ -25,6 +25,7 @@ struct WordPickerView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     selectionSummary
                     sourceSection
+                    phraseTranslationSection
                     chipGrid
                 }
                 .padding(16)
@@ -61,9 +62,21 @@ struct WordPickerView: View {
     }
 
     private var selectionSummary: some View {
-            Text(chips.isEmpty ? "这句话没有可保存的英文单词。" : "已拆成 \(chips.count) 个单词，选择后保存到 WordMem。")
+        Text(selectionSummaryText)
             .font(.footnote)
             .foregroundStyle(.secondary)
+    }
+
+    private var selectionSummaryText: String {
+        let phrase = TranslationWordTokenizer.normalizedPhrase(from: sourceText)
+        let wordCount = TranslationWordTokenizer.wordChips(from: sourceText).count
+        if phrase.isEmpty && wordCount == 0 {
+            return "这句话没有可保存的内容。"
+        }
+        if wordCount == 0 {
+            return "已保留整句，可选择后保存到 WordMem。"
+        }
+        return "已保留整句，并拆出 \(wordCount) 个单词；选择后保存到 WordMem。"
     }
 
     private var sourceSection: some View {
@@ -73,6 +86,21 @@ struct WordPickerView: View {
                 .foregroundStyle(.secondary)
             Text(sourceText)
                 .font(.body)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(12)
+                .background(Color(.secondarySystemGroupedBackground))
+                .cornerRadius(12)
+        }
+    }
+
+    private var phraseTranslationSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("整句翻译")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.secondary)
+            Text(phraseTranslation.isEmpty ? "暂无整句翻译" : phraseTranslation)
+                .font(.body)
+                .foregroundStyle(phraseTranslation.isEmpty ? .secondary : .primary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(12)
                 .background(Color(.secondarySystemGroupedBackground))
@@ -126,6 +154,10 @@ struct WordPickerView: View {
 
     private func translateChips(with session: TranslationSession) async {
         for chip in chips where meanings[chip] == nil {
+            if chip == TranslationWordTokenizer.normalizedPhrase(from: sourceText), !phraseTranslation.isEmpty {
+                meanings[chip] = phraseTranslation
+                continue
+            }
             if let meaning = try? await session.translate(chip).targetText {
                 meanings[chip] = meaning
             }
