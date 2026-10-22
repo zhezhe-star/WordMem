@@ -2,8 +2,7 @@ import SwiftUI
 import Translation
 import TranslationUIProvider
 
-/// Mirrors the reference default-translation-app experience:
-/// source sentence -> translation -> word picker -> save into the wordbook.
+/// Presents one complete card: source, translation, phrase, and split words.
 struct TranslationCardView: View {
     let context: any TranslationUIProviderContext
 
@@ -11,7 +10,6 @@ struct TranslationCardView: View {
     @State private var translatedText = ""
     @State private var status: Status = .idle
     @State private var configuration: TranslationSession.Configuration?
-    @State private var showWordPicker = false
 
     private let storage = LocalStorageManager()
 
@@ -20,131 +18,66 @@ struct TranslationCardView: View {
         case translating
         case ready
         case translationFailed
-        case saved
     }
 
     var body: some View {
-        NavigationView {
-            Group {
-                if showWordPicker {
-                    WordPickerView(
-                        sourceText: sourceText,
-                        phraseTranslation: translatedText,
-                        storage: storage
-                    ) {
-                        withAnimation(.snappy) {
-                            showWordPicker = false
-                        }
-                    } onSave: {
-                        withAnimation(.snappy) {
-                            status = .saved
-                        }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                            context.finish(translation: nil)
-                        }
+        Group {
+            if sourceText.isEmpty {
+                startupState
+            } else {
+                WordPickerView(
+                    sourceText: sourceText,
+                    phraseTranslation: translatedText,
+                    isPhraseTranslationReady: isPhraseTranslationReady,
+                    storage: storage,
+                    onCancel: {
+                        context.finish(translation: nil)
+                    },
+                    onSave: {
+                        // Finish immediately after persistence so the system card
+                        // closes without requiring a second interaction.
+                        context.finish(translation: nil)
                     }
-                } else {
-                    card
-                }
-            }
-            .background(Color(.systemGroupedBackground).ignoresSafeArea())
-            .onAppear(perform: loadSource)
-            .translationTask(configuration) { session in
-                await translate(with: session)
+                )
+                .transition(.opacity)
             }
         }
-        .navigationViewStyle(.stack)
+        .background(Color(.systemGroupedBackground).ignoresSafeArea())
+        .onAppear(perform: loadCard)
+        .translationTask(configuration) { session in
+            await translate(with: session)
+        }
     }
 
-    private var card: some View {
+    private var isPhraseTranslationReady: Bool {
+        status == .ready || status == .translationFailed
+    }
+
+    private var startupState: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                sourceSection
-                translationSection
-                importButton
-                if status == .saved {
-                    Label("已保存到 WordMem", systemImage: "checkmark.circle.fill")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.green)
+                HStack(spacing: 12) {
+                    ProgressView()
+                    Text("正在准备单词卡片…")
+                        .font(.footnote.weight(.medium))
+                        .foregroundStyle(.secondary)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 28)
             }
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
-    private var sourceSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("原句")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(.secondary)
-            Text(sourceText.isEmpty ? "正在获取选中文本…" : sourceText)
-                .font(.body)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(12)
-                .background(Color(.secondarySystemGroupedBackground))
-                .cornerRadius(12)
-        }
-    }
-
-    private var translationSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("翻译")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(.secondary)
-            Group {
-                if status == .translating {
-                    HStack(spacing: 10) {
-                        ProgressView()
-                        Text("正在翻译…").foregroundStyle(.secondary)
-                    }
-                } else {
-                    Text(translatedText.isEmpty ? " " : translatedText)
-                        .font(.body)
-                }
-            }
-            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-            .padding(12)
-            .background(Color(.secondarySystemGroupedBackground))
-            .cornerRadius(12)
-
-            if status == .translationFailed {
-                Label("系统翻译不可用，已保留原句，可直接挑选单词保存。", systemImage: "exclamationmark.triangle")
-                    .font(.footnote)
-                    .foregroundStyle(.orange)
-            }
-
-            Button("重新翻译") {
-                startTranslation()
-            }
-            .font(.footnote.weight(.semibold))
-            .disabled(sourceText.isEmpty || status == .translating)
-        }
-    }
-
-    private var importButton: some View {
-        Button {
-            context.expandSheet()
-            withAnimation(.snappy) {
-                showWordPicker = true
-            }
-        } label: {
-            Text("导入到 WordMem")
-                .font(.headline)
-                .frame(maxWidth: .infinity, minHeight: 50)
-        }
-        .buttonStyle(.borderedProminent)
-        .tint(.green)
-        .disabled(sourceText.isEmpty || status == .translating || status == .saved)
-    }
-
-    private func loadSource() {
+    private func loadCard() {
         guard sourceText.isEmpty, let input = context.inputText else { return }
         let collapsed = String(input.characters)
             .split(whereSeparator: { $0.isNewline })
             .joined(separator: " ")
             .trimmingCharacters(in: .whitespacesAndNewlines)
         sourceText = collapsed
+        context.expandSheet()
         startTranslation()
     }
 
