@@ -273,8 +273,9 @@ final class CalendarChallengeService: ObservableObject {
             availableForms.insert(.exampleCloze, at: min(3, availableForms.count))
         }
 
-        let formIndex = Int((stableSeed(seedFor: word.id.uuidString) + UInt64(index)) % UInt64(availableForms.count))
-        let form = availableForms[formIndex]
+        let rotation = Int(stableSeed(seedFor: word.id.uuidString) % UInt64(availableForms.count))
+        let rotatedForms = Array(availableForms[rotation...] + availableForms[..<rotation])
+        let form = rotatedForms[index % rotatedForms.count]
         let distractors = distractorTranslationsAndWords(for: word, allWords: allWords, form: form)
 
         switch form {

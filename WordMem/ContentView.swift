@@ -167,14 +167,11 @@ struct WordbookView: View {
             }
             .task {
                 initializeDictionaryService()
-                migrateLegacyWordbook()
-                do {
-                    try WordImportContextMigrator.backfillEntryIDs(
-                        in: modelContext,
-                        defaults: .standard
-                    )
-                } catch {
-                    alertMessage = "导入记录迁移失败。WordMem 已保留原始数据。"
+                await performImportMaintenance()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+                Task {
+                    await performImportMaintenance()
                 }
             }
             .task(id: feedback?.id) {
@@ -239,11 +236,31 @@ struct WordbookView: View {
         }
     }
 
-    private func migrateLegacyWordbook() {
+    private func migrateLegacyWordbook() async {
         do {
-            try LegacyWordbookMigrator.migrateIfNeeded(defaults: .standard, into: modelContext)
+            // Share 与翻译扩展都写入 App Group 的 saved_words，迁移时优先读取它。
+            let extensionSharedDefaults = UserDefaults(suiteName: "group.com.zhezhe.wordmem") ?? .standard
+            let localDictionary = dictionaryService as? SQLiteDictionaryLookupService
+            try await LegacyWordbookMigrator.migrateIfNeeded(
+                defaults: extensionSharedDefaults,
+                into: modelContext,
+                dictionaryService: localDictionary
+            )
         } catch {
             alertMessage = "旧单词本迁移失败。WordMem 已保留原始数据。"
+        }
+    }
+
+    private func performImportMaintenance() async {
+        let extensionSharedDefaults = UserDefaults(suiteName: "group.com.zhezhe.wordmem") ?? .standard
+        await migrateLegacyWordbook()
+        do {
+            try WordImportContextMigrator.backfillEntryIDs(
+                in: modelContext,
+                defaults: extensionSharedDefaults
+            )
+        } catch {
+            alertMessage = "导入记录迁移失败。WordMem 已保留原始数据。"
         }
     }
 
@@ -345,6 +362,7 @@ extension LookupStatus {
         case .lemmaResolved: .blue
         case .autoCorrected: .orange
         case .ambiguousResolved: .indigo
+        case .userSaved: .mint
         case .notFound: .secondary
         }
     }
@@ -402,8 +420,20 @@ struct WordEntryDetailView: View {
 
             if entry.senses.isEmpty {
                 Section("释义") {
-                    Text("本地词典暂未收录。")
-                        .foregroundStyle(.secondary)
+                    if entry.userTranslation.isEmpty {
+                        Text("本地词典暂未收录。")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("导入释义")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.tint)
+                            Text(entry.userTranslation)
+                        }
+                        Text("本地词典暂未收录，词典释义可稍后补充。")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             } else {
                 Section("释义") {
