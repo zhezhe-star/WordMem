@@ -124,7 +124,36 @@ final class WordbookRepositoryTests: XCTestCase {
 
 @MainActor
 final class LegacyWordbookMigrationTests: XCTestCase {
-    func testTranslationSourceIsTokenizedIntoIndividualWordChipsOnly() {
+    func testTranslationPickerKeepsWholePhraseAndAddsIndividualWordChips() {
+        XCTAssertEqual(
+            TranslationWordTokenizer.pickerChips(from: "The serendipitous, moon-like idea!"),
+            [
+                "The serendipitous, moon-like idea!",
+                "The",
+                "serendipitous",
+                "moon-like",
+                "idea",
+            ]
+        )
+        XCTAssertEqual(
+            TranslationWordTokenizer.pickerChips(from: "  don't\tstop\nnow  "),
+            ["don't stop now", "don't", "stop", "now"]
+        )
+        XCTAssertEqual(
+            TranslationWordTokenizer.pickerChips(from: "Run run, run!"),
+            ["Run run, run!", "Run", "run"]
+        )
+        XCTAssertEqual(
+            TranslationWordTokenizer.pickerChips(from: "123 🙂 ..."),
+            ["123 🙂 ..."]
+        )
+        XCTAssertEqual(
+            TranslationWordTokenizer.pickerChips(from: "serendipity"),
+            ["serendipity"]
+        )
+    }
+
+    func testTokenizerStillProvidesIndividualWordsWithoutPhraseChip() {
         XCTAssertEqual(
             TranslationWordTokenizer.wordChips(from: "The serendipitous, moon-like idea!"),
             ["The", "serendipitous", "moon-like", "idea"]

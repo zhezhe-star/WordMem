@@ -108,4 +108,23 @@ enum TranslationWordTokenizer {
             }
             .filter { seen.insert($0).inserted }
     }
+
+    static func pickerChips(from source: String) -> [String] {
+        var values: [String] = []
+        let phrase = normalizedPhrase(from: source)
+        if !phrase.isEmpty {
+            values.append(phrase)
+        }
+
+        for word in wordChips(from: source) where !values.contains(word) {
+            values.append(word)
+        }
+        return values
+    }
+
+    static func normalizedPhrase(from source: String) -> String {
+        source
+            .split(whereSeparator: { $0.isWhitespace || $0.isNewline })
+            .joined(separator: " ")
+    }
 }
