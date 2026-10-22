@@ -27,7 +27,7 @@ struct WordbookRepository {
         let key = result.entry?.normalizedKey ?? WordInputNormalizer.normalizedKey(from: rawInput)
 
         if let existing = try findEntry(normalizedKey: key) {
-            if result.status != .notFound, existing.lookupStatus == .notFound {
+            if result.status != .notFound, existing.lookupStatus == .notFound || existing.lookupStatus == .userSaved {
                 existing.apply(result)
                 do {
                     try modelContext.save()

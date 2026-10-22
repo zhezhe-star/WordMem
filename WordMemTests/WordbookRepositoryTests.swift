@@ -200,7 +200,7 @@ final class LegacyWordbookMigrationTests: XCTestCase {
         let entries = try context.fetch(FetchDescriptor<WordEntry>())
         XCTAssertEqual(entries.count, 2)
         XCTAssertEqual(Set(entries.map(\.headword)), ["serendipity", "Run"])
-        XCTAssertTrue(entries.allSatisfy { $0.lookupStatus == .notFound })
+        XCTAssertTrue(entries.allSatisfy { $0.lookupStatus == .userSaved })
         XCTAssertTrue(defaults.data(forKey: "saved_words.backup.beforeSwiftDataMigration") == sourceData)
         XCTAssertNil(defaults.data(forKey: "saved_words"))
         XCTAssertTrue(defaults.bool(forKey: LegacyWordbookMigrator.migrationKey))
@@ -242,8 +242,49 @@ final class LegacyWordbookMigrationTests: XCTestCase {
         let entries = try context.fetch(FetchDescriptor<WordEntry>())
         XCTAssertEqual(entries.map(\.normalizedKey), ["postponed"])
         XCTAssertEqual(entries.first?.userTranslation, "延期")
+        XCTAssertEqual(entries.first?.lookupStatus, .userSaved)
         XCTAssertNil(defaults.data(forKey: "saved_words"))
         XCTAssertTrue(defaults.bool(forKey: LegacyWordbookMigrator.migrationKey))
+    }
+
+    func testExistingImportedTranslationsAreUpgradedOutOfNotFound() async throws {
+        let suiteName = "WordMemMigrationTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: WordEntry.self, configurations: configuration)
+        let context = ModelContext(container)
+        context.insert(
+            WordEntry(
+                originalInput: "certificate",
+                normalizedKey: "certificate",
+                headword: "certificate",
+                userTranslation: "证书",
+                lookupStatus: .notFound
+            )
+        )
+        context.insert(
+            WordEntry(
+                originalInput: "unknown",
+                normalizedKey: "unknown",
+                headword: "unknown",
+                lookupStatus: .notFound
+            )
+        )
+        try context.save()
+
+        try LegacyWordbookMigrator.upgradeUserTranslationStatus(defaults: defaults, in: context)
+
+        let entries = try context.fetch(
+            FetchDescriptor<WordEntry>(sortBy: [SortDescriptor(\.normalizedKey)])
+        )
+        XCTAssertEqual(entries.first { $0.normalizedKey == "certificate" }?.lookupStatus, .userSaved)
+        XCTAssertEqual(entries.first { $0.normalizedKey == "unknown" }?.lookupStatus, .notFound)
+
+        // Re-running must be idempotent.
+        try LegacyWordbookMigrator.upgradeUserTranslationStatus(defaults: defaults, in: context)
+        XCTAssertEqual(entries.first { $0.normalizedKey == "certificate" }?.lookupStatus, .userSaved)
     }
 }
 

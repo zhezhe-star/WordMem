@@ -313,6 +313,7 @@ extension LookupStatus {
         case .lemmaResolved: .blue
         case .autoCorrected: .orange
         case .ambiguousResolved: .indigo
+        case .userSaved: .mint
         case .notFound: .secondary
         }
     }
@@ -358,8 +359,20 @@ struct WordEntryDetailView: View {
 
             if entry.senses.isEmpty {
                 Section("释义") {
-                    Text("本地词典暂未收录。")
-                        .foregroundStyle(.secondary)
+                    if entry.userTranslation.isEmpty {
+                        Text("本地词典暂未收录。")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("导入释义")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.tint)
+                            Text(entry.userTranslation)
+                        }
+                        Text("本地词典暂未收录，词典释义可稍后补充。")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             } else {
                 Section("释义") {

@@ -5,6 +5,7 @@ enum LookupStatus: String, Codable, Hashable, Sendable, CaseIterable {
     case lemmaResolved
     case autoCorrected
     case ambiguousResolved
+    case userSaved
     case notFound
 
     var displayName: String {
@@ -13,6 +14,7 @@ enum LookupStatus: String, Codable, Hashable, Sendable, CaseIterable {
         case .lemmaResolved: "已还原原形"
         case .autoCorrected: "已自动纠正"
         case .ambiguousResolved: "已选择词义"
+        case .userSaved: "已补充"
         case .notFound: "待补充"
         }
     }
