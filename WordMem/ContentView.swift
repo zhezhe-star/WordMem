@@ -139,6 +139,9 @@ struct WordbookView: View {
                 initializeDictionaryService()
                 migrateLegacyWordbook()
             }
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+                migrateLegacyWordbook()
+            }
             .task(id: feedback?.id) {
                 guard feedback != nil else { return }
                 try? await Task.sleep(for: .seconds(4))

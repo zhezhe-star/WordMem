@@ -15,16 +15,7 @@ struct WordPickerView: View {
     @State private var configuration: TranslationSession.Configuration?
 
     private var chips: [String] {
-        var values: [String] = []
-        if !sourceText.isEmpty { values.append(sourceText) }
-        let words = sourceText
-            .split(whereSeparator: { $0.isWhitespace || $0.isNewline })
-            .map { String($0).trimmingCharacters(in: .punctuationCharacters) }
-            .filter { !$0.isEmpty && $0.range(of: "[a-zA-Z]", options: .regularExpression) != nil }
-        for word in words where !values.contains(word) {
-            values.append(word)
-        }
-        return values
+        TranslationWordTokenizer.wordChips(from: sourceText)
     }
 
     var body: some View {
@@ -70,7 +61,7 @@ struct WordPickerView: View {
     }
 
     private var selectionSummary: some View {
-        Text("已选 \(selected.count) 个，保存后加入 WordMem 单词本。")
+            Text(chips.isEmpty ? "这句话没有可保存的英文单词。" : "已拆成 \(chips.count) 个单词，选择后保存到 WordMem。")
             .font(.footnote)
             .foregroundStyle(.secondary)
     }

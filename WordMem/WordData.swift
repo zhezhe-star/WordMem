@@ -94,3 +94,18 @@ struct WordData: Identifiable, Codable {
         createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
     }
 }
+
+/// Turns a selected source sentence into the individual word chips shown by
+/// the translation provider. Keep this pure so picker behavior stays testable.
+enum TranslationWordTokenizer {
+    static func wordChips(from source: String) -> [String] {
+        var seen = Set<String>()
+        return source
+            .split(whereSeparator: { $0.isWhitespace || $0.isNewline })
+            .map { String($0).trimmingCharacters(in: .punctuationCharacters) }
+            .filter { word in
+                !word.isEmpty && word.range(of: "[a-zA-Z]", options: .regularExpression) != nil
+            }
+            .filter { seen.insert($0).inserted }
+    }
+}

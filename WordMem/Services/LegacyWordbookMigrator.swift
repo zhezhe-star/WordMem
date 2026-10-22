@@ -7,14 +7,14 @@ enum LegacyWordbookMigrator {
     private static let backupKey = "saved_words.backup.beforeSwiftDataMigration"
 
     static func migrateIfNeeded(defaults: UserDefaults, into modelContext: ModelContext) throws {
-        guard !defaults.bool(forKey: migrationKey) else { return }
-
         guard let sourceData = defaults.data(forKey: sourceKey) else {
             defaults.set(true, forKey: migrationKey)
             return
         }
 
-        defaults.set(sourceData, forKey: backupKey)
+        if !defaults.bool(forKey: migrationKey) {
+            defaults.set(sourceData, forKey: backupKey)
+        }
 
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
@@ -52,5 +52,6 @@ enum LegacyWordbookMigrator {
         }
 
         defaults.set(true, forKey: migrationKey)
+        defaults.removeObject(forKey: sourceKey)
     }
 }
