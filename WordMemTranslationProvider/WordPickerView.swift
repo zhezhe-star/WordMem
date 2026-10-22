@@ -6,6 +6,7 @@ import Translation
 struct WordPickerView: View {
     let sourceText: String
     let phraseTranslation: String
+    let isPhraseTranslationReady: Bool
     let storage: LocalStorageManager
     let onCancel: () -> Void
     let onSave: () -> Void
@@ -13,6 +14,12 @@ struct WordPickerView: View {
     @State private var selected: Set<String> = []
     @State private var meanings: [String: String] = [:]
     @State private var configuration: TranslationSession.Configuration?
+    @State private var isPreparingChips = true
+    @State private var hasPreparedChips = false
+
+    private var isPreparing: Bool {
+        !isPhraseTranslationReady || isPreparingChips
+    }
 
     private var chips: [String] {
         TranslationWordTokenizer.pickerChips(from: sourceText)
@@ -23,20 +30,30 @@ struct WordPickerView: View {
             topBar
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    selectionSummary
-                    sourceSection
-                    phraseTranslationSection
-                    chipGrid
+                    if isPreparing {
+                        loadingContent
+                    } else {
+                        selectionSummary
+                        sourceSection
+                        phraseTranslationSection
+                        chipGrid
+                    }
                 }
                 .padding(16)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
+        .animation(.easeInOut(duration: 0.28), value: isPreparing)
         .translationTask(configuration) { session in
             await translateChips(with: session)
         }
         .onAppear {
             startChipTranslation()
+        }
+        .onChange(of: isPhraseTranslationReady) { _, isReady in
+            if isReady {
+                startChipTranslation()
+            }
         }
     }
 
@@ -55,7 +72,7 @@ struct WordPickerView: View {
             Button("保存", action: save)
                 .font(.body.weight(.semibold))
                 .foregroundStyle(selected.isEmpty ? AnyShapeStyle(.secondary) : AnyShapeStyle(Color.green))
-                .disabled(selected.isEmpty)
+                .disabled(selected.isEmpty || isPreparing)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
@@ -91,6 +108,46 @@ struct WordPickerView: View {
                 .background(Color(.secondarySystemGroupedBackground))
                 .cornerRadius(12)
         }
+    }
+
+    private var loadingContent: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 10) {
+                ProgressView()
+                Text("正在准备整句和单词…")
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(.secondary)
+            }
+
+            sourceSection
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("整句翻译")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                ShimmerBox(height: 46)
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                Text("单词")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                FlowLayout(spacing: 10) {
+                    ForEach(chips, id: \.self) { chip in
+                        HStack(spacing: 8) {
+                            Text(chip)
+                            ShimmerBox(width: 38, height: 12, capsule: true)
+                        }
+                        .font(.body)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .background(Color(.secondarySystemGroupedBackground))
+                        .clipShape(Capsule())
+                    }
+                }
+            }
+        }
+        .accessibilityHidden(true)
     }
 
     private var phraseTranslationSection: some View {
@@ -146,6 +203,12 @@ struct WordPickerView: View {
     }
 
     private func startChipTranslation() {
+        guard isPhraseTranslationReady, !hasPreparedChips else { return }
+        hasPreparedChips = true
+        guard !chips.isEmpty else {
+            isPreparingChips = false
+            return
+        }
         configuration = TranslationSession.Configuration(
             source: Locale.Language(identifier: "en"),
             target: Locale.Language(identifier: "zh-Hans")
@@ -163,6 +226,7 @@ struct WordPickerView: View {
             }
         }
         configuration = nil
+        isPreparingChips = false
     }
 
     private func save() {
@@ -170,7 +234,7 @@ struct WordPickerView: View {
         formatter.dateFormat = "yyyy-MM-dd"
         for chip in selected.sorted() {
             let meaning = meanings[chip]
-                ?? (chip == sourceText ? phraseTranslation : nil)
+                ?? (chip == TranslationWordTokenizer.normalizedPhrase(from: sourceText) ? phraseTranslation : nil)
                 ?? ""
             let word = WordData(
                 word: chip,
@@ -180,6 +244,45 @@ struct WordPickerView: View {
             storage.addWord(word)
         }
         onSave()
+    }
+}
+
+private struct ShimmerBox: View {
+    var width: CGFloat?
+    var height: CGFloat
+    var capsule = false
+
+    @State private var isAnimating = false
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: capsule ? 8 : 12)
+            .fill(Color(.tertiarySystemFill))
+            .frame(width: width, height: height)
+            .modifier(ShimmerEffect(isAnimating: isAnimating))
+            .onAppear {
+                withAnimation(.linear(duration: 1.15).repeatForever(autoreverses: false)) {
+                    isAnimating = true
+                }
+            }
+    }
+}
+
+private struct ShimmerEffect: ViewModifier {
+    let isAnimating: Bool
+
+    func body(content: Content) -> some View {
+        content.overlay {
+            GeometryReader { proxy in
+                LinearGradient(
+                    colors: [.clear, .white.opacity(0.55), .clear],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                .frame(width: max(28, proxy.size.width * 0.7))
+                .offset(x: isAnimating ? proxy.size.width * 1.1 : -proxy.size.width * 0.8)
+            }
+            .mask(content)
+        }
     }
 }
 
