@@ -137,10 +137,12 @@ struct WordbookView: View {
             .animation(.snappy, value: feedback)
             .task {
                 initializeDictionaryService()
-                migrateLegacyWordbook()
+                await migrateLegacyWordbook()
             }
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
-                migrateLegacyWordbook()
+                Task {
+                    await migrateLegacyWordbook()
+                }
             }
             .task(id: feedback?.id) {
                 guard feedback != nil else { return }
@@ -205,11 +207,16 @@ struct WordbookView: View {
         }
     }
 
-    private func migrateLegacyWordbook() {
+    private func migrateLegacyWordbook() async {
         do {
             // Share 与翻译扩展都写入 App Group 的 saved_words，迁移时优先读取它。
             let extensionSharedDefaults = UserDefaults(suiteName: "group.com.zhezhe.wordmem") ?? .standard
-            try LegacyWordbookMigrator.migrateIfNeeded(defaults: extensionSharedDefaults, into: modelContext)
+            let localDictionary = dictionaryService as? SQLiteDictionaryLookupService
+            try await LegacyWordbookMigrator.migrateIfNeeded(
+                defaults: extensionSharedDefaults,
+                into: modelContext,
+                dictionaryService: localDictionary
+            )
         } catch {
             alertMessage = "旧单词本迁移失败。WordMem 已保留原始数据。"
         }

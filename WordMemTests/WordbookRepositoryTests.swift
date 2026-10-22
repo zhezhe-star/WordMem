@@ -194,8 +194,8 @@ final class LegacyWordbookMigrationTests: XCTestCase {
         let container = try ModelContainer(for: WordEntry.self, configurations: configuration)
         let context = ModelContext(container)
 
-        try LegacyWordbookMigrator.migrateIfNeeded(defaults: defaults, into: context)
-        try LegacyWordbookMigrator.migrateIfNeeded(defaults: defaults, into: context)
+        try await LegacyWordbookMigrator.migrateIfNeeded(defaults: defaults, into: context)
+        try await LegacyWordbookMigrator.migrateIfNeeded(defaults: defaults, into: context)
 
         let entries = try context.fetch(FetchDescriptor<WordEntry>())
         XCTAssertEqual(entries.count, 2)
@@ -237,7 +237,7 @@ final class LegacyWordbookMigrationTests: XCTestCase {
         encoder.dateEncodingStrategy = .iso8601
         defaults.set(try encoder.encode([newWord]), forKey: "saved_words")
 
-        try LegacyWordbookMigrator.migrateIfNeeded(defaults: defaults, into: context)
+        try await LegacyWordbookMigrator.migrateIfNeeded(defaults: defaults, into: context)
 
         let entries = try context.fetch(FetchDescriptor<WordEntry>())
         XCTAssertEqual(entries.map(\.normalizedKey), ["postponed"])
@@ -285,6 +285,97 @@ final class LegacyWordbookMigrationTests: XCTestCase {
         // Re-running must be idempotent.
         try LegacyWordbookMigrator.upgradeUserTranslationStatus(defaults: defaults, in: context)
         XCTAssertEqual(entries.first { $0.normalizedKey == "certificate" }?.lookupStatus, .userSaved)
+    }
+
+    func testMigrationMatchesImportedWordAgainstLocalDictionary() async throws {
+        let suiteName = "WordMemMigrationTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let sourceWord = WordData(word: "ran", translation: "跑（过去式）")
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        defaults.set(try encoder.encode([sourceWord]), forKey: "saved_words")
+
+        let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: WordEntry.self, configurations: configuration)
+        let context = ModelContext(container)
+
+        try await LegacyWordbookMigrator.migrateIfNeeded(
+            defaults: defaults,
+            into: context,
+            dictionaryService: BundledDictionaryLookupService(
+                catalog: DevelopmentSeedDictionaryCatalog.entries
+            )
+        )
+
+        let entry = try XCTUnwrap(
+            try context.fetch(FetchDescriptor<WordEntry>()).first
+        )
+        XCTAssertEqual(entry.lookupStatus, .lemmaResolved)
+        XCTAssertEqual(entry.normalizedKey, "run")
+        XCTAssertEqual(entry.headword, "run")
+        XCTAssertEqual(entry.translation, "跑；奔跑")
+        XCTAssertEqual(entry.userTranslation, "跑（过去式）")
+        XCTAssertEqual(entry.phonetic, "/rʌn/")
+        XCTAssertFalse(entry.senses.isEmpty)
+        XCTAssertNil(defaults.data(forKey: "saved_words"))
+    }
+
+    func testExistingUserSavedEntriesAreEnrichedAgainstLocalDictionaryOnce() async throws {
+        let suiteName = "WordMemMigrationTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: WordEntry.self, configurations: configuration)
+        let context = ModelContext(container)
+        context.insert(
+            WordEntry(
+                originalInput: "serendipity",
+                normalizedKey: "serendipity",
+                headword: "serendipity",
+                userTranslation: "我自己的解释",
+                lookupStatus: .userSaved
+            )
+        )
+        try context.save()
+
+        try await LegacyWordbookMigrator.enrichUserSavedEntries(
+            defaults: defaults,
+            in: context,
+            dictionaryService: BundledDictionaryLookupService(
+                catalog: DevelopmentSeedDictionaryCatalog.entries
+            )
+        )
+
+        let entry = try XCTUnwrap(
+            try context.fetch(FetchDescriptor<WordEntry>()).first
+        )
+        XCTAssertEqual(entry.lookupStatus, .enriched)
+        XCTAssertEqual(entry.translation, "意外发现新事物的能力")
+        XCTAssertEqual(entry.userTranslation, "我自己的解释")
+        XCTAssertEqual(entry.senses.count, 1)
+        XCTAssertTrue(defaults.bool(forKey: LegacyWordbookMigrator.localDictionaryEnrichmentKey))
+
+        // A phrase with no dictionary entry must remain user supplied.
+        let phrase = WordEntry(
+            originalInput: "private key",
+            normalizedKey: "private key",
+            headword: "private key",
+            userTranslation: "私钥",
+            lookupStatus: .userSaved
+        )
+        context.insert(phrase)
+        try context.save()
+        try await LegacyWordbookMigrator.enrichUserSavedEntries(
+            defaults: defaults,
+            in: context,
+            dictionaryService: BundledDictionaryLookupService(
+                catalog: DevelopmentSeedDictionaryCatalog.entries
+            )
+        )
+        XCTAssertEqual(phrase.lookupStatus, .userSaved)
     }
 }
 
