@@ -135,10 +135,19 @@ struct TextImportView: View {
             defer { isSaving = false }
 
             do {
-                let outcomes = try await repository.importWords(
-                    selectedWords,
+                let submission = WordImportSubmission(
                     source: .text,
                     sourceText: sourceText,
+                    candidates: selectedWords.map {
+                        WordImportCandidatePayload(
+                            text: $0,
+                            normalizedKey: WordInputNormalizer.normalizedKey(from: $0)
+                        )
+                    },
+                    metadata: ["channel": WordImportSource.text.rawValue]
+                )
+                let outcomes = try await repository.importSubmission(
+                    submission,
                     using: dictionaryService
                 )
                 completion(WordImportSummary(outcomes: outcomes))
@@ -281,13 +290,18 @@ struct ImageImportView: View {
             .task {
                 cameraAvailability = CameraAvailability.current()
             }
-            .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+            .onReceive(
+                NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)
+            ) { _ in
                 cameraAvailability = CameraAvailability.current()
             }
-            .alert("无法使用相机", isPresented: .init(
-                get: { cameraFallbackMessage != nil },
-                set: { if !$0 { cameraFallbackMessage = nil } }
-            )) {
+            .alert(
+                "无法使用相机",
+                isPresented: .init(
+                    get: { cameraFallbackMessage != nil },
+                    set: { if !$0 { cameraFallbackMessage = nil } }
+                )
+            ) {
                 Button("好", role: .cancel) {}
             } message: {
                 Text(cameraFallbackMessage ?? cameraAvailability.fallbackMessage)
@@ -405,12 +419,24 @@ struct ImageImportView: View {
             defer { isSaving = false }
 
             do {
-                let outcomes = try await repository.importWords(
-                    selectedWords,
+                let submission = WordImportSubmission(
                     source: .image,
                     sourceText: recognizedText,
-                    imageData: imageData,
                     recognizedText: recognizedText,
+                    imageData: imageData,
+                    candidates: selectedWords.map {
+                        WordImportCandidatePayload(
+                            text: $0,
+                            normalizedKey: WordInputNormalizer.normalizedKey(from: $0)
+                        )
+                    },
+                    metadata: [
+                        "channel": WordImportSource.image.rawValue,
+                        "imageByteCount": "\(imageData.count)",
+                    ]
+                )
+                let outcomes = try await repository.importSubmission(
+                    submission,
                     using: dictionaryService
                 )
                 completion(WordImportSummary(outcomes: outcomes))
@@ -438,7 +464,9 @@ struct CameraImagePicker: UIViewControllerRepresentable {
         Coordinator(completion: completion)
     }
 
-    final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+    final class Coordinator: NSObject, UIImagePickerControllerDelegate,
+        UINavigationControllerDelegate
+    {
         private let completion: @MainActor (CameraCaptureResult) -> Void
 
         init(completion: @MainActor @escaping (CameraCaptureResult) -> Void) {
@@ -496,14 +524,20 @@ private struct WordCandidateListView: View {
 
                     Spacer()
 
-                    Image(systemName: selection.isSelected(candidate.normalizedKey) ? "checkmark.circle.fill" : "circle")
-                        .foregroundStyle(.tint)
+                    Image(
+                        systemName: selection.isSelected(candidate.normalizedKey)
+                            ? "checkmark.circle.fill" : "circle"
+                    )
+                    .foregroundStyle(.tint)
                 }
             }
             .accessibilityElement(children: .combine)
             .accessibilityLabel("选择 \(candidate.text)")
             .accessibilityValue(selection.isSelected(candidate.normalizedKey) ? "已选择" : "未选择")
-            .accessibilityAddTraits(selection.isSelected(candidate.normalizedKey) ? [.isButton, .isSelected] : [.isButton])
+            .accessibilityAddTraits(
+                selection.isSelected(candidate.normalizedKey)
+                    ? [.isButton, .isSelected] : [.isButton]
+            )
             .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
         }
         .listStyle(.insetGrouped)

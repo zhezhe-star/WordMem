@@ -10,6 +10,9 @@ final class WordImportContext {
     var recognizedText: String?
     @Attribute(.externalStorage) var imageData: Data?
     var entryID: UUID?
+    var submissionPayloadID: UUID?
+    var candidatePayloadID: UUID?
+    var payloadSchemaVersion: Int?
     private var metadataData: Data
     var createdAt: Date
     @Relationship var entry: WordEntry?
@@ -37,6 +40,9 @@ final class WordImportContext {
         selectedCandidate: String? = nil,
         recognizedText: String? = nil,
         imageData: Data? = nil,
+        submissionPayloadID: UUID? = nil,
+        candidatePayloadID: UUID? = nil,
+        payloadSchemaVersion: Int? = nil,
         metadata: [String: String] = [:],
         createdAt: Date = .now
     ) {
@@ -48,6 +54,9 @@ final class WordImportContext {
         self.recognizedText = recognizedText
         self.entryID = entry?.id
         self.imageData = imageData
+        self.submissionPayloadID = submissionPayloadID
+        self.candidatePayloadID = candidatePayloadID
+        self.payloadSchemaVersion = payloadSchemaVersion
         self.metadataData = (try? JSONEncoder().encode(metadata)) ?? Data()
         self.createdAt = createdAt
     }

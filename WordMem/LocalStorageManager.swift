@@ -43,8 +43,9 @@ class LocalStorageManager: ObservableObject {
         guard !userDefaults.bool(forKey: Self.migrationCompletedKey) else { return }
 
         if userDefaults.data(forKey: wordsKey) == nil,
-           let legacyData = legacyDefaults.data(forKey: wordsKey),
-           !legacyData.isEmpty {
+            let legacyData = legacyDefaults.data(forKey: wordsKey),
+            !legacyData.isEmpty
+        {
             userDefaults.set(legacyData, forKey: wordsKey)
         }
 
@@ -89,15 +90,31 @@ class LocalStorageManager: ObservableObject {
     }
 
     func appendSubmission(_ submission: WordImportSubmission) {
-        WordImportSubmissionQueue.append(submission, to: userDefaults)
+        do {
+            try WordImportSubmissionQueue.append(
+                submission,
+                baseDirectory: WordImportSubmissionQueue.defaultBaseDirectory(),
+                legacyDefaults: userDefaults
+            )
+            errorMessage = nil
+        } catch {
+            errorMessage = "保存导入记录失败，请重试。"
+        }
     }
 
     func loadSubmissions() -> [WordImportSubmission] {
-        WordImportSubmissionQueue.load(from: userDefaults)
+        WordImportSubmissionQueue.load(
+            baseDirectory: WordImportSubmissionQueue.defaultBaseDirectory(),
+            legacyDefaults: userDefaults
+        )
     }
 
     func removeSubmissions(payloadIDs: Set<UUID>) {
-        WordImportSubmissionQueue.remove(payloadIDs, from: userDefaults)
+        try? WordImportSubmissionQueue.remove(
+            payloadIDs,
+            baseDirectory: WordImportSubmissionQueue.defaultBaseDirectory(),
+            legacyDefaults: userDefaults
+        )
     }
 
     // MARK: - 添加单个单词

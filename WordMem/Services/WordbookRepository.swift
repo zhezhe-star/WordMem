@@ -24,58 +24,33 @@ struct WordbookRepository {
         save saveAction: (@MainActor (ModelContext) throws -> Void)? = nil
     ) {
         self.modelContext = modelContext
-        self.saveAction = saveAction ?? { context in
-            try context.save()
-        }
+        self.saveAction =
+            saveAction ?? { context in
+                try context.save()
+            }
     }
 
-    func add(_ rawInput: String, using dictionaryService: any DictionaryLookupService) async throws -> AddWordOutcome {
-        let result = try await dictionaryService.lookup(rawInput)
-        let key = result.entry?.normalizedKey ?? WordInputNormalizer.normalizedKey(from: rawInput)
-
-        if let existing = try findEntry(normalizedKey: key) {
-            if result.status != .notFound, existing.lookupStatus == .notFound || existing.lookupStatus == .userSaved {
-                existing.apply(result)
-            }
-
-            let context = WordImportContext(
-                entry: existing,
-                source: .manual,
-                selectedCandidate: rawInput
-            )
-            modelContext.insert(context)
-
-            do {
-                try saveAction(modelContext)
-            } catch {
-                modelContext.rollback()
-                throw error
-            }
-
-            return .duplicate(existing)
-        }
-
-        let entry = WordEntry(originalInput: rawInput, normalizedKey: key, headword: key)
-        let context = WordImportContext(
-            entry: entry,
+    @available(*, deprecated, message: "Use importSubmission(_:using:).")
+    func add(_ rawInput: String, using dictionaryService: any DictionaryLookupService) async throws
+        -> AddWordOutcome
+    {
+        let submission = WordImportSubmission(
             source: .manual,
-            selectedCandidate: rawInput
+            sourceText: rawInput,
+            candidates: [
+                WordImportCandidatePayload(
+                    text: rawInput,
+                    normalizedKey: WordInputNormalizer.normalizedKey(from: rawInput)
+                )
+            ],
+            metadata: ["channel": WordImportSource.manual.rawValue]
         )
-        modelContext.insert(entry)
-        // iOS 27 SwiftData can reset values assigned before insert, so enrich after registration.
-        entry.apply(result)
-        modelContext.insert(context)
-
-        do {
-            try saveAction(modelContext)
-        } catch {
-            modelContext.rollback()
-            throw error
-        }
-
-        return .added(entry)
+        let outcomes = try await importSubmission(submission, using: dictionaryService)
+        guard let outcome = outcomes.first else { throw WordImportError.emptySelection }
+        return outcome
     }
 
+    @available(*, deprecated, message: "Use importSubmission(_:using:).")
     func importWords(
         _ rawWords: [String],
         source: WordImportSource,
@@ -84,46 +59,33 @@ struct WordbookRepository {
         recognizedText: String? = nil,
         using dictionaryService: any DictionaryLookupService
     ) async throws -> [AddWordOutcome] {
-        let candidates = rawWords.map {
-            WordImportCandidatePayload(
-                text: $0,
-                normalizedKey: WordInputNormalizer.normalizedKey(from: $0)
-            )
-        }
-        return try await importCandidates(
-            candidates,
+        let submission = WordImportSubmission(
             source: source,
-            sourceText: sourceText,
-            imageData: imageData,
+            sourceText: sourceText ?? "",
             recognizedText: recognizedText,
-            submissionMetadata: [:],
-            payloadID: nil,
-            schemaVersion: nil,
-            createdAt: nil,
-            using: dictionaryService
+            imageData: imageData,
+            candidates: rawWords.map {
+                WordImportCandidatePayload(
+                    text: $0,
+                    normalizedKey: WordInputNormalizer.normalizedKey(from: $0)
+                )
+            }
         )
+        return try await importSubmission(submission, using: dictionaryService)
     }
 
     func importSubmission(
         _ submission: WordImportSubmission,
         using dictionaryService: any DictionaryLookupService
     ) async throws -> [AddWordOutcome] {
-        guard !submission.candidates.isEmpty else {
-            throw WordImportError.emptySelection
-        }
-
-        let candidates = submission.candidates.map { candidate in
-            var normalized = candidate
-            normalized.normalizedKey = WordInputNormalizer.normalizedKey(from: candidate.text)
-                .replacingOccurrences(of: "'", with: "")
-            return normalized
-        }
+        let candidates = normalizedSubmissionCandidates(in: submission)
+        guard !candidates.isEmpty else { throw WordImportError.emptySelection }
 
         return try await importCandidates(
             candidates,
             source: submission.source,
             sourceText: submission.sourceText,
-            imageData: nil,
+            imageData: submission.imageData,
             recognizedText: submission.recognizedText,
             submissionMetadata: submission.metadata,
             payloadID: submission.payloadID,
@@ -131,6 +93,38 @@ struct WordbookRepository {
             createdAt: submission.createdAt,
             using: dictionaryService
         )
+    }
+
+    func hasCompletedImport(_ submission: WordImportSubmission) throws -> Bool {
+        let expectedIDs = Set(normalizedSubmissionCandidates(in: submission).map(\.payloadID))
+        guard !expectedIDs.isEmpty else { return false }
+
+        let contexts = try modelContext.fetch(FetchDescriptor<WordImportContext>())
+        let actualIDs = Set<UUID>(
+            contexts.compactMap { context -> UUID? in
+                guard context.submissionPayloadID == submission.payloadID else { return nil }
+                return context.candidatePayloadID
+            }
+        )
+        return expectedIDs.isSubset(of: actualIDs)
+    }
+
+    private func normalizedSubmissionCandidates(
+        in submission: WordImportSubmission
+    ) -> [WordImportCandidatePayload] {
+        var ordered: [WordImportCandidatePayload] = []
+        var seenKeys = Set<String>()
+
+        for candidate in submission.candidates {
+            let normalizedKey = WordInputNormalizer.normalizedKey(from: candidate.text)
+                .replacingOccurrences(of: "'", with: "")
+            guard !normalizedKey.isEmpty, seenKeys.insert(normalizedKey).inserted else { continue }
+            var normalized = candidate
+            normalized.normalizedKey = normalizedKey
+            ordered.append(normalized)
+        }
+
+        return ordered
     }
 
     private func importCandidates(
@@ -168,15 +162,17 @@ struct WordbookRepository {
         do {
             for (index, lookup) in lookups.enumerated() {
                 let initialKey = orderedInputs[index].initialKey
-                let key = lookup.result.entry?.normalizedKey
+                let key =
+                    lookup.result.entry?.normalizedKey
                     ?? WordInputNormalizer.normalizedKey(from: lookup.input.text)
 
                 if let existing = try findEntry(normalizedKey: key) {
-                        if lookup.result.status != .notFound,
-                           existing.lookupStatus == .notFound || existing.lookupStatus == .userSaved {
-                            existing.apply(lookup.result)
-                        }
-                        applySuppliedFields(lookup.input, to: existing)
+                    if lookup.result.status != .notFound,
+                        existing.lookupStatus == .notFound || existing.lookupStatus == .userSaved
+                    {
+                        existing.apply(lookup.result)
+                    }
+                    applySuppliedFields(lookup.input, to: existing)
 
                     insertImportContext(
                         for: existing,
@@ -227,22 +223,25 @@ struct WordbookRepository {
         }
     }
 
+    @available(*, deprecated, message: "Use importSubmission(_:using:).")
     func addDefaultAppImport(
         _ rawInput: String,
         originalText: String,
         using dictionaryService: any DictionaryLookupService
     ) async throws -> AddWordOutcome {
-        let outcomes = try await importWords(
-            [rawInput],
+        let submission = WordImportSubmission(
             source: .defaultApp,
             sourceText: originalText,
-            using: dictionaryService
+            candidates: [
+                WordImportCandidatePayload(
+                    text: rawInput,
+                    normalizedKey: WordInputNormalizer.normalizedKey(from: rawInput)
+                )
+            ],
+            metadata: ["channel": WordImportSource.defaultApp.rawValue]
         )
-
-        guard let outcome = outcomes.first else {
-            throw WordImportError.emptySelection
-        }
-
+        let outcomes = try await importSubmission(submission, using: dictionaryService)
+        guard let outcome = outcomes.first else { throw WordImportError.emptySelection }
         return outcome
     }
 
@@ -291,6 +290,8 @@ struct WordbookRepository {
     ) {
         var metadata: [String: String] = [:]
         metadata["candidateLength"] = "\(input.text.count)"
+        metadata["submittedNormalizedKey"] = input.normalizedKey
+        metadata["candidatePayloadID"] = input.payloadID.uuidString
         submissionMetadata.forEach { metadata[$0.key] = $0.value }
         input.metadata.forEach { metadata[$0.key] = $0.value }
         if let payloadID {
@@ -304,6 +305,9 @@ struct WordbookRepository {
         }
         if let note = input.userNote, !note.isEmpty {
             metadata["userNote"] = note
+        }
+        if let example = input.userExample, !example.isEmpty {
+            metadata["userExample"] = example
         }
         if let sourceText {
             metadata["sourceTextLength"] = "\(sourceText.count)"
@@ -320,9 +324,12 @@ struct WordbookRepository {
                 entry: entry,
                 source: source,
                 sourceText: sourceText,
-                    selectedCandidate: input.text,
+                selectedCandidate: input.text,
                 recognizedText: recognizedText,
                 imageData: imageData,
+                submissionPayloadID: payloadID,
+                candidatePayloadID: input.payloadID,
+                payloadSchemaVersion: schemaVersion,
                 metadata: metadata
             )
         )
@@ -341,7 +348,8 @@ struct WordbookRepository {
     }
 
     private func applySuppliedFields(_ candidate: WordImportCandidatePayload, to entry: WordEntry) {
-        let translation = candidate.userTranslation?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let translation =
+            candidate.userTranslation?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let phonetic = candidate.userPhonetic?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let example = candidate.userExample?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
 
@@ -352,7 +360,7 @@ struct WordbookRepository {
             entry.phonetic = phonetic
         }
         if !example.isEmpty {
-            entry.legacyExample = example
+            entry.userExample = example
         }
     }
 }
@@ -360,35 +368,76 @@ struct WordbookRepository {
 @MainActor
 enum WordImportSubmissionMigrator {
     static func processPendingSubmissions(
-        defaults: UserDefaults,
+        baseDirectory base: URL? = nil,
+        legacyDefaults: UserDefaults? = nil,
         into modelContext: ModelContext,
         dictionaryService: any DictionaryLookupService
-    ) async throws {
-        let submissions = WordImportSubmissionQueue.load(from: defaults)
-            .sorted {
-                if $0.createdAt != $1.createdAt {
-                    $0.createdAt < $1.createdAt
-                } else {
-                    $0.payloadID.uuidString < $1.payloadID.uuidString
-                }
+    ) async throws -> WordImportSubmissionMigrationResult {
+        let snapshot = try WordImportSubmissionQueue.snapshot(
+            baseDirectory: base,
+            legacyDefaults: legacyDefaults
+        )
+        let repository = WordbookRepository(modelContext: modelContext)
+        var result = WordImportSubmissionMigrationResult(
+            malformedQuarantinedCount: snapshot.malformedCount,
+            futureSchemaQuarantinedCount: snapshot.futureSchemaCount
+        )
+
+        for submission in snapshot.pending.sorted(by: orderSubmission) {
+            if try repository.hasCompletedImport(submission) {
+                result.skippedReplayedCount += 1
+                try WordImportSubmissionQueue.remove(
+                    [submission.payloadID],
+                    baseDirectory: base,
+                    legacyDefaults: legacyDefaults
+                )
+                continue
             }
 
-        var processedIDs = Set<UUID>()
-        do {
-            for submission in submissions {
-                _ = try await WordbookRepository(modelContext: modelContext).importSubmission(
-                    submission,
-                    using: dictionaryService
-                )
-                processedIDs.insert(submission.payloadID)
-            }
-        } catch {
-            WordImportSubmissionQueue.remove(processedIDs, from: defaults)
-            throw error
+            let outcomes = try await repository.importSubmission(
+                submission,
+                using: dictionaryService
+            )
+            result.importedPayloadCount += 1
+            result.processedCandidateCount += outcomes.count
+            try WordImportSubmissionQueue.remove(
+                [submission.payloadID],
+                baseDirectory: base,
+                legacyDefaults: legacyDefaults
+            )
         }
 
-        WordImportSubmissionQueue.remove(processedIDs, from: defaults)
+        return result
     }
+}
+
+@MainActor
+struct WordImportSubmissionMigrationResult: Equatable {
+    var importedPayloadCount = 0
+    var processedCandidateCount = 0
+    var skippedReplayedCount = 0
+    var malformedQuarantinedCount = 0
+    var futureSchemaQuarantinedCount = 0
+
+    var attentionMessage: String? {
+        WordImportSubmissionQueue.attentionMessage(
+            for: WordImportQueueSnapshot(
+                pending: [],
+                malformedCount: malformedQuarantinedCount,
+                futureSchemaCount: futureSchemaQuarantinedCount
+            )
+        )
+    }
+}
+
+private func orderSubmission(
+    _ left: WordImportSubmission,
+    _ right: WordImportSubmission
+) -> Bool {
+    if left.createdAt != right.createdAt {
+        return left.createdAt < right.createdAt
+    }
+    return left.payloadID.uuidString < right.payloadID.uuidString
 }
 
 enum WordImportError: Error, Equatable {
@@ -398,6 +447,41 @@ enum WordImportError: Error, Equatable {
 @MainActor
 enum WordImportContextMigrator {
     static let backfillCompletedKey = "wordImportContextEntryIDBackfill.v1.completed"
+    static let submissionIdentityBackfillCompletedKey =
+        "wordImportSubmissionIdentityBackfill.v1.completed"
+
+    static func backfillSubmissionIdentity(
+        in modelContext: ModelContext,
+        defaults: UserDefaults = .standard,
+        save saveAction: ((ModelContext) throws -> Void)? = nil
+    ) throws {
+        guard !defaults.bool(forKey: submissionIdentityBackfillCompletedKey) else { return }
+        let contexts = try modelContext.fetch(FetchDescriptor<WordImportContext>())
+        var didChange = false
+
+        for context in contexts where context.submissionPayloadID == nil {
+            guard let rawID = context.metadata["payloadID"],
+                let payloadID = UUID(uuidString: rawID)
+            else { continue }
+            context.submissionPayloadID = payloadID
+            context.payloadSchemaVersion = context.metadata["payloadSchemaVersion"].flatMap(
+                Int.init)
+            didChange = true
+        }
+
+        guard didChange else {
+            defaults.set(true, forKey: submissionIdentityBackfillCompletedKey)
+            return
+        }
+        let performSave = saveAction ?? { context in try context.save() }
+        do {
+            try performSave(modelContext)
+        } catch {
+            modelContext.rollback()
+            throw error
+        }
+        defaults.set(true, forKey: submissionIdentityBackfillCompletedKey)
+    }
 
     static func backfillEntryIDs(
         in modelContext: ModelContext,
@@ -424,9 +508,10 @@ enum WordImportContextMigrator {
             return
         }
 
-        let performSave = saveAction ?? { context in
-            try context.save()
-        }
+        let performSave =
+            saveAction ?? { context in
+                try context.save()
+            }
         do {
             try performSave(migrationContext)
         } catch {
