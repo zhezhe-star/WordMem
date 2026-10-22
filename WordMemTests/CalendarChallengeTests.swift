@@ -92,7 +92,11 @@ final class CalendarChallengeTests: XCTestCase {
         let questions = service.questions(on: base, from: words)
         XCTAssertEqual(questions.count, 5)
         XCTAssertEqual(Set(questions.map(\.wordID)), Set(words.map(\.id)))
-        XCTAssertEqual(Set(questions.map(\.form)).count >= 3, true)
+        XCTAssertEqual(
+            Set(questions.map(\.form)).count >= 3,
+            true,
+            "\(questions.map { ($0.target, $0.form, $0.exampleText ?? "nil") })"
+        )
 
         let repeatedQuestions = service.questions(on: base, from: words)
         XCTAssertEqual(questions, repeatedQuestions)

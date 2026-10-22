@@ -273,9 +273,9 @@ final class CalendarChallengeService: ObservableObject {
             availableForms.insert(.exampleCloze, at: min(3, availableForms.count))
         }
 
-        let rotation = Int(stableSeed(seedFor: word.id.uuidString) % UInt64(availableForms.count))
-        let rotatedForms = Array(availableForms[rotation...] + availableForms[..<rotation])
-        let form = rotatedForms[index % rotatedForms.count]
+        // Cycling by the deterministic due-word order guarantees question-type
+        // variety without coupling coverage to random UUID values.
+        let form = availableForms[index % availableForms.count]
         let distractors = distractorTranslationsAndWords(for: word, allWords: allWords, form: form)
 
         switch form {
