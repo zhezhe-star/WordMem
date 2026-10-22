@@ -124,6 +124,22 @@ final class WordbookRepositoryTests: XCTestCase {
 
 @MainActor
 final class LegacyWordbookMigrationTests: XCTestCase {
+    func testTranslationSourceIsTokenizedIntoIndividualWordChipsOnly() {
+        XCTAssertEqual(
+            TranslationWordTokenizer.wordChips(from: "The serendipitous, moon-like idea!"),
+            ["The", "serendipitous", "moon-like", "idea"]
+        )
+        XCTAssertEqual(
+            TranslationWordTokenizer.wordChips(from: "  don't\tstop\nnow  "),
+            ["don't", "stop", "now"]
+        )
+        XCTAssertEqual(
+            TranslationWordTokenizer.wordChips(from: "Run run, run!"),
+            ["Run", "run"]
+        )
+        XCTAssertEqual(TranslationWordTokenizer.wordChips(from: "123 🙂 ..."), [])
+    }
+
     func testExistingUserDefaultsWordsMigrateOnceIntoSwiftData() async throws {
         let suiteName = "WordMemMigrationTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
@@ -157,6 +173,7 @@ final class LegacyWordbookMigrationTests: XCTestCase {
         XCTAssertEqual(Set(entries.map(\.headword)), ["serendipity", "Run"])
         XCTAssertTrue(entries.allSatisfy { $0.lookupStatus == .notFound })
         XCTAssertTrue(defaults.data(forKey: "saved_words.backup.beforeSwiftDataMigration") == sourceData)
+        XCTAssertNil(defaults.data(forKey: "saved_words"))
         XCTAssertTrue(defaults.bool(forKey: LegacyWordbookMigrator.migrationKey))
 
         let migratedWord = try XCTUnwrap(entries.first { $0.normalizedKey == "serendipity" })
@@ -174,6 +191,30 @@ final class LegacyWordbookMigrationTests: XCTestCase {
         XCTAssertEqual(enrichedWord.userTranslation, "跑")
         XCTAssertEqual(enrichedWord.translation, "跑；奔跑")
         XCTAssertEqual(enrichedWord.headword, "run")
+    }
+
+    func testSavedWordsCreatedAfterMigrationImportOnNextMigration() async throws {
+        let suiteName = "WordMemMigrationTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        defaults.set(true, forKey: LegacyWordbookMigrator.migrationKey)
+        let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: WordEntry.self, configurations: configuration)
+        let context = ModelContext(container)
+
+        let newWord = WordData(word: "postponed", translation: "延期")
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        defaults.set(try encoder.encode([newWord]), forKey: "saved_words")
+
+        try LegacyWordbookMigrator.migrateIfNeeded(defaults: defaults, into: context)
+
+        let entries = try context.fetch(FetchDescriptor<WordEntry>())
+        XCTAssertEqual(entries.map(\.normalizedKey), ["postponed"])
+        XCTAssertEqual(entries.first?.userTranslation, "延期")
+        XCTAssertNil(defaults.data(forKey: "saved_words"))
+        XCTAssertTrue(defaults.bool(forKey: LegacyWordbookMigrator.migrationKey))
     }
 }
 
