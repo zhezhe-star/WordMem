@@ -211,22 +211,26 @@ private struct ShareCardView: View {
         let normalizedNote = noteText.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedPhonetic = phoneticText.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedExample = exampleText.trimmingCharacters(in: .whitespacesAndNewlines)
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
 
-        let word = WordData(
-            word: normalizedWord,
-            translation: normalizedMeaning,
-            phonetic: normalizedPhonetic.isEmpty ? nil : normalizedPhonetic,
-            createDateString: formatter.string(from: Date()),
-            exampleSentence: normalizedExample.isEmpty ? nil : normalizedExample,
-            note: normalizedNote.isEmpty ? nil : normalizedNote
+        let candidate = WordImportCandidatePayload(
+            text: normalizedWord,
+            normalizedKey: normalizedWord.lowercased(),
+            userTranslation: normalizedMeaning,
+            userPhonetic: normalizedPhonetic.isEmpty ? nil : normalizedPhonetic,
+            userExample: normalizedExample.isEmpty ? nil : normalizedExample,
+            userNote: normalizedNote.isEmpty ? nil : normalizedNote
         )
 
-        storageManager.addWord(word)
+        let submission = WordImportSubmission(
+            source: .shareExtension,
+            sourceText: sourceText,
+            recognizedText: sourceText,
+            candidates: [candidate],
+            metadata: ["channel": "share_extension"]
+        )
+        storageManager.appendSubmission(submission)
         status = .saved
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
-            storageManager.loadWords()
             onClose()
         }
     }

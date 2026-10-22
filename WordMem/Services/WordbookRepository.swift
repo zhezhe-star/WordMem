@@ -84,20 +84,81 @@ struct WordbookRepository {
         recognizedText: String? = nil,
         using dictionaryService: any DictionaryLookupService
     ) async throws -> [AddWordOutcome] {
-        var orderedInputs: [(input: String, initialKey: String)] = []
-        var seenKeys = Set<String>()
+        let candidates = rawWords.map {
+            WordImportCandidatePayload(
+                text: $0,
+                normalizedKey: WordInputNormalizer.normalizedKey(from: $0)
+            )
+        }
+        return try await importCandidates(
+            candidates,
+            source: source,
+            sourceText: sourceText,
+            imageData: imageData,
+            recognizedText: recognizedText,
+            submissionMetadata: [:],
+            payloadID: nil,
+            schemaVersion: nil,
+            createdAt: nil,
+            using: dictionaryService
+        )
+    }
 
-        for rawWord in rawWords {
-            let initialKey = WordInputNormalizer.normalizedKey(from: rawWord)
-                .replacingOccurrences(of: "'", with: "")
-            guard !initialKey.isEmpty, seenKeys.insert(initialKey).inserted else { continue }
-            orderedInputs.append((rawWord, initialKey))
+    func importSubmission(
+        _ submission: WordImportSubmission,
+        using dictionaryService: any DictionaryLookupService
+    ) async throws -> [AddWordOutcome] {
+        guard !submission.candidates.isEmpty else {
+            throw WordImportError.emptySelection
         }
 
-        var lookups: [(input: String, result: DictionaryLookupResult)] = []
+        let candidates = submission.candidates.map { candidate in
+            var normalized = candidate
+            normalized.normalizedKey = WordInputNormalizer.normalizedKey(from: candidate.text)
+                .replacingOccurrences(of: "'", with: "")
+            return normalized
+        }
+
+        return try await importCandidates(
+            candidates,
+            source: submission.source,
+            sourceText: submission.sourceText,
+            imageData: nil,
+            recognizedText: submission.recognizedText,
+            submissionMetadata: submission.metadata,
+            payloadID: submission.payloadID,
+            schemaVersion: submission.schemaVersion,
+            createdAt: submission.createdAt,
+            using: dictionaryService
+        )
+    }
+
+    private func importCandidates(
+        _ structuredCandidates: [WordImportCandidatePayload],
+        source: WordImportSource,
+        sourceText: String?,
+        imageData: Data?,
+        recognizedText: String?,
+        submissionMetadata: [String: String],
+        payloadID: UUID?,
+        schemaVersion: Int?,
+        createdAt: Date?,
+        using dictionaryService: any DictionaryLookupService
+    ) async throws -> [AddWordOutcome] {
+        var orderedInputs: [(input: WordImportCandidatePayload, initialKey: String)] = []
+        var seenKeys = Set<String>()
+
+        for candidate in structuredCandidates {
+            let initialKey = WordInputNormalizer.normalizedKey(from: candidate.text)
+                .replacingOccurrences(of: "'", with: "")
+            guard !initialKey.isEmpty, seenKeys.insert(initialKey).inserted else { continue }
+            orderedInputs.append((candidate, initialKey))
+        }
+
+        var lookups: [(input: WordImportCandidatePayload, result: DictionaryLookupResult)] = []
 
         for candidate in orderedInputs {
-            let result = try await dictionaryService.lookup(candidate.input)
+            let result = try await dictionaryService.lookup(candidate.input.text)
             lookups.append((candidate.input, result))
         }
 
@@ -108,12 +169,14 @@ struct WordbookRepository {
             for (index, lookup) in lookups.enumerated() {
                 let initialKey = orderedInputs[index].initialKey
                 let key = lookup.result.entry?.normalizedKey
-                    ?? WordInputNormalizer.normalizedKey(from: lookup.input)
+                    ?? WordInputNormalizer.normalizedKey(from: lookup.input.text)
 
                 if let existing = try findEntry(normalizedKey: key) {
-                    if lookup.result.status != .notFound, existing.lookupStatus == .notFound {
-                        existing.apply(lookup.result)
-                    }
+                        if lookup.result.status != .notFound,
+                           existing.lookupStatus == .notFound || existing.lookupStatus == .userSaved {
+                            existing.apply(lookup.result)
+                        }
+                        applySuppliedFields(lookup.input, to: existing)
 
                     insertImportContext(
                         for: existing,
@@ -121,25 +184,34 @@ struct WordbookRepository {
                         source: source,
                         sourceText: sourceText,
                         imageData: imageData,
-                        recognizedText: recognizedText
+                        recognizedText: recognizedText,
+                        submissionMetadata: submissionMetadata,
+                        payloadID: payloadID,
+                        schemaVersion: schemaVersion,
+                        createdAt: createdAt
                     )
                     outcomeByInitialKey[initialKey] = .duplicate(existing)
                 } else {
                     let entry = WordEntry(
-                        originalInput: lookup.input,
+                        originalInput: lookup.input.text,
                         normalizedKey: key,
                         headword: key
                     )
                     modelContext.insert(entry)
                     // See add(_:using:) for the iOS 27 SwiftData registration workaround.
                     entry.apply(lookup.result)
+                    applySuppliedFields(lookup.input, to: entry)
                     insertImportContext(
                         for: entry,
                         input: lookup.input,
                         source: source,
                         sourceText: sourceText,
                         imageData: imageData,
-                        recognizedText: recognizedText
+                        recognizedText: recognizedText,
+                        submissionMetadata: submissionMetadata,
+                        payloadID: payloadID,
+                        schemaVersion: schemaVersion,
+                        createdAt: createdAt
                     )
                     outcomeByInitialKey[initialKey] = .added(entry)
                 }
@@ -207,14 +279,32 @@ struct WordbookRepository {
 
     private func insertImportContext(
         for entry: WordEntry,
-        input: String,
+        input: WordImportCandidatePayload,
         source: WordImportSource,
         sourceText: String?,
         imageData: Data?,
-        recognizedText: String?
+        recognizedText: String?,
+        submissionMetadata: [String: String],
+        payloadID: UUID?,
+        schemaVersion: Int?,
+        createdAt: Date?
     ) {
         var metadata: [String: String] = [:]
-        metadata["candidateLength"] = "\(input.count)"
+        metadata["candidateLength"] = "\(input.text.count)"
+        submissionMetadata.forEach { metadata[$0.key] = $0.value }
+        input.metadata.forEach { metadata[$0.key] = $0.value }
+        if let payloadID {
+            metadata["payloadID"] = payloadID.uuidString
+        }
+        if let schemaVersion {
+            metadata["payloadSchemaVersion"] = "\(schemaVersion)"
+        }
+        if let createdAt {
+            metadata["submissionCreatedAt"] = ISO8601DateFormatter().string(from: createdAt)
+        }
+        if let note = input.userNote, !note.isEmpty {
+            metadata["userNote"] = note
+        }
         if let sourceText {
             metadata["sourceTextLength"] = "\(sourceText.count)"
         }
@@ -230,7 +320,7 @@ struct WordbookRepository {
                 entry: entry,
                 source: source,
                 sourceText: sourceText,
-                selectedCandidate: input,
+                    selectedCandidate: input.text,
                 recognizedText: recognizedText,
                 imageData: imageData,
                 metadata: metadata
@@ -249,9 +339,59 @@ struct WordbookRepository {
             )
         }
     }
+
+    private func applySuppliedFields(_ candidate: WordImportCandidatePayload, to entry: WordEntry) {
+        let translation = candidate.userTranslation?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let phonetic = candidate.userPhonetic?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let example = candidate.userExample?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+        if !translation.isEmpty {
+            entry.userTranslation = translation
+        }
+        if !phonetic.isEmpty {
+            entry.phonetic = phonetic
+        }
+        if !example.isEmpty {
+            entry.legacyExample = example
+        }
+    }
 }
 
-enum WordImportError: Error {
+@MainActor
+enum WordImportSubmissionMigrator {
+    static func processPendingSubmissions(
+        defaults: UserDefaults,
+        into modelContext: ModelContext,
+        dictionaryService: any DictionaryLookupService
+    ) async throws {
+        let submissions = WordImportSubmissionQueue.load(from: defaults)
+            .sorted {
+                if $0.createdAt != $1.createdAt {
+                    $0.createdAt < $1.createdAt
+                } else {
+                    $0.payloadID.uuidString < $1.payloadID.uuidString
+                }
+            }
+
+        var processedIDs = Set<UUID>()
+        do {
+            for submission in submissions {
+                _ = try await WordbookRepository(modelContext: modelContext).importSubmission(
+                    submission,
+                    using: dictionaryService
+                )
+                processedIDs.insert(submission.payloadID)
+            }
+        } catch {
+            WordImportSubmissionQueue.remove(processedIDs, from: defaults)
+            throw error
+        }
+
+        WordImportSubmissionQueue.remove(processedIDs, from: defaults)
+    }
+}
+
+enum WordImportError: Error, Equatable {
     case emptySelection
 }
 

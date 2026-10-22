@@ -4,6 +4,7 @@ import SwiftUI
 class LocalStorageManager: ObservableObject {
     static let appGroupSuiteName = "group.com.zhezhe.wordmem"
     static let migrationCompletedKey = "did_migrate_standard_saved_words"
+    static let pendingSubmissionsKey = "pending_word_import_submissions.v1"
 
     private let userDefaults: UserDefaults
     private let wordsKey: String
@@ -85,6 +86,18 @@ class LocalStorageManager: ObservableObject {
             errorMessage = "加载失败: \(error.localizedDescription)"
             words = []
         }
+    }
+
+    func appendSubmission(_ submission: WordImportSubmission) {
+        WordImportSubmissionQueue.append(submission, to: userDefaults)
+    }
+
+    func loadSubmissions() -> [WordImportSubmission] {
+        WordImportSubmissionQueue.load(from: userDefaults)
+    }
+
+    func removeSubmissions(payloadIDs: Set<UUID>) {
+        WordImportSubmissionQueue.remove(payloadIDs, from: userDefaults)
     }
 
     // MARK: - 添加单个单词

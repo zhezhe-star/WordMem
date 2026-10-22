@@ -255,6 +255,11 @@ struct WordbookView: View {
         let extensionSharedDefaults = UserDefaults(suiteName: "group.com.zhezhe.wordmem") ?? .standard
         await migrateLegacyWordbook()
         do {
+            try await WordImportSubmissionMigrator.processPendingSubmissions(
+                defaults: extensionSharedDefaults,
+                into: modelContext,
+                dictionaryService: dictionaryService
+            )
             try WordImportContextMigrator.backfillEntryIDs(
                 in: modelContext,
                 defaults: extensionSharedDefaults
@@ -583,6 +588,23 @@ private struct WordImportContextView: View {
                 Text(sourceText)
                     .font(.subheadline)
                     .lineLimit(4)
+            }
+
+            if let recognizedText = context.recognizedText, !recognizedText.isEmpty,
+               recognizedText != context.sourceText {
+                Text("识别文本")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+
+                Text(recognizedText)
+                    .font(.subheadline)
+                    .lineLimit(4)
+            }
+
+            if let note = context.metadata["userNote"], !note.isEmpty {
+                Text("记忆笔记：\(note)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             if let imageData = context.imageData, !imageData.isEmpty,

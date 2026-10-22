@@ -230,19 +230,28 @@ struct WordPickerView: View {
     }
 
     private func save() {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        for chip in selected.sorted() {
+        let sourceOrder = chips.enumerated().reduce(into: [String: String]()) { result, item in
+            result[item.element] = "\(item.offset)"
+        }
+        let candidates = selected.sorted().map { chip in
             let meaning = meanings[chip]
                 ?? (chip == TranslationWordTokenizer.normalizedPhrase(from: sourceText) ? phraseTranslation : nil)
                 ?? ""
-            let word = WordData(
-                word: chip,
-                translation: meaning.trimmingCharacters(in: .whitespacesAndNewlines),
-                createDateString: formatter.string(from: Date())
+            return WordImportCandidatePayload(
+                text: chip,
+                normalizedKey: chip.lowercased(),
+                userTranslation: meaning.trimmingCharacters(in: .whitespacesAndNewlines),
+                metadata: ["sourceOrder": sourceOrder[chip] ?? ""]
             )
-            storage.addWord(word)
         }
+        let submission = WordImportSubmission(
+            source: .translationProvider,
+            sourceText: sourceText,
+            recognizedText: sourceText,
+            candidates: candidates,
+            metadata: ["channel": "translation_provider"]
+        )
+        storage.appendSubmission(submission)
         onSave()
     }
 }
