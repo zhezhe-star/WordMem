@@ -57,6 +57,7 @@ private struct ShareCardView: View {
     @State private var exampleText = ""
     @State private var showAdvancedFields = false
     @State private var status: Status = .extracting
+    @State private var persistenceError: String?
 
     enum Status: Equatable {
         case extracting
@@ -77,6 +78,14 @@ private struct ShareCardView: View {
     var body: some View {
         NavigationView {
             Form {
+                if let persistenceError {
+                    Section {
+                        Label(persistenceError, systemImage: "externaldrive.badge.exclamationmark")
+                            .font(.footnote)
+                            .foregroundStyle(.orange)
+                    }
+                }
+
                 Section("原文") {
                     Text(sourceText.isEmpty ? "正在获取分享内容…" : sourceText)
                         .font(.body)
@@ -228,10 +237,16 @@ private struct ShareCardView: View {
             candidates: [candidate],
             metadata: ["channel": "share_extension"]
         )
-        storageManager.appendSubmission(submission)
-        status = .saved
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
-            onClose()
-        }
+        let error = WordImportExtensionSaveService.saveShare(
+            submission,
+            storage: storageManager,
+            onSaved: {
+                status = .saved
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+                    onClose()
+                }
+            }
+        )
+        persistenceError = error
     }
 }

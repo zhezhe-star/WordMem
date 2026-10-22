@@ -7,7 +7,7 @@ struct WordPickerView: View {
     let sourceText: String
     let phraseTranslation: String
     let isPhraseTranslationReady: Bool
-    let storage: LocalStorageManager
+    let storage: any WordImportSubmissionStoring
     let onCancel: () -> Void
     let onSave: () -> Void
 
@@ -16,6 +16,7 @@ struct WordPickerView: View {
     @State private var configuration: TranslationSession.Configuration?
     @State private var isPreparingChips = true
     @State private var hasPreparedChips = false
+    @State private var persistenceError: String?
 
     private var isPreparing: Bool {
         !isPhraseTranslationReady || isPreparingChips
@@ -30,6 +31,12 @@ struct WordPickerView: View {
             topBar
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
+                    if let persistenceError {
+                        Label(persistenceError, systemImage: "externaldrive.badge.exclamationmark")
+                            .font(.footnote)
+                            .foregroundStyle(.orange)
+                    }
+
                     if isPreparing {
                         loadingContent
                     } else {
@@ -71,7 +78,9 @@ struct WordPickerView: View {
             Spacer()
             Button("保存", action: save)
                 .font(.body.weight(.semibold))
-                .foregroundStyle(selected.isEmpty ? AnyShapeStyle(.secondary) : AnyShapeStyle(Color.green))
+                .foregroundStyle(
+                    selected.isEmpty ? AnyShapeStyle(.secondary) : AnyShapeStyle(Color.green)
+                )
                 .disabled(selected.isEmpty || isPreparing)
         }
         .padding(.horizontal, 16)
@@ -191,7 +200,10 @@ struct WordPickerView: View {
                     .font(.body.weight(isSelected ? .semibold : .regular))
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
-                    .background(isSelected ? Color.green.opacity(0.18) : Color(.secondarySystemGroupedBackground))
+                    .background(
+                        isSelected
+                            ? Color.green.opacity(0.18) : Color(.secondarySystemGroupedBackground)
+                    )
                     .overlay(
                         Capsule().stroke(isSelected ? Color.green : Color.clear, lineWidth: 1.5)
                     )
@@ -217,7 +229,9 @@ struct WordPickerView: View {
 
     private func translateChips(with session: TranslationSession) async {
         for chip in chips where meanings[chip] == nil {
-            if chip == TranslationWordTokenizer.normalizedPhrase(from: sourceText), !phraseTranslation.isEmpty {
+            if chip == TranslationWordTokenizer.normalizedPhrase(from: sourceText),
+                !phraseTranslation.isEmpty
+            {
                 meanings[chip] = phraseTranslation
                 continue
             }
@@ -234,8 +248,10 @@ struct WordPickerView: View {
             result[item.element] = "\(item.offset)"
         }
         let candidates = selected.sorted().map { chip in
-            let meaning = meanings[chip]
-                ?? (chip == TranslationWordTokenizer.normalizedPhrase(from: sourceText) ? phraseTranslation : nil)
+            let meaning =
+                meanings[chip]
+                ?? (chip == TranslationWordTokenizer.normalizedPhrase(from: sourceText)
+                    ? phraseTranslation : nil)
                 ?? ""
             return WordImportCandidatePayload(
                 text: chip,
@@ -251,8 +267,11 @@ struct WordPickerView: View {
             candidates: candidates,
             metadata: ["channel": "translation_provider"]
         )
-        storage.appendSubmission(submission)
-        onSave()
+        persistenceError = WordImportExtensionSaveService.saveTranslationProvider(
+            submission,
+            storage: storage,
+            onSaved: onSave
+        )
     }
 }
 
@@ -316,7 +335,9 @@ struct FlowLayout: Layout {
         return CGSize(width: maxWidth == .infinity ? x : maxWidth, height: y + rowHeight)
     }
 
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+    func placeSubviews(
+        in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()
+    ) {
         var x = bounds.minX
         var y = bounds.minY
         var rowHeight: CGFloat = 0

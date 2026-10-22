@@ -176,9 +176,47 @@ enum WordImportQueueError: Error, Equatable {
     case appGroupContainerUnavailable
 }
 
+protocol WordImportSubmissionStoring: AnyObject {
+    @discardableResult
+    func appendSubmission(_ submission: WordImportSubmission) -> Bool
+    var persistenceMessage: String? { get }
+}
+
+@MainActor
+enum WordImportExtensionSaveService {
+    static func saveShare(
+        _ submission: WordImportSubmission,
+        storage: any WordImportSubmissionStoring,
+        onSaved: () -> Void
+    ) -> String? {
+        save(submission, storage: storage, onSaved: onSaved)
+    }
+
+    static func saveTranslationProvider(
+        _ submission: WordImportSubmission,
+        storage: any WordImportSubmissionStoring,
+        onSaved: () -> Void
+    ) -> String? {
+        save(submission, storage: storage, onSaved: onSaved)
+    }
+
+    private static func save(
+        _ submission: WordImportSubmission,
+        storage: any WordImportSubmissionStoring,
+        onSaved: () -> Void
+    ) -> String? {
+        guard storage.appendSubmission(submission) else {
+            return storage.persistenceMessage ?? "保存导入记录失败，请重试。"
+        }
+        onSaved()
+        return nil
+    }
+}
+
 enum WordImportSubmissionQueue {
     static let pendingKey = "pending_word_import_submissions.v1"
-    static let legacyPendingBackupKey = "pending_word_import_submissions.v1.backup.beforeFileQueue"
+    static let legacyPendingBackupKey =
+        "pending_word_import_submissions.v1.backup.beforeFileQueue"
     static let appGroupIdentifier = "group.com.zhezhe.wordmem"
     private static let rootDirectoryName = "word-import-submissions"
 
@@ -209,7 +247,9 @@ enum WordImportSubmissionQueue {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         try encoder.encode(submission).write(
-            to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+            to: url,
+            options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication]
+        )
         try migrateLegacySubmissions(from: legacyDefaults, baseDirectory: base)
     }
 
@@ -223,39 +263,43 @@ enum WordImportSubmissionQueue {
             at: pendingDirectory,
             includingPropertiesForKeys: [.isRegularFileKey]
         )
-        .filter { $0.pathExtension == "json" }
+        .filter { url in
+            let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
+            return values?.isRegularFile == true && url.pathExtension == "json"
+        }
         .sorted { $0.lastPathComponent < $1.lastPathComponent }
 
         var pending: [WordImportSubmission] = []
-        var malformedCount = 0
-        var futureSchemaCount = 0
-
         for file in files {
-            let data = try Data(contentsOf: file)
-            if let futureURL = try quarantineIfFutureSchema(
+            let data: Data
+            do {
+                data = try Data(contentsOf: file)
+            } catch {
+                try quarantineFile(at: file, directory: .malformed, baseDirectory: base)
+                continue
+            }
+
+            if try quarantineIfFutureSchema(
                 data,
                 sourceURL: file,
                 baseDirectory: base
-            ) {
-                _ = futureURL
+            ) != nil {
                 continue
             }
 
             do {
                 pending.append(try decodeSubmission(from: data))
             } catch {
-                try quarantine(
-                    data,
-                    sourceFilename: file.lastPathComponent,
-                    directory: .malformed,
-                    baseDirectory: base
-                )
+                try quarantineFile(at: file, directory: .malformed, baseDirectory: base)
             }
         }
 
-        malformedCount = try existingFileCount(in: directory(.malformed, baseDirectory: base))
-        futureSchemaCount = try existingFileCount(in: directory(.futureSchema, baseDirectory: base))
-
+        let malformedCount = try existingFileCount(
+            in: directory(.malformed, baseDirectory: base)
+        )
+        let futureSchemaCount = try existingFileCount(
+            in: directory(.futureSchema, baseDirectory: base)
+        )
         return WordImportQueueSnapshot(
             pending: pending,
             malformedCount: malformedCount,
@@ -290,7 +334,10 @@ enum WordImportSubmissionQueue {
             at: url,
             includingPropertiesForKeys: [.isRegularFileKey]
         )
-        .filter { $0.pathExtension == "json" }
+        .filter { url in
+            let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
+            return values?.isRegularFile == true && url.pathExtension == "json"
+        }
         .count
     }
 
@@ -345,33 +392,48 @@ enum WordImportSubmissionQueue {
         guard let version = schemaVersion(in: data),
             version > WordImportSubmission.currentSchemaVersion
         else { return nil }
-        return try quarantine(
-            data, sourceFilename: sourceURL.lastPathComponent, directory: .futureSchema,
-            baseDirectory: baseDirectory)
+        return try quarantineFile(
+            at: sourceURL,
+            directory: .futureSchema,
+            baseDirectory: baseDirectory
+        )
+    }
+
+    private static func uniqueDestination(filename: String, in directory: URL) -> URL {
+        var destination = directory.appendingPathComponent(filename)
+        if FileManager.default.fileExists(atPath: destination.path) {
+            destination = directory.appendingPathComponent("\(UUID().uuidString)-\(filename)")
+        }
+        return destination
     }
 
     @discardableResult
-    private static func quarantine(
-        _ data: Data,
-        sourceFilename: String,
+    private static func quarantineFile(
+        at sourceURL: URL,
         directory targetDirectory: WordImportQueueDirectory,
         baseDirectory: URL?
     ) throws -> URL {
         let destinationDirectory = try directory(targetDirectory, baseDirectory: baseDirectory)
-        var destination = destinationDirectory.appendingPathComponent(sourceFilename)
-        if FileManager.default.fileExists(atPath: destination.path) {
-            destination = destinationDirectory.appendingPathComponent(
-                "\(UUID().uuidString)-\(sourceFilename)"
-            )
-        }
+        let destination = uniqueDestination(
+            filename: sourceURL.lastPathComponent,
+            in: destinationDirectory
+        )
+        try FileManager.default.moveItem(at: sourceURL, to: destination)
+        return destination
+    }
+
+    private static func quarantineData(
+        _ data: Data,
+        sourceFilename: String,
+        directory targetDirectory: WordImportQueueDirectory,
+        baseDirectory: URL?
+    ) throws {
+        let destinationDirectory = try directory(targetDirectory, baseDirectory: baseDirectory)
+        let destination = uniqueDestination(filename: sourceFilename, in: destinationDirectory)
         try data.write(
             to: destination,
-            options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
-        let sourceDirectory = try directory(.pending, baseDirectory: baseDirectory)
-        try FileManager.default.removeItem(
-            at: sourceDirectory.appendingPathComponent(sourceFilename)
+            options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication]
         )
-        return destination
     }
 
     private static func migrateLegacySubmissions(
@@ -382,7 +444,7 @@ enum WordImportSubmissionQueue {
         let objects = ((try? JSONSerialization.jsonObject(with: data)) as? [Any]) ?? []
         for object in objects {
             guard let payloadData = try? JSONSerialization.data(withJSONObject: object) else {
-                try quarantine(object, directory: .malformed, baseDirectory: baseDirectory)
+                try quarantineObject(object, directory: .malformed, baseDirectory: baseDirectory)
                 continue
             }
 
@@ -390,7 +452,7 @@ enum WordImportSubmissionQueue {
             if let version = schemaVersion(in: payloadData),
                 version > WordImportSubmission.currentSchemaVersion
             {
-                try quarantine(
+                try quarantineData(
                     payloadData,
                     sourceFilename: filename(for: payloadID),
                     directory: .futureSchema,
@@ -406,7 +468,7 @@ enum WordImportSubmissionQueue {
                     options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication]
                 )
             } else {
-                try quarantine(
+                try quarantineData(
                     payloadData,
                     sourceFilename: filename(for: payloadID),
                     directory: .malformed,
@@ -427,14 +489,17 @@ enum WordImportSubmissionQueue {
         return id
     }
 
-    private static func quarantine(
+    private static func quarantineObject(
         _ object: Any,
         directory targetDirectory: WordImportQueueDirectory,
         baseDirectory: URL?
     ) throws {
         let data = (try? JSONSerialization.data(withJSONObject: object)) ?? Data()
-        try quarantine(
-            data, sourceFilename: "\(UUID().uuidString).json", directory: targetDirectory,
-            baseDirectory: baseDirectory)
+        try quarantineData(
+            data,
+            sourceFilename: "\(UUID().uuidString).json",
+            directory: targetDirectory,
+            baseDirectory: baseDirectory
+        )
     }
 }

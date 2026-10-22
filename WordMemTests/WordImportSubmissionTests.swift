@@ -671,3 +671,239 @@ final class WordImportQueueHardeningTests: XCTestCase {
         XCTAssertEqual(context.payloadSchemaVersion, 1)
     }
 }
+
+@MainActor
+final class WordImportHardeningFollowUpTests: XCTestCase {
+    private struct Fixture {
+        let baseDirectory: URL
+        let defaults: UserDefaults
+        let defaultsSuite: String
+        let container: ModelContainer
+        let modelContext: ModelContext
+        let repository: WordbookRepository
+        let dictionary: BundledDictionaryLookupService
+    }
+
+    private func makeFixture() throws -> Fixture {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("WordImportFollowUp-\(UUID().uuidString)", isDirectory: true)
+        let suite = "WordImportFollowUp.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(
+            for: WordEntry.self,
+            WordImportContext.self,
+            configurations: configuration
+        )
+        let modelContext = ModelContext(container)
+        return Fixture(
+            baseDirectory: root,
+            defaults: defaults,
+            defaultsSuite: suite,
+            container: container,
+            modelContext: modelContext,
+            repository: WordbookRepository(modelContext: modelContext),
+            dictionary: BundledDictionaryLookupService(
+                catalog: DevelopmentSeedDictionaryCatalog.entries
+            )
+        )
+    }
+
+    private func cleanup(_ fixture: Fixture) {
+        try? FileManager.default.removeItem(at: fixture.baseDirectory)
+        fixture.defaults.removePersistentDomain(forName: fixture.defaultsSuite)
+    }
+
+    private func submission(source: WordImportSource = .shareExtension) -> WordImportSubmission {
+        WordImportSubmission(
+            source: source,
+            sourceText: "The running test.",
+            candidates: [
+                WordImportCandidatePayload(
+                    text: "run",
+                    normalizedKey: "run",
+                    userTranslation: "我的跑"
+                )
+            ]
+        )
+    }
+
+    func testMetadataOnlyPriorImportIsDetectedAndSkippedWithoutDuplicates() async throws {
+        let fixture = try makeFixture()
+        defer { cleanup(fixture) }
+        let payload = submission()
+        let entry = WordEntry(
+            originalInput: "run",
+            normalizedKey: "run",
+            headword: "run",
+            userTranslation: "我的跑"
+        )
+        let context = WordImportContext(
+            entry: entry,
+            source: .shareExtension,
+            sourceText: payload.sourceText,
+            selectedCandidate: "run"
+        )
+        fixture.modelContext.insert(entry)
+        fixture.modelContext.insert(context)
+        context.metadata = [
+            "payloadID": payload.payloadID.uuidString,
+            "payloadSchemaVersion": "1",
+        ]
+        try fixture.modelContext.save()
+        try WordImportContextMigrator.backfillSubmissionIdentity(
+            in: fixture.modelContext,
+            defaults: fixture.defaults
+        )
+        try WordImportSubmissionQueue.append(
+            payload,
+            baseDirectory: fixture.baseDirectory,
+            legacyDefaults: fixture.defaults
+        )
+
+        let result = try await WordImportSubmissionMigrator.processPendingSubmissions(
+            baseDirectory: fixture.baseDirectory,
+            legacyDefaults: fixture.defaults,
+            into: fixture.modelContext,
+            dictionaryService: fixture.dictionary
+        )
+
+        XCTAssertEqual(result.skippedReplayedCount, 1)
+        XCTAssertEqual(result.importedPayloadCount, 0)
+        XCTAssertEqual(try fixture.modelContext.fetch(FetchDescriptor<WordEntry>()).count, 1)
+        XCTAssertEqual(
+            try fixture.modelContext.fetch(FetchDescriptor<WordImportContext>()).count, 1)
+        XCTAssertTrue(
+            try WordImportSubmissionQueue.snapshot(
+                baseDirectory: fixture.baseDirectory,
+                legacyDefaults: fixture.defaults
+            ).pending.isEmpty
+        )
+    }
+
+    func testSnapshotContinuesAfterUnreadablePendingFileAndQuarantinesIt() throws {
+        let fixture = try makeFixture()
+        defer { cleanup(fixture) }
+        let valid = submission()
+        try WordImportSubmissionQueue.append(valid, baseDirectory: fixture.baseDirectory)
+        let unreadable = try WordImportSubmissionQueue.directory(
+            .pending,
+            baseDirectory: fixture.baseDirectory
+        )
+        .appendingPathComponent("unreadable-\(UUID().uuidString).json")
+        try Data("{}".utf8).write(to: unreadable)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0],
+            ofItemAtPath: unreadable.path
+        )
+
+        let snapshot = try WordImportSubmissionQueue.snapshot(
+            baseDirectory: fixture.baseDirectory,
+            legacyDefaults: fixture.defaults
+        )
+
+        XCTAssertEqual(snapshot.pending.map(\.payloadID), [valid.payloadID])
+        XCTAssertEqual(snapshot.malformedCount, 1)
+        XCTAssertEqual(
+            try FileManager.default.contentsOfDirectory(
+                at: WordImportSubmissionQueue.directory(
+                    .malformed,
+                    baseDirectory: fixture.baseDirectory
+                ),
+                includingPropertiesForKeys: nil
+            ).count,
+            1
+        )
+    }
+
+    func testProtectedSubmissionMetadataCannotBeOverwritten() async throws {
+        let fixture = try makeFixture()
+        defer { cleanup(fixture) }
+        var payload = submission()
+        payload.metadata = [
+            "candidatePayloadID": "submission-override",
+            "submittedNormalizedKey": "submission-override",
+        ]
+        payload.candidates[0].metadata = [
+            "candidatePayloadID": "candidate-override",
+            "submittedNormalizedKey": "candidate-override",
+        ]
+
+        _ = try await fixture.repository.importSubmission(payload, using: fixture.dictionary)
+        let context = try XCTUnwrap(
+            fixture.modelContext.fetch(FetchDescriptor<WordImportContext>()).first
+        )
+        XCTAssertEqual(
+            context.metadata["candidatePayloadID"],
+            payload.candidates[0].payloadID.uuidString
+        )
+        XCTAssertEqual(context.metadata["submittedNormalizedKey"], "run")
+    }
+
+    func testShareExtensionPersistenceFailureDoesNotReportSaved() {
+        let storage = FailingSubmissionStorage()
+        var savedCallbackCount = 0
+        let error = WordImportExtensionSaveService.saveShare(
+            submission(),
+            storage: storage,
+            onSaved: { savedCallbackCount += 1 }
+        )
+
+        XCTAssertEqual(savedCallbackCount, 0)
+        XCTAssertEqual(error, "注入的持久化失败")
+        XCTAssertEqual(storage.appendCount, 1)
+    }
+
+    func testTranslationProviderPersistenceFailureDoesNotInvokeSaveCallback() {
+        let storage = FailingSubmissionStorage()
+        var savedCallbackCount = 0
+        let error = WordImportExtensionSaveService.saveTranslationProvider(
+            submission(source: .translationProvider),
+            storage: storage,
+            onSaved: { savedCallbackCount += 1 }
+        )
+
+        XCTAssertEqual(savedCallbackCount, 0)
+        XCTAssertEqual(error, "注入的持久化失败")
+        XCTAssertEqual(storage.appendCount, 1)
+    }
+
+    func testExtensionPersistenceSuccessInvokesOnlySavedCallback() {
+        let storage = SuccessfulSubmissionStorage()
+        var savedCallbackCount = 0
+        let shareError = WordImportExtensionSaveService.saveShare(
+            submission(),
+            storage: storage,
+            onSaved: { savedCallbackCount += 1 }
+        )
+        let providerError = WordImportExtensionSaveService.saveTranslationProvider(
+            submission(source: .translationProvider),
+            storage: storage,
+            onSaved: { savedCallbackCount += 1 }
+        )
+
+        XCTAssertNil(shareError)
+        XCTAssertNil(providerError)
+        XCTAssertEqual(savedCallbackCount, 2)
+    }
+}
+
+private final class FailingSubmissionStorage: WordImportSubmissionStoring {
+    private(set) var appendCount = 0
+    var persistenceMessage: String? { "注入的持久化失败" }
+
+    func appendSubmission(_ submission: WordImportSubmission) -> Bool {
+        appendCount += 1
+        return false
+    }
+}
+
+private final class SuccessfulSubmissionStorage: WordImportSubmissionStoring {
+    private(set) var appendCount = 0
+    var persistenceMessage: String?
+
+    func appendSubmission(_ submission: WordImportSubmission) -> Bool {
+        appendCount += 1
+        return true
+    }
+}

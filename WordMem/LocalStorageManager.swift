@@ -89,7 +89,8 @@ class LocalStorageManager: ObservableObject {
         }
     }
 
-    func appendSubmission(_ submission: WordImportSubmission) {
+    @discardableResult
+    func appendSubmission(_ submission: WordImportSubmission) -> Bool {
         do {
             try WordImportSubmissionQueue.append(
                 submission,
@@ -97,8 +98,10 @@ class LocalStorageManager: ObservableObject {
                 legacyDefaults: userDefaults
             )
             errorMessage = nil
+            return true
         } catch {
             errorMessage = "保存导入记录失败，请重试。"
+            return false
         }
     }
 
@@ -163,4 +166,8 @@ class LocalStorageManager: ObservableObject {
     var wordCount: Int {
         return words.count
     }
+}
+
+extension LocalStorageManager: WordImportSubmissionStoring {
+    var persistenceMessage: String? { errorMessage }
 }

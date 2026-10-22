@@ -99,14 +99,31 @@ struct WordbookRepository {
         let expectedIDs = Set(normalizedSubmissionCandidates(in: submission).map(\.payloadID))
         guard !expectedIDs.isEmpty else { return false }
 
-        let contexts = try modelContext.fetch(FetchDescriptor<WordImportContext>())
+        let payloadID = submission.payloadID
+        let contexts = try modelContext.fetch(
+            FetchDescriptor<WordImportContext>(
+                predicate: #Predicate<WordImportContext> { context in
+                    context.submissionPayloadID == payloadID
+                }
+            )
+        )
         let actualIDs = Set<UUID>(
             contexts.compactMap { context -> UUID? in
-                guard context.submissionPayloadID == submission.payloadID else { return nil }
+                guard context.submissionPayloadID == payloadID else { return nil }
                 return context.candidatePayloadID
             }
         )
-        return expectedIDs.isSubset(of: actualIDs)
+        if expectedIDs.isSubset(of: actualIDs) {
+            return true
+        }
+
+        // Prior unified-import records had payload identity only in metadata, so
+        // candidate UUIDs could not survive backfill. Candidate text plus count
+        // identifies those complete transactions safely.
+        let expected = normalizedSubmissionCandidates(in: submission)
+        let expectedTexts = Set(expected.map(\.text))
+        let actualTexts = Set(contexts.compactMap(\.selectedCandidate))
+        return contexts.count >= expected.count && expectedTexts.isSubset(of: actualTexts)
     }
 
     private func normalizedSubmissionCandidates(
@@ -292,8 +309,14 @@ struct WordbookRepository {
         metadata["candidateLength"] = "\(input.text.count)"
         metadata["submittedNormalizedKey"] = input.normalizedKey
         metadata["candidatePayloadID"] = input.payloadID.uuidString
-        submissionMetadata.forEach { metadata[$0.key] = $0.value }
-        input.metadata.forEach { metadata[$0.key] = $0.value }
+        for (key, value) in submissionMetadata {
+            metadata[key] = value
+        }
+        for (key, value) in input.metadata {
+            metadata[key] = value
+        }
+        metadata["submittedNormalizedKey"] = input.normalizedKey
+        metadata["candidatePayloadID"] = input.payloadID.uuidString
         if let payloadID {
             metadata["payloadID"] = payloadID.uuidString
         }
