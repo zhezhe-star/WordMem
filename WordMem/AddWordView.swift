@@ -60,7 +60,7 @@ struct AddWordView: View {
                         ImportStepHeader(
                             currentStep: currentStep,
                             title: "添加一个单词",
-                            subtitle: "音标、释义和词形会从本地词典自动补充。"
+                            subtitle: "单词保存后，可随时在系统词典中查看释义和发音。"
                         )
 
                         inputCard
@@ -186,7 +186,7 @@ struct AddWordView: View {
                 completion(outcome)
                 dismiss()
             } catch {
-                errorMessage = "本地词典补充失败，请重试。"
+                errorMessage = "保存失败，请重试。"
             }
         }
     }

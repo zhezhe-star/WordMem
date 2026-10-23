@@ -170,12 +170,12 @@ struct TextImportView: View {
 
 #if DEBUG
 #Preview("文本导入 · 空状态") {
-    TextImportView(dictionaryService: BareWordDictionaryLookupService()) { _ in }
+    TextImportView(dictionaryService: SystemDictionaryLookupService()) { _ in }
 }
 
 #Preview("文本导入 · 正常候选") {
     TextImportView(
-        dictionaryService: BareWordDictionaryLookupService(),
+        dictionaryService: SystemDictionaryLookupService(),
         completion: { _ in },
         previewState: ImportPreviewState(
             sourceText: ImportPreviewFixtures.text(count: 8),
@@ -187,7 +187,7 @@ struct TextImportView: View {
 
 #Preview("文本导入 · 55 个候选") {
     TextImportView(
-        dictionaryService: BareWordDictionaryLookupService(),
+        dictionaryService: SystemDictionaryLookupService(),
         completion: { _ in },
         previewState: ImportPreviewState(
             sourceText: ImportPreviewFixtures.text(count: 55),
