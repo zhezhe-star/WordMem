@@ -69,6 +69,19 @@ struct WordImportCandidate: Identifiable, Hashable {
     var id: String { normalizedKey }
 }
 
+enum ImportCandidateAdapter {
+    /// Preserves the app candidate's normalized identity and source order.
+    static func chips(from candidates: [WordImportCandidate]) -> [ImportCandidateChip] {
+        candidates.enumerated().map { offset, candidate in
+            ImportCandidateChip(
+                id: candidate.normalizedKey,
+                text: candidate.text,
+                sourceOrder: offset
+            )
+        }
+    }
+}
+
 struct WordImportSelection: Equatable {
     private(set) var deselectedKeys: Set<String> = []
 

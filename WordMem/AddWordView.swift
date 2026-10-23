@@ -8,6 +8,7 @@ struct AddWordView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @State private var word = ""
+    @State private var selection = ImportChipSelection(chips: [])
     @State private var isSaving = false
     @State private var errorMessage: String?
     @FocusState private var isInputFocused: Bool
@@ -20,58 +21,60 @@ struct AddWordView: View {
         WordInputNormalizer.normalizedKey(from: word)
     }
 
+    private var chips: [ImportCandidateChip] {
+        guard !normalizedInput.isEmpty else { return [] }
+        return [ImportCandidateChip(id: normalizedInput, text: word, sourceOrder: 0)]
+    }
+
+    private var currentStep: ImportStep {
+        chips.isEmpty ? .content : .selection
+    }
+
     var body: some View {
         NavigationStack {
-            VStack(alignment: .leading, spacing: 20) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("添加一个单词")
-                        .font(.largeTitle.bold())
+            VStack(spacing: 0) {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 18) {
+                        ImportStepHeader(
+                            currentStep: currentStep,
+                            title: "添加一个单词",
+                            subtitle: "音标、释义和词形会从本地词典自动补充。"
+                        )
 
-                    Text("音标、释义和词形会从本地词典自动补充。")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.top, 8)
+                        inputCard
 
-                TextField("输入英文单词", text: $word)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.title2)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .keyboardType(.alphabet)
-                    .submitLabel(.done)
-                    .focused($isInputFocused)
-                    .onSubmit(save)
-                    .disabled(isSaving)
-                    .accessibilityIdentifier("wordInputField")
-
-                if let errorMessage {
-                    Label(errorMessage, systemImage: "exclamationmark.triangle")
-                        .font(.footnote)
-                        .foregroundStyle(.red)
-                }
-
-                Spacer(minLength: 0)
-
-                Button(action: save) {
-                    HStack {
-                        if isSaving {
-                            ProgressView()
-                                .controlSize(.small)
+                        if chips.isEmpty {
+                            ContentUnavailableView(
+                                "输入后挑选单词",
+                                systemImage: "square.and.pencil",
+                                description: Text("输入英文单词后，它会显示为可确认的选择。")
+                            )
+                            .padding(.vertical, 28)
                         } else {
-                            Image(systemName: "plus.circle.fill")
+                            selectionContent
                         }
-                        Text(isSaving ? "正在补充" : "添加到单词本")
+
+                        if let errorMessage {
+                            ImportErrorMessage(message: errorMessage)
+                        }
                     }
-                    .frame(maxWidth: .infinity)
+                    .padding(20)
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
                 }
-                .buttonStyle(.glassProminent)
-                .controlSize(.large)
-                .disabled(normalizedInput.isEmpty || isSaving)
+                .scrollBounceBehavior(.basedOnSize)
+
+                ImportPrimaryCTA(
+                    title: isSaving ? "正在补充" : "添加 \(selection.selectedCount) 个单词",
+                    isLoading: isSaving,
+                    action: save
+                )
+                .padding(.horizontal, 20)
+                .padding(.top, 10)
+                .padding(.bottom, 14)
+                .background(.bar)
+                .disabled(selection.selectedCount == 0 || isSaving)
             }
-            .padding(20)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .background(Color(.systemBackground))
+            .background(Color(.systemGroupedBackground).ignoresSafeArea())
             .navigationTitle("添加单词")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -83,12 +86,55 @@ struct AddWordView: View {
             .task {
                 isInputFocused = true
             }
+            .onChange(of: normalizedInput) {
+                selection = ImportChipSelection(chips: chips)
+            }
+        }
+    }
+
+    private var inputCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("单词")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            TextField("输入英文单词", text: $word)
+                .font(.title3.weight(.medium))
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .keyboardType(.alphabet)
+                .submitLabel(.done)
+                .focused($isInputFocused)
+                .onSubmit(save)
+                .disabled(isSaving)
+                .padding(13)
+                .background(Color(.secondarySystemBackground), in: .rect(cornerRadius: 14))
+                .accessibilityIdentifier("wordInputField")
+        }
+        .padding(16)
+        .background(.regularMaterial, in: .rect(cornerRadius: 22))
+        .overlay {
+            RoundedRectangle(cornerRadius: 22)
+                .strokeBorder(.white.opacity(0.16), lineWidth: 0.5)
+        }
+    }
+
+    private var selectionContent: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            ImportSelectionToolbar(
+                selectedCount: selection.selectedCount,
+                totalCount: chips.count,
+                onSelectAll: { selection.selectAll() },
+                onClear: { selection.clear() }
+            )
+
+            ImportCandidateChipGrid(chips: chips, selection: $selection)
         }
     }
 
     private func save() {
         let input = word
-        guard !WordInputNormalizer.normalizedKey(from: input).isEmpty, !isSaving else { return }
+        guard selection.selectedCount > 0, !normalizedInput.isEmpty, !isSaving else { return }
 
         isSaving = true
         errorMessage = nil

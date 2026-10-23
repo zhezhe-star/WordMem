@@ -7,6 +7,17 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		SHRD30 /* TextImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SHRD31 /* TextImportView.swift */; };
+		SHRD32 /* ImageImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SHRD33 /* ImageImportView.swift */; };
+		SHRD34 /* ImageImportSourceCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = SHRD35 /* ImageImportSourceCard.swift */; };
+		SHRD20 /* ImportFlowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = SHRD21 /* ImportFlowLayout.swift */; };
+		SHRD22 /* ImportFlowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = SHRD21 /* ImportFlowLayout.swift */; };
+		SHRD23 /* ImportContextViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = SHRD24 /* ImportContextViews.swift */; };
+		SHRD25 /* ImportContextViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = SHRD24 /* ImportContextViews.swift */; };
+		SHRD26 /* ImportSelectionViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = SHRD27 /* ImportSelectionViews.swift */; };
+		SHRD28 /* ImportSelectionViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = SHRD27 /* ImportSelectionViews.swift */; };
+		SHRD10 /* ImportCandidateModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = SHRD11 /* ImportCandidateModels.swift */; };
+		SHRD12 /* ImportCandidateModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = SHRD11 /* ImportCandidateModels.swift */; };
 		APP01 /* WordMemApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP02 /* WordMemApp.swift */; };
 		APP03 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP04 /* ContentView.swift */; };
 		APP15 /* WordData.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP16 /* WordData.swift */; };
@@ -51,6 +62,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		SHRD31 /* TextImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextImportView.swift; sourceTree = "<group>"; };
+		SHRD33 /* ImageImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageImportView.swift; sourceTree = "<group>"; };
+		SHRD35 /* ImageImportSourceCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageImportSourceCard.swift; sourceTree = "<group>"; };
+		SHRD21 /* ImportFlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportFlowLayout.swift; sourceTree = "<group>"; };
+		SHRD24 /* ImportContextViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportContextViews.swift; sourceTree = "<group>"; };
+		SHRD27 /* ImportSelectionViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportSelectionViews.swift; sourceTree = "<group>"; };
+		SHRD11 /* ImportCandidateModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportCandidateModels.swift; sourceTree = "<group>"; };
 		APP02 /* WordMemApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordMemApp.swift; sourceTree = "<group>"; };
 		APP04 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		APP05 /* WordMem.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WordMem.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -176,7 +194,11 @@
 				APP02 /* WordMemApp.swift */,
 				APP04 /* ContentView.swift */,
 				APP23 /* AddWordView.swift */,
+				SHRD13 /* Import */,
 				IMP08 /* WordImportViews.swift */,
+				SHRD31 /* TextImportView.swift */,
+				SHRD33 /* ImageImportView.swift */,
+				SHRD35 /* ImageImportSourceCard.swift */,
 				CAL02 /* CalendarChallengeService.swift */,
 				CAL04 /* CalendarChallengeViews.swift */,
 				CAL08 /* CalendarChallengeFlowViews.swift */,
@@ -224,6 +246,17 @@
 				TPR02 /* WordMemTranslationProvider.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		SHRD13 /* Import */ = {
+			isa = PBXGroup;
+			children = (
+				SHRD11 /* ImportCandidateModels.swift */,
+				SHRD21 /* ImportFlowLayout.swift */,
+				SHRD24 /* ImportContextViews.swift */,
+				SHRD27 /* ImportSelectionViews.swift */,
+			);
+			path = Import;
 			sourceTree = "<group>";
 		};
 		MEM16 /* Domain */ = {
@@ -458,7 +491,10 @@
 				APP01 /* WordMemApp.swift in Sources */,
 				APP03 /* ContentView.swift in Sources */,
 				APP22 /* AddWordView.swift in Sources */,
-				CAL01 /* CalendarChallengeService.swift in Sources */,
+				SHRD10 /* ImportCandidateModels.swift in Sources */,
+				SHRD20 /* ImportFlowLayout.swift in Sources */,
+				SHRD23 /* ImportContextViews.swift in Sources */,
+				SHRD26 /* ImportSelectionViews.swift in Sources */,				CAL01 /* CalendarChallengeService.swift in Sources */,
 				CAL03 /* CalendarChallengeViews.swift in Sources */,
 				CAL07 /* CalendarChallengeFlowViews.swift in Sources */,
 				MEM01 /* DictionaryModels.swift in Sources */,
@@ -469,6 +505,9 @@
 				IMP05 /* VisionTextRecognitionService.swift in Sources */,
 				SUB10 /* WordImportSubmission.swift in Sources */,
 				IMP07 /* WordImportViews.swift in Sources */,
+				SHRD30 /* TextImportView.swift in Sources */,
+				SHRD32 /* ImageImportView.swift in Sources */,
+				SHRD34 /* ImageImportSourceCard.swift in Sources */,
 				MEM06 /* WordbookRepository.swift in Sources */,
 				MEM07 /* LegacyWordbookMigrator.swift in Sources */,
 				MEM08 /* SQLiteDictionaryLookupService.swift in Sources */,
@@ -512,6 +551,10 @@
 				TPR03 /* TranslationProviderMain.swift in Sources */,
 				TPR05 /* TranslationCardView.swift in Sources */,
 				TPR07 /* WordPickerView.swift in Sources */,
+				SHRD12 /* ImportCandidateModels.swift in Sources */,
+				SHRD22 /* ImportFlowLayout.swift in Sources */,
+				SHRD25 /* ImportContextViews.swift in Sources */,
+				SHRD28 /* ImportSelectionViews.swift in Sources */,
 				SUB13 /* WordImportSubmission.swift in Sources */,
 				TPR09 /* WordData.swift in Sources */,
 				TPR10 /* LocalStorageManager.swift in Sources */,
