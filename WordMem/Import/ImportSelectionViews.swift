@@ -93,7 +93,7 @@ private struct ImportCandidateChipButton: View {
       .accessibilityHint("连按切换选择状态")
       .accessibilityValue(isSelected ? "已选择" : "未选择")
       .accessibilityAddTraits(isSelected ? [.isSelected] : [])
-    } else {
+    } else if chip.canRestoreOriginal {
       HStack(spacing: 6) {
         chipLabel
 

@@ -27,15 +27,22 @@ struct ImportCandidateChip: Identifiable, Hashable, Sendable {
         self.advice = advice
     }
 
-    /// Advice-covered words are gated on the system dictionary. An explicit
-    /// restore is the only unavailable-word override in the import pipeline.
+    /// Both the corrected key and a restored original key must be present in
+    /// the system dictionary before the candidate can enter a submission.
     var isImportable: Bool {
         guard let advice else { return true }
-        return advice.isDictionaryAvailable || advice.isOriginalRestored
+        if advice.isOriginalRestored {
+            return advice.isOriginalDictionaryAvailable
+        }
+        return advice.isDictionaryAvailable
+    }
+
+    var canRestoreOriginal: Bool {
+        advice?.canRestoreOriginal == true
     }
 
     func restoringOriginal() -> ImportCandidateChip {
-        guard let advice, advice.isOriginalRestored == false else { return self }
+        guard let advice, advice.canRestoreOriginal else { return self }
         let restoredAdvice = ImportWordAdvice(
             originalText: advice.originalText,
             originalKey: advice.originalKey,
@@ -44,7 +51,8 @@ struct ImportCandidateChip: Identifiable, Hashable, Sendable {
             spellingCorrection: advice.spellingCorrection,
             finalText: advice.originalText,
             finalKey: advice.originalKey,
-            isDictionaryAvailable: advice.isDictionaryAvailable,
+            isDictionaryAvailable: advice.isOriginalDictionaryAvailable,
+            isOriginalDictionaryAvailable: advice.isOriginalDictionaryAvailable,
             isOriginalRestored: true
         )
         return ImportCandidateChip(
@@ -68,7 +76,7 @@ struct ImportCandidateChip: Identifiable, Hashable, Sendable {
     }
 
     var availabilityBadgeText: String? {
-        guard let advice, !advice.isDictionaryAvailable, !advice.isOriginalRestored else { return nil }
+        guard let advice, !advice.isDictionaryAvailable else { return nil }
         return "词典不可用"
     }
 }
@@ -84,7 +92,12 @@ struct ImportWordAdvice: Equatable, Hashable, Sendable {
     let finalText: String
     let finalKey: String
     let isDictionaryAvailable: Bool
+    let isOriginalDictionaryAvailable: Bool
     var isOriginalRestored = false
+
+    var canRestoreOriginal: Bool {
+        !isOriginalRestored && isOriginalDictionaryAvailable
+    }
 
     var isLemmaNormalized: Bool {
         WordInputNormalizer.normalizedKey(from: finalText)
@@ -157,6 +170,9 @@ struct ImportWordAdvisor: Sendable {
             guard !finalKey.isEmpty, seenFinalKeys.insert(finalKey).inserted else { continue }
 
             let isAvailable = await availability.hasDefinition(forTerm: finalKey)
+            let isOriginalAvailable = finalKey == originalKey
+                ? isAvailable
+                : await availability.hasDefinition(forTerm: originalKey)
             let advice = ImportWordAdvice(
                 originalText: candidate.text,
                 originalKey: originalKey,
@@ -165,7 +181,8 @@ struct ImportWordAdvisor: Sendable {
                 spellingCorrection: correction,
                 finalText: finalText,
                 finalKey: finalKey,
-                isDictionaryAvailable: isAvailable
+                isDictionaryAvailable: isAvailable,
+                isOriginalDictionaryAvailable: isOriginalAvailable
             )
             advisedChips.append(
                 ImportCandidateChip(
@@ -305,6 +322,7 @@ extension ImportCandidatePipeline {
                 metadata["lemma"] = lemma
             }
             metadata["dictionaryAvailable"] = advice.isDictionaryAvailable ? "true" : "false"
+            metadata["originalDictionaryAvailable"] = advice.isOriginalDictionaryAvailable ? "true" : "false"
             if advice.isOriginalRestored {
                 metadata["originalSpellingRestored"] = "true"
             }
