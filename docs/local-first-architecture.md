@@ -35,6 +35,7 @@ LegacyWordbookMigrator
 
 - `ImportCandidatePipeline` is the shared sentence-splitting boundary. After a sentence is split into unique source words, every word passes through `ImportWordAdvisor`; manual, text, image, share, and translation-provider imports use the same candidate model and payload metadata.
 - The advisor applies NaturalLanguage lemma normalization and UITextChecker spelling correction automatically. The corrected key is the default, while immutable advice retains the original word for an explicit restore action.
+- Both corrected and restored keys are gated independently by system-dictionary availability. The restore control is offered only when the original key is also present; otherwise the candidate remains non-selectable.
 - `ImportCandidateChip` uses indigo for lemma normalization, orange for spelling correction, and red for system-dictionary unavailability. A candidate that the system dictionary cannot resolve is not selectable by default; the explicit restore control is the only override.
 - Candidate selection remains default-none. Advice changes identity, availability, and display only; it never automatically selects a word for import.
 - Translation-provider phrase context remains available as non-dictionary-gated context, while individual source words continue through the same advisor.
