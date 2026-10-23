@@ -3,7 +3,7 @@ import SwiftData
 import SwiftUI
 
 struct TextImportView: View {
-    let dictionaryService: any DictionaryLookupService
+    let dictionary: any SystemDictionaryAuthorizing
     let completion: (WordImportSummary) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -17,11 +17,11 @@ struct TextImportView: View {
 
 #if DEBUG
     init(
-        dictionaryService: any DictionaryLookupService,
+        dictionary: any SystemDictionaryAuthorizing,
         completion: @escaping (WordImportSummary) -> Void,
         previewState: ImportPreviewState = ImportPreviewState()
     ) {
-        self.dictionaryService = dictionaryService
+        self.dictionary = dictionary
         self.completion = completion
         _sourceText = State(initialValue: previewState.sourceText)
         _chips = State(initialValue: previewState.chips)
@@ -173,7 +173,7 @@ struct TextImportView: View {
                 )
                 let outcomes = try await repository.importSubmission(
                     submission,
-                    using: dictionaryService
+                    using: dictionary
                 )
                 completion(WordImportSummary(outcomes: outcomes))
                 dismiss()
@@ -186,12 +186,12 @@ struct TextImportView: View {
 
 #if DEBUG
 #Preview("文本导入 · 空状态") {
-    TextImportView(dictionaryService: SystemDictionaryLookupService()) { _ in }
+    TextImportView(dictionary: UIKitSystemDictionaryAuthorizer()) { _ in }
 }
 
 #Preview("文本导入 · 正常候选") {
     TextImportView(
-        dictionaryService: SystemDictionaryLookupService(),
+        dictionary: UIKitSystemDictionaryAuthorizer(),
         completion: { _ in },
         previewState: ImportPreviewState(
             sourceText: ImportPreviewFixtures.text(count: 8),
@@ -203,7 +203,7 @@ struct TextImportView: View {
 
 #Preview("文本导入 · 55 个候选") {
     TextImportView(
-        dictionaryService: SystemDictionaryLookupService(),
+        dictionary: UIKitSystemDictionaryAuthorizer(),
         completion: { _ in },
         previewState: ImportPreviewState(
             sourceText: ImportPreviewFixtures.text(count: 55),

@@ -307,11 +307,6 @@ private struct ChallengeQuestionPage: View {
                     .font(.system(size: 44, weight: .bold))
                     .multilineTextAlignment(.center)
                 HStack(spacing: 12) {
-                    if let phonetic = question.hint {
-                        Text(phonetic)
-                            .font(.title3)
-                            .foregroundStyle(.secondary)
-                    }
                     speakerButton(text: question.target)
                 }
                 Text("选择正确释义")
@@ -389,12 +384,6 @@ private struct ChallengeQuestionPage: View {
                 Text(question.targetTranslation)
                     .font(.system(size: 30, weight: .bold))
                     .multilineTextAlignment(.center)
-
-                if let phonetic = question.hint {
-                    Text(phonetic)
-                        .font(.title3)
-                        .foregroundStyle(.secondary)
-                }
 
                 if let example = question.exampleText {
                     Text(example)

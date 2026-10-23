@@ -2,7 +2,7 @@ import SwiftData
 import SwiftUI
 
 struct AddWordView: View {
-    let dictionaryService: any DictionaryLookupService
+    let dictionary: any SystemDictionaryAuthorizing
     let completion: (AddWordOutcome) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -13,15 +13,18 @@ struct AddWordView: View {
     @State private var advisorToken = UUID()
     @State private var isSaving = false
     @State private var errorMessage: String?
+    @State private var userTranslation = ""
+    @State private var userExample = ""
+    @State private var userNote = ""
     @FocusState private var isInputFocused: Bool
 
 #if DEBUG
     init(
-        dictionaryService: any DictionaryLookupService,
+        dictionary: any SystemDictionaryAuthorizing,
         completion: @escaping (AddWordOutcome) -> Void,
         previewState: ImportPreviewState = ImportPreviewState()
     ) {
-        self.dictionaryService = dictionaryService
+        self.dictionary = dictionary
         self.completion = completion
         _word = State(initialValue: previewState.word)
         let normalizedWord = WordInputNormalizer.normalizedKey(from: previewState.word)
@@ -72,6 +75,10 @@ struct AddWordView: View {
                             .padding(.vertical, 28)
                         } else {
                             selectionContent
+                        }
+
+                        if !advisorChips.isEmpty {
+                            userFields
                         }
 
                         if let errorMessage {
@@ -139,6 +146,19 @@ struct AddWordView: View {
         }
     }
 
+    private var userFields: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("用户字段（可选）")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+            TextField("我的翻译", text: $userTranslation)
+            TextField("我的例句", text: $userExample)
+            TextField("我的笔记", text: $userNote)
+        }
+        .padding(16)
+        .background(.regularMaterial, in: .rect(cornerRadius: 22))
+    }
+
     private var selectionContent: some View {
         VStack(alignment: .leading, spacing: 14) {
             ImportSelectionToolbar(
@@ -198,15 +218,22 @@ struct AddWordView: View {
             defer { isSaving = false }
 
             do {
+                var candidates = ImportCandidatePipeline.payloads(from: selection.selectedChips)
+                if var candidate = candidates.first {
+                    candidate.userTranslation = emptyAsNil(userTranslation)
+                    candidate.userExample = emptyAsNil(userExample)
+                    candidate.userNote = emptyAsNil(userNote)
+                    candidates[0] = candidate
+                }
                 let submission = WordImportSubmission(
                     source: .manual,
                     sourceText: input,
-                    candidates: ImportCandidatePipeline.payloads(from: selection.selectedChips),
+                    candidates: candidates,
                     metadata: ["channel": WordImportSource.manual.rawValue]
                 )
                 let outcomes = try await repository.importSubmission(
                     submission,
-                    using: dictionaryService
+                    using: dictionary
                 )
                 guard let outcome = outcomes.first else {
                     throw WordImportError.emptySelection
@@ -217,5 +244,10 @@ struct AddWordView: View {
                 errorMessage = "保存失败，请重试。"
             }
         }
+    }
+
+    private func emptyAsNil(_ value: String) -> String? {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 }

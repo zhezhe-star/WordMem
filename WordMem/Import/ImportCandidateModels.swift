@@ -121,9 +121,7 @@ protocol ImportWordSpellingSuggesting: Sendable {
     func correction(for word: String) async -> String?
 }
 
-protocol ImportWordAvailabilityChecking: Sendable {
-    func hasDefinition(forTerm term: String) async -> Bool
-}
+typealias ImportWordAvailabilityChecking = SystemDictionaryAuthorizing
 
 /// Shared async advisor used by every sentence-splitting import surface.
 struct ImportWordAdvisor: Sendable {
@@ -145,7 +143,7 @@ struct ImportWordAdvisor: Sendable {
         ImportWordAdvisor(
             lemmaProvider: NaturalLanguageWordLemmaProvider(),
             spellingSuggester: UITextCheckerSpellingSuggester(),
-            availability: UIKitSystemDictionaryAvailability()
+            availability: UIKitSystemDictionaryAuthorizer()
         )
     }
 
@@ -312,6 +310,7 @@ extension ImportCandidatePipeline {
         var metadata: [String: String] = ["sourceOrder": String(chip.sourceOrder)]
         if let advice = chip.advice {
             metadata["originalWord"] = advice.originalText
+            metadata["originalKey"] = advice.originalKey
             if let context = advice.context, !context.isEmpty {
                 metadata["sourceContext"] = context
             }
