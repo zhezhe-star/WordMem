@@ -1,4 +1,6 @@
 import Foundation
+import NaturalLanguage
+import UIKit
 
 /// A target-independent representation of one selectable source token.
 struct ImportCandidateChip: Identifiable, Hashable, Sendable {
@@ -7,21 +9,361 @@ struct ImportCandidateChip: Identifiable, Hashable, Sendable {
     let detail: String?
     let sourceOrder: Int
     let group: String?
+    let advice: ImportWordAdvice?
 
     init(
         id: String,
         text: String,
         detail: String? = nil,
         sourceOrder: Int,
-        group: String? = nil
+        group: String? = nil,
+        advice: ImportWordAdvice? = nil
     ) {
         self.id = id
         self.text = text
         self.detail = detail
         self.sourceOrder = sourceOrder
         self.group = group
+        self.advice = advice
+    }
+
+    /// Advice-covered words are gated on the system dictionary. An explicit
+    /// restore is the only unavailable-word override in the import pipeline.
+    var isImportable: Bool {
+        guard let advice else { return true }
+        return advice.isDictionaryAvailable || advice.isOriginalRestored
+    }
+
+    func restoringOriginal() -> ImportCandidateChip {
+        guard let advice, advice.isOriginalRestored == false else { return self }
+        let restoredAdvice = ImportWordAdvice(
+            originalText: advice.originalText,
+            originalKey: advice.originalKey,
+            context: advice.context,
+            lemma: advice.lemma,
+            spellingCorrection: advice.spellingCorrection,
+            finalText: advice.originalText,
+            finalKey: advice.originalKey,
+            isDictionaryAvailable: advice.isDictionaryAvailable,
+            isOriginalRestored: true
+        )
+        return ImportCandidateChip(
+            id: advice.originalKey,
+            text: advice.originalText,
+            detail: detail,
+            sourceOrder: sourceOrder,
+            group: group,
+            advice: restoredAdvice
+        )
+    }
+
+    var lemmaBadgeText: String? {
+        guard let advice, advice.isLemmaNormalized else { return nil }
+        return "原形 \(advice.finalText)"
+    }
+
+    var spellingBadgeText: String? {
+        guard let advice, advice.isSpellingCorrected else { return nil }
+        return "拼写纠正 \(advice.originalText) → \(advice.finalText)"
+    }
+
+    var availabilityBadgeText: String? {
+        guard let advice, !advice.isDictionaryAvailable, !advice.isOriginalRestored else { return nil }
+        return "词典不可用"
     }
 }
+
+/// Immutable provenance for one advised import candidate. Keeping the source
+/// value here lets a corrected word still be restored without losing context.
+struct ImportWordAdvice: Equatable, Hashable, Sendable {
+    let originalText: String
+    let originalKey: String
+    let context: String?
+    let lemma: String?
+    let spellingCorrection: String?
+    let finalText: String
+    let finalKey: String
+    let isDictionaryAvailable: Bool
+    var isOriginalRestored = false
+
+    var isLemmaNormalized: Bool {
+        WordInputNormalizer.normalizedKey(from: finalText)
+            .replacingOccurrences(of: "'", with: "") != originalKey
+    }
+
+    var isSpellingCorrected: Bool {
+        guard let spellingCorrection else { return false }
+        return spellingCorrection.compare(
+            originalText,
+            options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive]
+        ) != .orderedSame
+    }
+}
+
+protocol ImportWordLemmaProviding: Sendable {
+    func lemma(for word: String, context: String?) async -> String?
+}
+
+protocol ImportWordSpellingSuggesting: Sendable {
+    func correction(for word: String) async -> String?
+}
+
+protocol ImportWordAvailabilityChecking: Sendable {
+    func hasDefinition(forTerm term: String) async -> Bool
+}
+
+/// Shared async advisor used by every sentence-splitting import surface.
+struct ImportWordAdvisor: Sendable {
+    private let lemmaProvider: any ImportWordLemmaProviding
+    private let spellingSuggester: any ImportWordSpellingSuggesting
+    private let availability: any ImportWordAvailabilityChecking
+
+    init(
+        lemmaProvider: any ImportWordLemmaProviding,
+        spellingSuggester: any ImportWordSpellingSuggesting,
+        availability: any ImportWordAvailabilityChecking
+    ) {
+        self.lemmaProvider = lemmaProvider
+        self.spellingSuggester = spellingSuggester
+        self.availability = availability
+    }
+
+    static func live() -> ImportWordAdvisor {
+        ImportWordAdvisor(
+            lemmaProvider: NaturalLanguageWordLemmaProvider(),
+            spellingSuggester: UITextCheckerSpellingSuggester(),
+            availability: UIKitSystemDictionaryAvailability()
+        )
+    }
+
+    func chips(
+        from candidates: [WordImportCandidate],
+        context: String? = nil
+    ) async -> [ImportCandidateChip] {
+        var advisedChips: [ImportCandidateChip] = []
+        var seenFinalKeys = Set<String>()
+
+        for (offset, candidate) in candidates.enumerated() {
+            let originalKey = WordInputNormalizer.normalizedKey(from: candidate.text)
+                .replacingOccurrences(of: "'", with: "")
+            guard !originalKey.isEmpty else { continue }
+
+            let correction = await spellingSuggester.correction(for: candidate.text)
+            let lemmaSource = correction ?? candidate.text
+            let lemma = await lemmaProvider.lemma(for: lemmaSource, context: context)
+            let finalText = lemma ?? lemmaSource
+            let finalKey = WordInputNormalizer.normalizedKey(from: finalText)
+                .replacingOccurrences(of: "'", with: "")
+            guard !finalKey.isEmpty, seenFinalKeys.insert(finalKey).inserted else { continue }
+
+            let isAvailable = await availability.hasDefinition(forTerm: finalKey)
+            let advice = ImportWordAdvice(
+                originalText: candidate.text,
+                originalKey: originalKey,
+                context: context,
+                lemma: lemma,
+                spellingCorrection: correction,
+                finalText: finalText,
+                finalKey: finalKey,
+                isDictionaryAvailable: isAvailable
+            )
+            advisedChips.append(
+                ImportCandidateChip(
+                    id: finalKey,
+                    text: finalText,
+                    sourceOrder: offset,
+                    advice: advice
+                )
+            )
+        }
+
+        return advisedChips
+    }
+}
+
+/// Public NaturalLanguage lemma lookup, anchored to the original sentence when
+/// one is supplied so ambiguous forms retain their context.
+struct NaturalLanguageWordLemmaProvider: ImportWordLemmaProviding {
+    func lemma(for word: String, context: String?) async -> String? {
+        let text = context?.isEmpty == false ? context! : word
+        let tagger = NLTagger(tagSchemes: [.lemma])
+        tagger.string = text
+        tagger.setLanguage(.english, range: text.startIndex..<text.endIndex)
+
+        let options: NLTagger.Options = [.omitWhitespace, .omitPunctuation, .joinNames]
+        var result: NLTag?
+        tagger.enumerateTags(
+            in: text.startIndex..<text.endIndex,
+            unit: .word,
+            scheme: .lemma,
+            options: options
+        ) { tag, tokenRange in
+            let token = String(text[tokenRange])
+            if token.localizedCaseInsensitiveCompare(word) == .orderedSame, let tag {
+                result = tag
+                return false
+            }
+            return true
+        }
+        return result?.rawValue.lowercased()
+    }
+}
+
+/// UITextChecker is the public system spelling source. A suggestion is only
+/// used when the source word is actually reported misspelled.
+struct UITextCheckerSpellingSuggester: ImportWordSpellingSuggesting {
+    func correction(for word: String) async -> String? {
+        await MainActor.run {
+            let checker = UITextChecker()
+            let range = NSRange(word.startIndex..., in: word)
+            let misspelledRange = checker.rangeOfMisspelledWord(
+                in: word,
+                range: range,
+                startingAt: range.location,
+                wrap: false,
+                language: "en_US"
+            )
+            guard misspelledRange.location != NSNotFound else { return nil }
+            return checker.guesses(
+                forWordRange: misspelledRange,
+                in: word,
+                language: "en_US"
+            )?.first
+        }
+    }
+}
+
+/// Small façade so sentence and translation-provider callers produce the same
+/// chip model without duplicating advisor behavior.
+enum ImportCandidatePipeline {
+    static func chips(
+        from candidates: [WordImportCandidate],
+        context: String?,
+        advisor: ImportWordAdvisor = .live()
+    ) async -> [ImportCandidateChip] {
+        await advisor.chips(from: candidates, context: context)
+    }
+
+    static func translationChips(
+        from source: String,
+        advisor: ImportWordAdvisor = .live()
+    ) async -> [ImportCandidateChip] {
+        let phrase = TranslationWordTokenizer.normalizedPhrase(from: source)
+        var chips: [ImportCandidateChip] = []
+        if !phrase.isEmpty {
+            // Phrase context intentionally bypasses the word-level dictionary
+            // gate; the advisor applies only to individual word candidates.
+            chips.append(
+                ImportCandidateChip(
+                    id: phrase,
+                    text: phrase,
+                    sourceOrder: 0,
+                    group: "整句"
+                )
+            )
+        }
+
+        let candidates = EnglishWordCandidateSplitter.candidates(from: source)
+        let advisedWords = await advisor.chips(from: candidates, context: source)
+        chips.append(
+            contentsOf: advisedWords.map {
+                ImportCandidateChip(
+                    id: $0.id,
+                    text: $0.text,
+                    sourceOrder: $0.sourceOrder + 1,
+                    group: "单词",
+                    advice: $0.advice
+                )
+            }
+        )
+        return ImportCandidateChip.uniquelyIdentified(chips)
+    }
+}
+
+struct WordImportCandidate: Identifiable, Hashable {
+    var text: String
+    var normalizedKey: String
+
+    var id: String { normalizedKey }
+}
+
+/// Converts advisor-covered selected chips back into the single submission
+/// format. Metadata is the non-migrating provenance channel shared by every
+/// import source.
+extension ImportCandidatePipeline {
+    static func payload(from chip: ImportCandidateChip) -> WordImportCandidatePayload {
+        var metadata: [String: String] = ["sourceOrder": String(chip.sourceOrder)]
+        if let advice = chip.advice {
+            metadata["originalWord"] = advice.originalText
+            if let context = advice.context, !context.isEmpty {
+                metadata["sourceContext"] = context
+            }
+            if advice.isSpellingCorrected, let correction = advice.spellingCorrection, !correction.isEmpty {
+                metadata["spellingCorrection"] = correction
+            }
+            if advice.isLemmaNormalized, let lemma = advice.lemma, !lemma.isEmpty {
+                metadata["lemma"] = lemma
+            }
+            metadata["dictionaryAvailable"] = advice.isDictionaryAvailable ? "true" : "false"
+            if advice.isOriginalRestored {
+                metadata["originalSpellingRestored"] = "true"
+            }
+        } else if chip.group == "整句" {
+            metadata["phraseContext"] = "true"
+        }
+
+        return WordImportCandidatePayload(
+            text: chip.text,
+            normalizedKey: chip.id,
+            metadata: metadata
+        )
+    }
+
+    static func payloads(from chips: [ImportCandidateChip]) -> [WordImportCandidatePayload] {
+        chips.map(payload(from:))
+    }
+}
+
+enum ImportCandidateAdapter {
+    /// Preserves the app candidate's normalized identity and source order.
+    static func chips(from candidates: [WordImportCandidate]) -> [ImportCandidateChip] {
+        candidates.enumerated().map { offset, candidate in
+            ImportCandidateChip(
+                id: candidate.normalizedKey,
+                text: candidate.text,
+                sourceOrder: offset
+            )
+        }
+    }
+}
+
+enum EnglishWordCandidateSplitter {
+    private static let expression = try! NSRegularExpression(
+        pattern: #"[A-Za-z]+(?:['’][A-Za-z]+|-[A-Za-z]+)*"#,
+        options: []
+    )
+
+    static func candidates(from sourceText: String) -> [WordImportCandidate] {
+        var candidates: [WordImportCandidate] = []
+        var seenKeys = Set<String>()
+
+        let range = NSRange(sourceText.startIndex..., in: sourceText)
+        for match in expression.matches(in: sourceText, range: range) {
+            guard let matchRange = Range(match.range, in: sourceText) else { continue }
+            let text = String(sourceText[matchRange])
+            // Contraction apostrophes are spelling details; candidate identity uses the bare word.
+            let key = WordInputNormalizer.normalizedKey(from: text)
+                .replacingOccurrences(of: "'", with: "")
+            guard !key.isEmpty, seenKeys.insert(key).inserted else { continue }
+            candidates.append(
+                WordImportCandidate(text: text, normalizedKey: key)
+            )
+        }
+
+        return candidates
+    }
+}
+
 
 extension ImportCandidateChip {
     /// Keeps the first appearance of every identity so reusable views cannot
@@ -119,7 +461,7 @@ struct ImportChipSelection: Equatable, Sendable {
     }
 
     mutating func select(_ id: String) {
-        guard orderedIDs.contains(id) else { return }
+        guard chipsByID[id]?.isImportable == true else { return }
         selectedIDs.insert(id)
     }
 
@@ -136,7 +478,7 @@ struct ImportChipSelection: Equatable, Sendable {
     }
 
     mutating func selectAll() {
-        selectedIDs = Set(orderedIDs)
+        selectedIDs = Set(orderedIDs.filter { chipsByID[$0]?.isImportable == true })
     }
 
     mutating func clear() {

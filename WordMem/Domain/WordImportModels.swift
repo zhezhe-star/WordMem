@@ -62,53 +62,6 @@ final class WordImportContext {
     }
 }
 
-struct WordImportCandidate: Identifiable, Hashable {
-    var text: String
-    var normalizedKey: String
-
-    var id: String { normalizedKey }
-}
-
-enum ImportCandidateAdapter {
-    /// Preserves the app candidate's normalized identity and source order.
-    static func chips(from candidates: [WordImportCandidate]) -> [ImportCandidateChip] {
-        candidates.enumerated().map { offset, candidate in
-            ImportCandidateChip(
-                id: candidate.normalizedKey,
-                text: candidate.text,
-                sourceOrder: offset
-            )
-        }
-    }
-}
-
-enum EnglishWordCandidateSplitter {
-    private static let expression = try! NSRegularExpression(
-        pattern: #"[A-Za-z]+(?:['’][A-Za-z]+|-[A-Za-z]+)*"#,
-        options: []
-    )
-
-    static func candidates(from sourceText: String) -> [WordImportCandidate] {
-        var candidates: [WordImportCandidate] = []
-        var seenKeys = Set<String>()
-
-        let range = NSRange(sourceText.startIndex..., in: sourceText)
-        for match in expression.matches(in: sourceText, range: range) {
-            guard let matchRange = Range(match.range, in: sourceText) else { continue }
-            let text = String(sourceText[matchRange])
-            // Contraction apostrophes are spelling details; candidate identity uses the bare word.
-            let key = WordInputNormalizer.normalizedKey(from: text)
-                .replacingOccurrences(of: "'", with: "")
-            guard !key.isEmpty, seenKeys.insert(key).inserted else { continue }
-            candidates.append(
-                WordImportCandidate(text: text, normalizedKey: key)
-            )
-        }
-
-        return candidates
-    }
-}
-
 struct WordImportSummary: Equatable {
     let addedCount: Int
     let duplicateCount: Int

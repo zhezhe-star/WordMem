@@ -13,6 +13,8 @@ protocol SystemDictionaryAvailabilityProviding: Sendable {
 /// SDK, so the public UIKit query runs on the main actor. The first query may
 /// block briefly while the system loads its dictionary database; later queries
 /// are cheap.
+extension UIKitSystemDictionaryAvailability: ImportWordAvailabilityChecking {}
+
 struct UIKitSystemDictionaryAvailability: SystemDictionaryAvailabilityProviding {
     @MainActor
     func hasDefinition(forTerm term: String) async -> Bool {

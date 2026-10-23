@@ -184,26 +184,49 @@ struct TranslationProviderSubmissionBuilder {
     let phraseTranslation: String
     let selectedChips: Set<String>
     let meanings: [String: String]
+    let advisedChips: [ImportCandidateChip]
+
+    init(
+        sourceText: String,
+        phraseTranslation: String,
+        selectedChips: Set<String>,
+        meanings: [String: String],
+        advisedChips: [ImportCandidateChip] = []
+    ) {
+        self.sourceText = sourceText
+        self.phraseTranslation = phraseTranslation
+        self.selectedChips = selectedChips
+        self.meanings = meanings
+        self.advisedChips = advisedChips
+    }
 
     var sourceChips: [String] {
-        TranslationWordTokenizer.pickerChips(from: sourceText)
+        let advised = advisedChips.map(\.text)
+        return advised.isEmpty ? TranslationWordTokenizer.pickerChips(from: sourceText) : advised
     }
 
     var selectedCandidates: [WordImportCandidatePayload] {
         sourceChips
             .enumerated()
-            .compactMap { offset, chip in
-                guard selectedChips.contains(chip) else { return nil }
+            .compactMap { offset, chipText in
+                guard selectedChips.contains(chipText) else { return nil }
                 let phrase = TranslationWordTokenizer.normalizedPhrase(from: sourceText)
                 let meaning =
-                    meanings[chip]
-                    ?? (chip == phrase ? phraseTranslation : nil)
+                    meanings[chipText]
+                    ?? (chipText == phrase ? phraseTranslation : nil)
                     ?? ""
+                let trimmedMeaning = meaning.trimmingCharacters(in: .whitespacesAndNewlines)
+
+                if let advisedChip = advisedChips.first(where: { $0.id == chipText }) {
+                    var payload = ImportCandidatePipeline.payload(from: advisedChip)
+                    payload.userTranslation = trimmedMeaning.isEmpty ? nil : trimmedMeaning
+                    return payload
+                }
 
                 return WordImportCandidatePayload(
-                    text: chip,
-                    normalizedKey: chip.lowercased(),
-                    userTranslation: meaning.trimmingCharacters(in: .whitespacesAndNewlines),
+                    text: chipText,
+                    normalizedKey: chipText.lowercased(),
+                    userTranslation: trimmedMeaning.isEmpty ? nil : trimmedMeaning,
                     metadata: ["sourceOrder": String(offset)]
                 )
             }
