@@ -10,7 +10,13 @@
 ## Runtime layers
 
 ```text
-AddWordView (single input)
+AddWordView / TextImportView / ImageImportView
+  / ShareViewController / Translation provider picker
+  → ImportCandidatePipeline
+    → ImportWordAdvisor
+      → NaturalLanguage lemma lookup
+      → UITextChecker spelling suggestion
+      → UIKit system dictionary availability check
   → WordbookRepository (@MainActor + ModelContext)
     → DictionaryLookupService (Sendable)
       → SystemDictionaryLookupService
@@ -27,6 +33,11 @@ LegacyWordbookMigrator
 
 ## Current boundaries
 
+- `ImportCandidatePipeline` is the shared sentence-splitting boundary. After a sentence is split into unique source words, every word passes through `ImportWordAdvisor`; manual, text, image, share, and translation-provider imports use the same candidate model and payload metadata.
+- The advisor applies NaturalLanguage lemma normalization and UITextChecker spelling correction automatically. The corrected key is the default, while immutable advice retains the original word for an explicit restore action.
+- `ImportCandidateChip` uses indigo for lemma normalization, orange for spelling correction, and red for system-dictionary unavailability. A candidate that the system dictionary cannot resolve is not selectable by default; the explicit restore control is the only override.
+- Candidate selection remains default-none. Advice changes identity, availability, and display only; it never automatically selects a word for import.
+- Translation-provider phrase context remains available as non-dictionary-gated context, while individual source words continue through the same advisor.
 - `DictionaryLookupService` is the only capture-time dictionary boundary. New runtime lookups return key-only entries; an available system word is reported as enriched, otherwise as not found.
 - `WordbookRepository` owns duplicate detection, creation, enrichment of bare legacy entries, undo, and SwiftData saves.
 - `LegacyWordbookMigrator` backs up the raw legacy payload before import and records a migration flag only after a successful save. User translations and legacy examples are retained in dedicated fields; dictionary enrichment updates canonical metadata without erasing that history.
