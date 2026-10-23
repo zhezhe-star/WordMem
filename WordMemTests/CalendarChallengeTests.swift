@@ -1,4 +1,6 @@
 import XCTest
+import AVFAudio
+
 @testable import WordMem
 
 final class CalendarChallengeTests: XCTestCase {
@@ -286,5 +288,119 @@ final class CalendarChallengeTests: XCTestCase {
             SpellingHintSlots.tokens(for: "go", revealedCount: 5),
             ["g", "o"]
         )
+    }
+}
+
+// MARK: - Pronunciation lifecycle
+
+@MainActor
+private final class MockPronunciationAudioSession: PronunciationAudioSessionControlling {
+    struct Transition: Equatable {
+        let isActive: Bool
+        let options: AVAudioSession.SetActiveOptions
+    }
+
+    private(set) var categoryCalls: [(category: AVAudioSession.Category, options: AVAudioSession.CategoryOptions)] = []
+    private(set) var transitions: [Transition] = []
+    var activationError: Error?
+
+    func setCategory(_ category: AVAudioSession.Category, options: AVAudioSession.CategoryOptions) throws {
+        categoryCalls.append((category, options))
+    }
+
+    func setActive(_ active: Bool, options: AVAudioSession.SetActiveOptions) throws {
+        if active, let activationError {
+            throw activationError
+        }
+        transitions.append(Transition(isActive: active, options: options))
+    }
+}
+
+@MainActor
+private final class MockPronunciationSpeechEngine: PronunciationSpeechEngine {
+    weak var pronunciationDelegate: PronunciationPlaybackDelegate?
+    private(set) var utterances: [AVSpeechUtterance] = []
+    private(set) var stopCalls = 0
+
+    func speak(_ utterance: AVSpeechUtterance) {
+        utterances.append(utterance)
+    }
+
+    func stopSpeaking(at boundary: AVSpeechBoundary) -> Bool {
+        stopCalls += 1
+        return true
+    }
+}
+
+@MainActor
+final class EnglishPronunciationPlayerTests: XCTestCase {
+    func testOverlappingUtterancesKeepDuckedSessionActiveUntilLastDelegateFinishes() throws {
+        let session = MockPronunciationAudioSession()
+        let engine = MockPronunciationSpeechEngine()
+        let player = EnglishPronunciationPlayer(audioSession: session, speechEngine: engine)
+
+        XCTAssertTrue(player.play("apple"))
+        XCTAssertTrue(player.play("apple"))
+        XCTAssertEqual(engine.utterances.count, 2)
+        XCTAssertEqual(engine.utterances.map(\.speechString), ["apple", "apple"])
+        XCTAssertEqual(engine.utterances.map(\.voice?.language), ["en-US", "en-US"])
+        XCTAssertEqual(engine.utterances.map(\.rate), [0.5, 0.5])
+        XCTAssertEqual(session.categoryCalls.count, 1)
+        XCTAssertEqual(session.categoryCalls.first?.category, .playback)
+        XCTAssertEqual(session.categoryCalls.first?.options, .duckOthers)
+        XCTAssertEqual(session.transitions, [MockPronunciationAudioSession.Transition(isActive: true, options: [])])
+        XCTAssertTrue(player.isSpeaking)
+
+        player.pronunciationEngine(engine, didCancel: engine.utterances[0])
+        XCTAssertTrue(player.isSpeaking, "A delegate callback for one queued utterance must not restore background audio while another remains active.")
+        XCTAssertTrue(session.transitions.allSatisfy(\.isActive))
+
+        player.pronunciationEngine(engine, didFinish: engine.utterances[1])
+        XCTAssertFalse(player.isSpeaking)
+        XCTAssertEqual(
+            session.transitions,
+            [
+                MockPronunciationAudioSession.Transition(isActive: true, options: []),
+                MockPronunciationAudioSession.Transition(isActive: false, options: .notifyOthersOnDeactivation),
+            ]
+        )
+    }
+
+    func testCancelRetiresEveryUtteranceAndNotifiesOtherAudioOnce() {
+        let session = MockPronunciationAudioSession()
+        let engine = MockPronunciationSpeechEngine()
+        let player = EnglishPronunciationPlayer(audioSession: session, speechEngine: engine)
+
+        XCTAssertTrue(player.play("apple"))
+        XCTAssertTrue(player.play("apple"))
+        XCTAssertTrue(player.isSpeaking)
+
+        player.cancel()
+
+        XCTAssertFalse(player.isSpeaking)
+        XCTAssertEqual(engine.stopCalls, 1)
+        XCTAssertEqual(
+            session.transitions,
+            [
+                MockPronunciationAudioSession.Transition(isActive: true, options: []),
+                MockPronunciationAudioSession.Transition(isActive: false, options: .notifyOthersOnDeactivation),
+            ]
+        )
+
+        player.pronunciationEngine(engine, didCancel: engine.utterances[0])
+        player.pronunciationEngine(engine, didCancel: engine.utterances[1])
+        XCTAssertEqual(session.transitions.count, 2, "Late delegate callbacks after cancellation must not deactivate twice.")
+    }
+
+    func testActivationFailureDoesNotTrackUtterance() {
+        let session = MockPronunciationAudioSession()
+        session.activationError = NSError(domain: NSPOSIXErrorDomain, code: 1)
+        let engine = MockPronunciationSpeechEngine()
+        let player = EnglishPronunciationPlayer(audioSession: session, speechEngine: engine)
+
+        XCTAssertFalse(player.play("apple"))
+        XCTAssertFalse(player.isSpeaking)
+        XCTAssertTrue(engine.utterances.isEmpty)
+        XCTAssertTrue(session.transitions.isEmpty)
     }
 }

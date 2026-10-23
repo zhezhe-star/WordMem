@@ -1,4 +1,3 @@
-import AVFoundation
 import SwiftData
 import SwiftUI
 
@@ -420,7 +419,7 @@ extension LookupStatus {
 struct WordEntryDetailView: View {
     let entry: WordEntry
     @Query private var importContexts: [WordImportContext]
-    @State private var synthesizer = AVSpeechSynthesizer()
+    @StateObject private var pronunciation = EnglishPronunciationPlayer()
 
     init(entry: WordEntry) {
         self.entry = entry
@@ -465,8 +464,13 @@ struct WordEntryDetailView: View {
                 Button {
                     playWord()
                 } label: {
-                    Label("播放发音", systemImage: "speaker.wave.2")
+                    Label(
+                        pronunciation.isSpeaking ? "正在播放发音" : "播放发音",
+                        systemImage: pronunciation.isSpeaking ? "speaker.wave.2.fill" : "speaker.wave.2"
+                    )
+                    .foregroundStyle(pronunciation.isSpeaking ? Color.accentColor : Color.primary)
                 }
+                .accessibilityValue(pronunciation.isSpeaking ? "正在播放" : "未播放")
             }
 
             if entry.senses.isEmpty {
@@ -590,13 +594,13 @@ struct WordEntryDetailView: View {
         }
         .navigationTitle(entry.headword)
         .navigationBarTitleDisplayMode(.inline)
+        .onDisappear {
+            pronunciation.cancel()
+        }
     }
 
     private func playWord() {
-        let utterance = AVSpeechUtterance(string: entry.headword)
-        utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
-        utterance.rate = 0.5
-        synthesizer.speak(utterance)
+        pronunciation.play(entry.headword, rate: 0.5)
     }
 
     private func formKindName(_ kind: WordForm.Kind) -> String {
