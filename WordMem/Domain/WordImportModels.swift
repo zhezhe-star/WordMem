@@ -82,26 +82,6 @@ enum ImportCandidateAdapter {
     }
 }
 
-struct WordImportSelection: Equatable {
-    private(set) var deselectedKeys: Set<String> = []
-
-    mutating func toggle(_ key: String) {
-        if deselectedKeys.contains(key) {
-            deselectedKeys.remove(key)
-        } else {
-            deselectedKeys.insert(key)
-        }
-    }
-
-    func isSelected(_ key: String) -> Bool {
-        !deselectedKeys.contains(key)
-    }
-
-    func selectedWords(in candidates: [WordImportCandidate]) -> [String] {
-        candidates.filter { isSelected($0.normalizedKey) }.map(\.text)
-    }
-}
-
 enum EnglishWordCandidateSplitter {
     private static let expression = try! NSRegularExpression(
         pattern: #"[A-Za-z]+(?:['’][A-Za-z]+|-[A-Za-z]+)*"#,

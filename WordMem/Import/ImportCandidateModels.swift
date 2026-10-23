@@ -92,18 +92,18 @@ enum ImportCandidateOrganizer {
     }
 }
 
-/// Stores selection as exclusions when a caller wants every candidate selected
-/// initially. Selected results always follow `chips` source order.
+/// Stores explicit user selections. Candidates never start selected, and
+/// selected results always follow `chips` source order.
 struct ImportChipSelection: Equatable, Sendable {
     private var orderedIDs: [String]
     private var chipsByID: [String: ImportCandidateChip]
     private var selectedIDs: Set<String>
 
-    init(chips: [ImportCandidateChip], selectsAllByDefault: Bool = true) {
+    init(chips: [ImportCandidateChip]) {
         let uniqueChips = ImportCandidateChip.uniquelyIdentified(chips)
         orderedIDs = uniqueChips.map(\.id)
         chipsByID = Dictionary(uniqueKeysWithValues: uniqueChips.map { ($0.id, $0) })
-        selectedIDs = selectsAllByDefault ? Set(orderedIDs) : []
+        selectedIDs = []
     }
 
     var selectedCount: Int { selectedIDs.count }
@@ -144,11 +144,10 @@ struct ImportChipSelection: Equatable, Sendable {
     }
 
     mutating func updateChips(_ chips: [ImportCandidateChip]) {
-        let oldDeselectedIDs = Set(orderedIDs).subtracting(selectedIDs)
         let uniqueChips = ImportCandidateChip.uniquelyIdentified(chips)
         orderedIDs = uniqueChips.map(\.id)
         chipsByID = Dictionary(uniqueKeysWithValues: uniqueChips.map { ($0.id, $0) })
-        selectedIDs = selectedIDs.intersection(orderedIDs).union(orderedIDs).subtracting(oldDeselectedIDs)
+        selectedIDs = selectedIDs.intersection(orderedIDs)
     }
 
 }
