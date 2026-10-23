@@ -17,9 +17,18 @@ struct WordPickerView: View {
     @State private var isPreparingChips = true
     @State private var hasPreparedChips = false
     @State private var persistenceError: String?
+    @State private var saveCoordinator = TranslationProviderSaveCoordinator()
 
     private var isPreparing: Bool {
         !isPhraseTranslationReady || isPreparingChips
+    }
+
+    private var isSaving: Bool {
+        saveCoordinator.isSaving
+    }
+
+    private var canSave: Bool {
+        !selected.isEmpty && !isPreparing && !isSaving
     }
 
     private var chips: [String] {
@@ -76,12 +85,22 @@ struct WordPickerView: View {
                 .overlay(Capsule().stroke(Color.green, lineWidth: 1))
                 .foregroundStyle(.green)
             Spacer()
-            Button("保存", action: save)
-                .font(.body.weight(.semibold))
-                .foregroundStyle(
-                    selected.isEmpty ? AnyShapeStyle(.secondary) : AnyShapeStyle(Color.green)
-                )
-                .disabled(selected.isEmpty || isPreparing)
+            Button(action: save) {
+                HStack(spacing: 6) {
+                    if isSaving {
+                        ProgressView()
+                            .controlSize(.small)
+                            .tint(.white)
+                    }
+                    Text(saveButtonTitle)
+                }
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.green)
+            .clipShape(Capsule())
+            .disabled(!canSave)
+            .accessibilityLabel(saveButtonTitle)
+            .accessibilityHint("将所选卡片保存到 WordMem")
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
@@ -103,6 +122,10 @@ struct WordPickerView: View {
             return "已保留整句，可选择后保存到 WordMem。"
         }
         return "已保留整句，并拆出 \(wordCount) 个单词；选择后保存到 WordMem。"
+    }
+
+    private var saveButtonTitle: String {
+        isSaving ? "正在保存…" : "保存 \(selected.count) 个"
     }
 
     private var sourceSection: some View {
@@ -244,35 +267,25 @@ struct WordPickerView: View {
     }
 
     private func save() {
-        let sourceOrder = chips.enumerated().reduce(into: [String: String]()) { result, item in
-            result[item.element] = "\(item.offset)"
-        }
-        let candidates = selected.sorted().map { chip in
-            let meaning =
-                meanings[chip]
-                ?? (chip == TranslationWordTokenizer.normalizedPhrase(from: sourceText)
-                    ? phraseTranslation : nil)
-                ?? ""
-            return WordImportCandidatePayload(
-                text: chip,
-                normalizedKey: chip.lowercased(),
-                userTranslation: meaning.trimmingCharacters(in: .whitespacesAndNewlines),
-                metadata: ["sourceOrder": sourceOrder[chip] ?? ""]
-            )
-        }
-        let submission = WordImportSubmission(
-            source: .translationProvider,
+        let builder = TranslationProviderSubmissionBuilder(
             sourceText: sourceText,
-            recognizedText: sourceText,
-            candidates: candidates,
-            metadata: ["channel": "translation_provider"]
+            phraseTranslation: phraseTranslation,
+            selectedChips: selected,
+            meanings: meanings
         )
-        persistenceError = WordImportExtensionSaveService.saveTranslationProvider(
+        let submission = builder.makeSubmission()
+
+        let result = saveCoordinator.save(
             submission,
             storage: storage,
             onSaved: onSave
         )
+
+        if case .completed(let error) = result {
+            persistenceError = error
+        }
     }
+
 }
 
 private struct ShimmerBox: View {

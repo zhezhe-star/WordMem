@@ -44,6 +44,88 @@ final class WordImportSubmissionTests: XCTestCase {
         XCTAssertEqual(WordImportSource.translationProvider.displayName, "翻译导入")
     }
 
+    func testTranslationProviderSubmissionKeepsSourceCardOrderAndExplicitPhraseSelection() {
+        let builder = TranslationProviderSubmissionBuilder(
+            sourceText: "  A   beautiful day!  ",
+            phraseTranslation: "美好的一天",
+            selectedChips: ["day", "A beautiful day!", "beautiful"],
+            meanings: [
+                "beautiful": "美丽的",
+                "day": "一天",
+            ]
+        )
+
+        let submission = builder.makeSubmission()
+
+        XCTAssertEqual(
+            submission.candidates.map(\.text),
+            ["A beautiful day!", "beautiful", "day"]
+        )
+        XCTAssertEqual(submission.source, .translationProvider)
+        XCTAssertEqual(submission.sourceText, "A beautiful day!")
+        XCTAssertEqual(submission.candidates[0].normalizedKey, "a beautiful day!")
+        XCTAssertEqual(submission.candidates[0].userTranslation, "美好的一天")
+        XCTAssertEqual(submission.candidates[0].metadata["sourceOrder"], "0")
+        XCTAssertEqual(submission.candidates[1].userTranslation, "美丽的")
+        XCTAssertEqual(submission.candidates[1].metadata["sourceOrder"], "2")
+        XCTAssertEqual(submission.candidates[2].userTranslation, "一天")
+        XCTAssertEqual(submission.candidates[2].metadata["sourceOrder"], "3")
+
+        let wordsOnly = TranslationProviderSubmissionBuilder(
+            sourceText: "A beautiful day!",
+            phraseTranslation: "美好的一天",
+            selectedChips: ["beautiful", "day"],
+            meanings: [:]
+        )
+        XCTAssertFalse(wordsOnly.makeSubmission().candidates.map(\.text).contains("A beautiful day!"))
+    }
+
+    func testTranslationProviderSaveCoordinatorRejectsReentrantFailureSubmission() {
+        let coordinator = TranslationProviderSaveCoordinator()
+        let storage = ReentrantFailingTranslationStorage(coordinator: coordinator)
+        var savedCallbackCount = 0
+
+        let result = coordinator.save(
+            makeSubmission(source: .translationProvider),
+            storage: storage,
+            onSaved: { savedCallbackCount += 1 }
+        )
+
+        XCTAssertEqual(result, .completed("注入的持久化失败"))
+        XCTAssertEqual(savedCallbackCount, 0)
+        XCTAssertEqual(storage.appendCount, 1)
+        XCTAssertFalse(coordinator.isSaving)
+    }
+
+    func testTranslationProviderSaveCoordinatorAllowsOnlyOneSuccessSubmission() {
+        let coordinator = TranslationProviderSaveCoordinator()
+        let storage = ReentrantSuccessfulTranslationStorage(coordinator: coordinator)
+        var savedCallbackCount = 0
+
+        let result = coordinator.save(
+            makeSubmission(source: .translationProvider),
+            storage: storage,
+            onSaved: { savedCallbackCount += 1 }
+        )
+
+        XCTAssertEqual(result, .completed(nil))
+        XCTAssertEqual(savedCallbackCount, 1)
+        XCTAssertEqual(storage.appendCount, 1)
+        XCTAssertFalse(coordinator.isSaving)
+    }
+
+    func testTranslationProviderSaveCoordinatorStateGuardTransitions() {
+        var state = TranslationProviderSaveState()
+
+        XCTAssertTrue(state.beginSaving())
+        XCTAssertTrue(state.isSaving)
+        XCTAssertFalse(state.beginSaving())
+        XCTAssertTrue(state.isSaving)
+        state.endSaving()
+        XCTAssertFalse(state.isSaving)
+        XCTAssertTrue(state.beginSaving())
+    }
+
     func testSubmissionRoundTripAndCompatibleJSONFieldNames() throws {
         let submission = makeSubmission()
         let encoder = JSONEncoder()
@@ -904,6 +986,70 @@ private final class SuccessfulSubmissionStorage: WordImportSubmissionStoring {
 
     func appendSubmission(_ submission: WordImportSubmission) -> Bool {
         appendCount += 1
+        return true
+    }
+}
+
+// The reentrancy probe is used only from the test process's MainActor thread;
+// MainActor.assumeIsolated needs the storage reference to be Sendable.
+private final class ReentrantFailingTranslationStorage: WordImportSubmissionStoring,
+    @unchecked Sendable {
+    let coordinator: TranslationProviderSaveCoordinator
+    private(set) var appendCount = 0
+    var persistenceMessage: String? { "注入的持久化失败" }
+
+    init(coordinator: TranslationProviderSaveCoordinator) {
+        self.coordinator = coordinator
+    }
+
+    func appendSubmission(_ submission: WordImportSubmission) -> Bool {
+        appendCount += 1
+
+        if appendCount == 1 {
+            var nestedSavedCallbackCount = 0
+            let nestedResult = MainActor.assumeIsolated {
+                coordinator.save(
+                    submission,
+                    storage: self,
+                    onSaved: { nestedSavedCallbackCount += 1 }
+                )
+            }
+
+            XCTAssertEqual(nestedResult, .ignoredWhileSaving)
+            XCTAssertEqual(nestedSavedCallbackCount, 0)
+        }
+
+        return false
+    }
+}
+
+private final class ReentrantSuccessfulTranslationStorage: WordImportSubmissionStoring,
+    @unchecked Sendable {
+    let coordinator: TranslationProviderSaveCoordinator
+    private(set) var appendCount = 0
+    var persistenceMessage: String?
+
+    init(coordinator: TranslationProviderSaveCoordinator) {
+        self.coordinator = coordinator
+    }
+
+    func appendSubmission(_ submission: WordImportSubmission) -> Bool {
+        appendCount += 1
+
+        if appendCount == 1 {
+            var nestedSavedCallbackCount = 0
+            let nestedResult = MainActor.assumeIsolated {
+                coordinator.save(
+                    submission,
+                    storage: self,
+                    onSaved: { nestedSavedCallbackCount += 1 }
+                )
+            }
+
+            XCTAssertEqual(nestedResult, .ignoredWhileSaving)
+            XCTAssertEqual(nestedSavedCallbackCount, 0)
+        }
+
         return true
     }
 }

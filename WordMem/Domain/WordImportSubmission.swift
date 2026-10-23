@@ -176,6 +176,93 @@ enum WordImportQueueError: Error, Equatable {
     case appGroupContainerUnavailable
 }
 
+/// Builds a translation-provider payload while preserving the card order shown
+/// to the user. Selection is explicit: the phrase is included only when its own
+/// chip was selected.
+struct TranslationProviderSubmissionBuilder {
+    let sourceText: String
+    let phraseTranslation: String
+    let selectedChips: Set<String>
+    let meanings: [String: String]
+
+    var sourceChips: [String] {
+        TranslationWordTokenizer.pickerChips(from: sourceText)
+    }
+
+    var selectedCandidates: [WordImportCandidatePayload] {
+        sourceChips
+            .enumerated()
+            .compactMap { offset, chip in
+                guard selectedChips.contains(chip) else { return nil }
+                let phrase = TranslationWordTokenizer.normalizedPhrase(from: sourceText)
+                let meaning = meanings[chip]
+                    ?? (chip == phrase ? phraseTranslation : nil)
+                    ?? ""
+
+                return WordImportCandidatePayload(
+                    text: chip,
+                    normalizedKey: chip.lowercased(),
+                    userTranslation: meaning.trimmingCharacters(in: .whitespacesAndNewlines),
+                    metadata: ["sourceOrder": String(offset)]
+                )
+            }
+    }
+
+    func makeSubmission() -> WordImportSubmission {
+        WordImportSubmission(
+            source: .translationProvider,
+            sourceText: TranslationWordTokenizer.normalizedPhrase(from: sourceText),
+            recognizedText: sourceText,
+            candidates: selectedCandidates,
+            metadata: ["channel": "translation_provider"]
+        )
+    }
+}
+
+struct TranslationProviderSaveState: Equatable {
+    private(set) var isSaving = false
+
+    mutating func beginSaving() -> Bool {
+        guard !isSaving else { return false }
+        isSaving = true
+        return true
+    }
+
+    mutating func endSaving() {
+        isSaving = false
+    }
+}
+
+@MainActor
+final class TranslationProviderSaveCoordinator {
+    enum Result: Equatable {
+        case completed(String?)
+        case ignoredWhileSaving
+    }
+
+    private var state = TranslationProviderSaveState()
+
+    var isSaving: Bool { state.isSaving }
+
+    func save(
+        _ submission: WordImportSubmission,
+        storage: any WordImportSubmissionStoring,
+        onSaved: () -> Void
+    ) -> Result {
+        guard state.beginSaving() else { return .ignoredWhileSaving }
+
+        let didSave = storage.appendSubmission(submission)
+        state.endSaving()
+
+        guard didSave else {
+            return .completed(storage.persistenceMessage ?? "保存导入记录失败，请重试。")
+        }
+
+        onSaved()
+        return .completed(nil)
+    }
+}
+
 protocol WordImportSubmissionStoring: AnyObject {
     @discardableResult
     func appendSubmission(_ submission: WordImportSubmission) -> Bool
