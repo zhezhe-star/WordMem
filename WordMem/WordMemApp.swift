@@ -7,6 +7,7 @@ struct WordMemApp: App {
         WindowGroup {
             ContentView()
                 .modelContainer(for: [WordEntry.self, WordImportContext.self])
+                .environmentObject(EnglishPronunciationPlayer.shared)
         }
     }
 }

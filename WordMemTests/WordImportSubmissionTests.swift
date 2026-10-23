@@ -99,18 +99,57 @@ final class WordImportSubmissionTests: XCTestCase {
 
     func testTranslationProviderSaveCoordinatorAllowsOnlyOneSuccessSubmission() {
         let coordinator = TranslationProviderSaveCoordinator()
-        let storage = ReentrantSuccessfulTranslationStorage(coordinator: coordinator)
+        let storage = SuccessfulSubmissionStorage()
         var savedCallbackCount = 0
 
-        let result = coordinator.save(
+        let firstResult = coordinator.save(
             makeSubmission(source: .translationProvider),
             storage: storage,
             onSaved: { savedCallbackCount += 1 }
         )
 
-        XCTAssertEqual(result, .completed(nil))
+        XCTAssertEqual(firstResult, .completed(nil))
         XCTAssertEqual(savedCallbackCount, 1)
         XCTAssertEqual(storage.appendCount, 1)
+        XCTAssertFalse(coordinator.isSaving)
+
+        let secondResult = coordinator.save(
+            makeSubmission(source: .translationProvider),
+            storage: storage,
+            onSaved: { savedCallbackCount += 1 }
+        )
+
+        XCTAssertEqual(secondResult, .ignoredAfterSuccess)
+        XCTAssertEqual(savedCallbackCount, 1)
+        XCTAssertEqual(storage.appendCount, 1)
+        XCTAssertFalse(coordinator.isSaving)
+    }
+
+    func testFailedProviderSaveRemainsRetryable() {
+        let coordinator = TranslationProviderSaveCoordinator()
+        let failingStorage = FailingSubmissionStorage()
+        let successfulStorage = SuccessfulSubmissionStorage()
+        var savedCallbackCount = 0
+
+        let failedResult = coordinator.save(
+            makeSubmission(source: .translationProvider),
+            storage: failingStorage,
+            onSaved: { savedCallbackCount += 1 }
+        )
+
+        XCTAssertEqual(failedResult, .completed("注入的持久化失败"))
+        XCTAssertEqual(savedCallbackCount, 0)
+        XCTAssertFalse(coordinator.isSaving)
+
+        let retriedResult = coordinator.save(
+            makeSubmission(source: .translationProvider),
+            storage: successfulStorage,
+            onSaved: { savedCallbackCount += 1 }
+        )
+
+        XCTAssertEqual(retriedResult, .completed(nil))
+        XCTAssertEqual(savedCallbackCount, 1)
+        XCTAssertEqual(successfulStorage.appendCount, 1)
         XCTAssertFalse(coordinator.isSaving)
     }
 
@@ -202,8 +241,90 @@ final class WordImportSubmissionTests: XCTestCase {
             [second.payloadID])
     }
 
-    func testStructuredRepositoryImportCreatesPerCandidateHistoryAndPreservesUserData() async throws
-    {
+    func testAppendMigratesLegacyPendingBeforeWritingNewPayload() throws {
+        let suite = "WordImportLegacyOrder.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("WordImportLegacyOrder-\(UUID().uuidString)", isDirectory: true)
+        defer {
+            defaults.removePersistentDomain(forName: suite)
+            try? FileManager.default.removeItem(at: root)
+        }
+        let legacyPayload = makeSubmission()
+        let legacyData = try JSONEncoder().encode([legacyPayload])
+        defaults.set(legacyData, forKey: WordImportSubmissionQueue.pendingKey)
+        let newPayload = makeSubmission(source: .translationProvider)
+        var migratedBeforeAppend = false
+
+        try WordImportSubmissionQueue.append(
+            newPayload,
+            baseDirectory: root,
+            legacyDefaults: defaults,
+            migrateLegacy: { _, baseDirectory in
+                migratedBeforeAppend = true
+                XCTAssertNotNil(baseDirectory)
+                guard let baseDirectory else { return }
+                XCTAssertFalse(
+                    FileManager.default.fileExists(
+                        atPath:
+                            baseDirectory
+                            .appendingPathComponent("pending")
+                            .appendingPathComponent("\(newPayload.payloadID.uuidString).json")
+                            .path
+                    )
+                )
+            }
+        )
+
+        XCTAssertTrue(migratedBeforeAppend)
+        let pendingIDs = Set(
+            try WordImportSubmissionQueue.snapshot(
+                baseDirectory: root,
+                legacyDefaults: defaults
+            ).pending.map(\.payloadID)
+        )
+        XCTAssertEqual(pendingIDs, [newPayload.payloadID])
+    }
+
+    func testAppendFailsBeforeWritingNewPayloadWhenLegacyMigrationFails() throws {
+        let suite = "WordImportLegacyFailure.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent(
+                "WordImportLegacyFailure-\(UUID().uuidString)", isDirectory: true)
+        defer {
+            defaults.removePersistentDomain(forName: suite)
+            try? FileManager.default.removeItem(at: root)
+        }
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let newPayload = makeSubmission(source: .translationProvider)
+
+        struct MigrationFailed: Error {}
+
+        XCTAssertThrowsError(
+            try WordImportSubmissionQueue.append(
+                newPayload,
+                baseDirectory: root,
+                legacyDefaults: defaults,
+                migrateLegacy: { _, _ in throw MigrationFailed() }
+            )
+        )
+
+        let pendingIDs = try WordImportSubmissionQueue.snapshot(baseDirectory: root)
+            .pending.map(\.payloadID)
+        XCTAssertEqual(pendingIDs, [])
+        XCTAssertFalse(
+            FileManager.default.fileExists(
+                atPath:
+                    root
+                    .appendingPathComponent("pending")
+                    .appendingPathComponent("\(newPayload.payloadID.uuidString).json")
+                    .path
+            )
+        )
+    }
+
+    func testStructuredRepositoryImportCreatesPerCandidateHistoryAndPreservesUserData() async throws {
         let container = try makeContainer()
         let modelContext = ModelContext(container)
         let repository = WordbookRepository(modelContext: modelContext)
@@ -936,20 +1057,6 @@ final class WordImportHardeningFollowUpTests: XCTestCase {
         XCTAssertEqual(storage.appendCount, 1)
     }
 
-    func testTranslationProviderPersistenceFailureDoesNotInvokeSaveCallback() {
-        let storage = FailingSubmissionStorage()
-        var savedCallbackCount = 0
-        let error = WordImportExtensionSaveService.saveTranslationProvider(
-            submission(source: .translationProvider),
-            storage: storage,
-            onSaved: { savedCallbackCount += 1 }
-        )
-
-        XCTAssertEqual(savedCallbackCount, 0)
-        XCTAssertEqual(error, "注入的持久化失败")
-        XCTAssertEqual(storage.appendCount, 1)
-    }
-
     func testExtensionPersistenceSuccessInvokesOnlySavedCallback() {
         let storage = SuccessfulSubmissionStorage()
         var savedCallbackCount = 0
@@ -958,15 +1065,9 @@ final class WordImportHardeningFollowUpTests: XCTestCase {
             storage: storage,
             onSaved: { savedCallbackCount += 1 }
         )
-        let providerError = WordImportExtensionSaveService.saveTranslationProvider(
-            submission(source: .translationProvider),
-            storage: storage,
-            onSaved: { savedCallbackCount += 1 }
-        )
 
         XCTAssertNil(shareError)
-        XCTAssertNil(providerError)
-        XCTAssertEqual(savedCallbackCount, 2)
+        XCTAssertEqual(savedCallbackCount, 1)
     }
 }
 
@@ -993,7 +1094,8 @@ private final class SuccessfulSubmissionStorage: WordImportSubmissionStoring {
 // The reentrancy probe is used only from the test process's MainActor thread;
 // MainActor.assumeIsolated needs the storage reference to be Sendable.
 private final class ReentrantFailingTranslationStorage: WordImportSubmissionStoring,
-    @unchecked Sendable {
+    @unchecked Sendable
+{
     let coordinator: TranslationProviderSaveCoordinator
     private(set) var appendCount = 0
     var persistenceMessage: String? { "注入的持久化失败" }
@@ -1024,7 +1126,8 @@ private final class ReentrantFailingTranslationStorage: WordImportSubmissionStor
 }
 
 private final class ReentrantSuccessfulTranslationStorage: WordImportSubmissionStoring,
-    @unchecked Sendable {
+    @unchecked Sendable
+{
     let coordinator: TranslationProviderSaveCoordinator
     private(set) var appendCount = 0
     var persistenceMessage: String?

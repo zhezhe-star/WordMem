@@ -1,5 +1,5 @@
-import XCTest
 import AVFAudio
+import XCTest
 
 @testable import WordMem
 
@@ -300,12 +300,19 @@ private final class MockPronunciationAudioSession: PronunciationAudioSessionCont
         let options: AVAudioSession.SetActiveOptions
     }
 
-    private(set) var categoryCalls: [(category: AVAudioSession.Category, options: AVAudioSession.CategoryOptions)] = []
+    struct CategoryCall: Equatable {
+        let category: AVAudioSession.Category
+        let options: AVAudioSession.CategoryOptions
+    }
+
+    private(set) var categoryCalls: [CategoryCall] = []
     private(set) var transitions: [Transition] = []
     var activationError: Error?
+    var category: AVAudioSession.Category = .ambient
+    var categoryOptions: AVAudioSession.CategoryOptions = [.mixWithOthers]
 
     func setCategory(_ category: AVAudioSession.Category, options: AVAudioSession.CategoryOptions) throws {
-        categoryCalls.append((category, options))
+        categoryCalls.append(CategoryCall(category: category, options: options))
     }
 
     func setActive(_ active: Bool, options: AVAudioSession.SetActiveOptions) throws {
@@ -334,6 +341,10 @@ private final class MockPronunciationSpeechEngine: PronunciationSpeechEngine {
 
 @MainActor
 final class EnglishPronunciationPlayerTests: XCTestCase {
+    func testSharedPlayerIsOneAppScopedLifecycleOwner() {
+        XCTAssertIdentical(EnglishPronunciationPlayer.shared, EnglishPronunciationPlayer.shared)
+    }
+
     func testOverlappingUtterancesKeepDuckedSessionActiveUntilLastDelegateFinishes() throws {
         let session = MockPronunciationAudioSession()
         let engine = MockPronunciationSpeechEngine()
@@ -392,8 +403,21 @@ final class EnglishPronunciationPlayerTests: XCTestCase {
         XCTAssertEqual(session.transitions.count, 2, "Late delegate callbacks after cancellation must not deactivate twice.")
     }
 
+    func testSlowRatePlaybackPreservesConfiguredRate() {
+        let session = MockPronunciationAudioSession()
+        let engine = MockPronunciationSpeechEngine()
+        let player = EnglishPronunciationPlayer(audioSession: session, speechEngine: engine)
+
+        XCTAssertTrue(player.play("apple", rate: 0.28))
+
+        XCTAssertEqual(engine.utterances.map(\.rate), [0.28])
+        XCTAssertTrue(player.isSpeaking)
+    }
+
     func testActivationFailureDoesNotTrackUtterance() {
         let session = MockPronunciationAudioSession()
+        session.category = .playback
+        session.categoryOptions = [.mixWithOthers]
         session.activationError = NSError(domain: NSPOSIXErrorDomain, code: 1)
         let engine = MockPronunciationSpeechEngine()
         let player = EnglishPronunciationPlayer(audioSession: session, speechEngine: engine)
@@ -402,5 +426,18 @@ final class EnglishPronunciationPlayerTests: XCTestCase {
         XCTAssertFalse(player.isSpeaking)
         XCTAssertTrue(engine.utterances.isEmpty)
         XCTAssertTrue(session.transitions.isEmpty)
+        XCTAssertEqual(
+            session.categoryCalls,
+            [
+                MockPronunciationAudioSession.CategoryCall(
+                    category: .playback,
+                    options: .duckOthers
+                ),
+                MockPronunciationAudioSession.CategoryCall(
+                    category: .playback,
+                    options: .mixWithOthers
+                ),
+            ]
+        )
     }
 }

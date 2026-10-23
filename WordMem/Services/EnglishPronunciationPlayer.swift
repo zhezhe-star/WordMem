@@ -5,6 +5,8 @@ import Foundation
 
 @MainActor
 protocol PronunciationAudioSessionControlling: AnyObject {
+    var category: AVAudioSession.Category { get }
+    var categoryOptions: AVAudioSession.CategoryOptions { get }
     func setCategory(_ category: AVAudioSession.Category, options: AVAudioSession.CategoryOptions) throws
     func setActive(_ active: Bool, options: AVAudioSession.SetActiveOptions) throws
 }
@@ -25,6 +27,12 @@ protocol PronunciationSpeechEngine: AnyObject {
 // MARK: - AVAudioSession adapter
 
 final class SystemPronunciationAudioSession: PronunciationAudioSessionControlling {
+    var category: AVAudioSession.Category { AVAudioSession.sharedInstance().category }
+
+    var categoryOptions: AVAudioSession.CategoryOptions {
+        AVAudioSession.sharedInstance().categoryOptions
+    }
+
     func setCategory(_ category: AVAudioSession.Category, options: AVAudioSession.CategoryOptions) throws {
         try AVAudioSession.sharedInstance().setCategory(category, mode: .default, options: options)
     }
@@ -97,6 +105,8 @@ extension AVSpeechPronunciationEngine: AVSpeechSynthesizerDelegate {
 /// released only after the last utterance reports completion or cancellation.
 @MainActor
 final class EnglishPronunciationPlayer: ObservableObject, PronunciationPlaybackDelegate {
+    static let shared = EnglishPronunciationPlayer()
+
     @Published private(set) var isSpeaking = false
     private(set) var isAvailable = false
 
@@ -130,11 +140,17 @@ final class EnglishPronunciationPlayer: ObservableObject, PronunciationPlaybackD
         activeUtteranceIDs.insert(utteranceID)
 
         if shouldActivateSession {
+            let priorCategory = audioSession.category
+            let priorCategoryOptions = audioSession.categoryOptions
             do {
                 try audioSession.setCategory(.playback, options: .duckOthers)
                 try audioSession.setActive(true, options: [])
             } catch {
                 activeUtteranceIDs.remove(utteranceID)
+                // Activation did not take ownership. Put the category back where
+                // this play attempt found it so a failed tap remains non-mixing
+                // if the app had configured another category.
+                try? audioSession.setCategory(priorCategory, options: priorCategoryOptions)
                 return false
             }
         }

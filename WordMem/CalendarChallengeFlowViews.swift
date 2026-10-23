@@ -1,25 +1,25 @@
 import SwiftUI
 
 #if DEBUG
-/// Environment-driven entry points so the challenge flow can be opened
-/// directly in a (headless) simulator for UI verification:
-/// `SIMCTL_CHILD_WORDMEM_OPEN_CHALLENGE=1 xcrun simctl launch …` opens the
-/// calendar tab and pushes the challenge for today plus
-/// `WORDMEM_CHALLENGE_DATE_OFFSET` days; `WORDMEM_CHALLENGE_PAGE` selects the
-/// initial question index (question count = completion page).
-enum DebugDeepLink {
-    static var openChallenge: Bool {
-        ProcessInfo.processInfo.environment["WORDMEM_OPEN_CHALLENGE"] == "1"
-    }
+    /// Environment-driven entry points so the challenge flow can be opened
+    /// directly in a (headless) simulator for UI verification:
+    /// `SIMCTL_CHILD_WORDMEM_OPEN_CHALLENGE=1 xcrun simctl launch …` opens the
+    /// calendar tab and pushes the challenge for today plus
+    /// `WORDMEM_CHALLENGE_DATE_OFFSET` days; `WORDMEM_CHALLENGE_PAGE` selects the
+    /// initial question index (question count = completion page).
+    enum DebugDeepLink {
+        static var openChallenge: Bool {
+            ProcessInfo.processInfo.environment["WORDMEM_OPEN_CHALLENGE"] == "1"
+        }
 
-    static var challengeDateOffset: Int {
-        Int(ProcessInfo.processInfo.environment["WORDMEM_CHALLENGE_DATE_OFFSET"] ?? "") ?? 0
-    }
+        static var challengeDateOffset: Int {
+            Int(ProcessInfo.processInfo.environment["WORDMEM_CHALLENGE_DATE_OFFSET"] ?? "") ?? 0
+        }
 
-    static var challengePage: Int? {
-        Int(ProcessInfo.processInfo.environment["WORDMEM_CHALLENGE_PAGE"] ?? "")
+        static var challengePage: Int? {
+            Int(ProcessInfo.processInfo.environment["WORDMEM_CHALLENGE_PAGE"] ?? "")
+        }
     }
-}
 #endif
 
 // MARK: - Full-screen challenge flow
@@ -81,16 +81,18 @@ struct CalendarChallengeView: View {
         .onAppear {
             guard currentPageID == nil else { return }
             #if DEBUG
-            if let page = DebugDeepLink.challengePage {
-                currentPageID = allQuestions.indices.contains(page)
-                    ? allQuestions[page].id
-                    : Self.completionPageID
-                return
-            }
+                if let page = DebugDeepLink.challengePage {
+                    currentPageID =
+                        allQuestions.indices.contains(page)
+                        ? allQuestions[page].id
+                        : Self.completionPageID
+                    return
+                }
             #endif
-            currentPageID = allQuestions.first(where: {
-                challengeService.answer(for: $0, on: date) == nil
-            })?.id ?? Self.completionPageID
+            currentPageID =
+                allQuestions.first(where: {
+                    challengeService.answer(for: $0, on: date) == nil
+                })?.id ?? Self.completionPageID
         }
     }
 
@@ -240,14 +242,13 @@ private struct ChallengeQuestionPage: View {
     var words: [CalendarWord]
     @ObservedObject var challengeService: CalendarChallengeService
     let onAnswerRecorded: (String) -> Void
+    @EnvironmentObject private var speaker: EnglishPronunciationPlayer
 
     @State private var selectedOption: String?
     @State private var spelling = ""
     @State private var attemptCount = 0
     @State private var feedback: ChallengeFeedback?
     @State private var revealedLetterCount = 0
-    @StateObject private var speaker = EnglishPronunciationPlayer()
-
     private var savedAnswer: CalendarChallengeAnswer? {
         challengeService.answer(for: question, on: date)
     }
@@ -340,6 +341,9 @@ private struct ChallengeQuestionPage: View {
                     Label("慢速播放", systemImage: "tortoise")
                 }
                 .buttonStyle(.bordered)
+                .accessibilityLabel("慢速播放发音")
+                .accessibilityValue(speaker.isSpeaking ? "正在播放" : "未播放")
+                .accessibilityAddTraits(speaker.isSpeaking ? .isSelected : [])
 
                 if !speaker.isAvailable {
                     Text("当前设备没有英文语音。")
@@ -424,7 +428,9 @@ private struct ChallengeQuestionPage: View {
                     }
             }
         }
-        .accessibilityLabel("答案共 \(SpellingHintSlots.letterCount(of: question.answer)) 个字母，已提示 \(min(revealedLetterCount, SpellingHintSlots.letterCount(of: question.answer))) 个")
+        .accessibilityLabel(
+            "答案共 \(SpellingHintSlots.letterCount(of: question.answer)) 个字母，已提示 \(min(revealedLetterCount, SpellingHintSlots.letterCount(of: question.answer))) 个"
+        )
     }
 
     private func speakerButton(text: String) -> some View {

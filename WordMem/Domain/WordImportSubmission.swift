@@ -195,7 +195,8 @@ struct TranslationProviderSubmissionBuilder {
             .compactMap { offset, chip in
                 guard selectedChips.contains(chip) else { return nil }
                 let phrase = TranslationWordTokenizer.normalizedPhrase(from: sourceText)
-                let meaning = meanings[chip]
+                let meaning =
+                    meanings[chip]
                     ?? (chip == phrase ? phraseTranslation : nil)
                     ?? ""
 
@@ -220,16 +221,31 @@ struct TranslationProviderSubmissionBuilder {
 }
 
 struct TranslationProviderSaveState: Equatable {
-    private(set) var isSaving = false
+    private enum Phase: Equatable {
+        case idle
+        case saving
+        case succeeded
+    }
+
+    private var phase = Phase.idle
+
+    var isSaving: Bool { phase == .saving }
+    var hasSucceeded: Bool { phase == .succeeded }
 
     mutating func beginSaving() -> Bool {
-        guard !isSaving else { return false }
-        isSaving = true
+        guard phase == .idle else { return false }
+        phase = .saving
         return true
     }
 
+    mutating func markSucceeded() {
+        guard phase == .saving else { return }
+        phase = .succeeded
+    }
+
     mutating func endSaving() {
-        isSaving = false
+        guard phase == .saving else { return }
+        phase = .idle
     }
 }
 
@@ -238,6 +254,7 @@ final class TranslationProviderSaveCoordinator {
     enum Result: Equatable {
         case completed(String?)
         case ignoredWhileSaving
+        case ignoredAfterSuccess
     }
 
     private var state = TranslationProviderSaveState()
@@ -249,9 +266,17 @@ final class TranslationProviderSaveCoordinator {
         storage: any WordImportSubmissionStoring,
         onSaved: () -> Void
     ) -> Result {
-        guard state.beginSaving() else { return .ignoredWhileSaving }
+        guard state.beginSaving() else {
+            return state.hasSucceeded ? .ignoredAfterSuccess : .ignoredWhileSaving
+        }
 
         let didSave = storage.appendSubmission(submission)
+
+        // The terminal latch must be installed before persistence state is
+        // cleared, so an interleaved caller can never observe a retryable save.
+        if didSave {
+            state.markSucceeded()
+        }
         state.endSaving()
 
         guard didSave else {
@@ -272,14 +297,6 @@ protocol WordImportSubmissionStoring: AnyObject {
 @MainActor
 enum WordImportExtensionSaveService {
     static func saveShare(
-        _ submission: WordImportSubmission,
-        storage: any WordImportSubmissionStoring,
-        onSaved: () -> Void
-    ) -> String? {
-        save(submission, storage: storage, onSaved: onSaved)
-    }
-
-    static func saveTranslationProvider(
         _ submission: WordImportSubmission,
         storage: any WordImportSubmissionStoring,
         onSaved: () -> Void
@@ -327,8 +344,13 @@ enum WordImportSubmissionQueue {
     static func append(
         _ submission: WordImportSubmission,
         baseDirectory base: URL? = nil,
-        legacyDefaults: UserDefaults? = nil
+        legacyDefaults: UserDefaults? = nil,
+        migrateLegacy: ((UserDefaults?, URL?) throws -> Void)? = nil
     ) throws {
+        // Migrate first: a failure here must never leave a newly appended
+        // payload behind while reporting the append as failed.
+        let migrator = migrateLegacy ?? migrateLegacySubmissions(from:baseDirectory:)
+        try migrator(legacyDefaults, base)
         let url = try directory(.pending, baseDirectory: base)
             .appendingPathComponent(filename(for: submission.payloadID))
         let encoder = JSONEncoder()
@@ -337,7 +359,6 @@ enum WordImportSubmissionQueue {
             to: url,
             options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication]
         )
-        try migrateLegacySubmissions(from: legacyDefaults, baseDirectory: base)
     }
 
     static func snapshot(

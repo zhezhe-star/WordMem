@@ -18,13 +18,14 @@ struct WordPickerView: View {
     @State private var hasPreparedChips = false
     @State private var persistenceError: String?
     @State private var saveCoordinator = TranslationProviderSaveCoordinator()
+    @State private var isPreparingSave = false
 
     private var isPreparing: Bool {
         !isPhraseTranslationReady || isPreparingChips
     }
 
     private var isSaving: Bool {
-        saveCoordinator.isSaving
+        saveCoordinator.isSaving || isPreparingSave
     }
 
     private var canSave: Bool {
@@ -101,6 +102,7 @@ struct WordPickerView: View {
             .disabled(!canSave)
             .accessibilityLabel(saveButtonTitle)
             .accessibilityHint("将所选卡片保存到 WordMem")
+            .accessibilityValue(isSaving ? "正在保存" : "未在保存")
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
@@ -233,6 +235,12 @@ struct WordPickerView: View {
                     .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(
+                    meanings[chip].map { "\(chip)，\($0)" } ?? chip
+                )
+                .accessibilityValue(isSelected ? "已选择" : "未选择")
+                .accessibilityAddTraits(isSelected ? [.isSelected] : [])
             }
         }
     }
@@ -267,22 +275,30 @@ struct WordPickerView: View {
     }
 
     private func save() {
-        let builder = TranslationProviderSubmissionBuilder(
-            sourceText: sourceText,
-            phraseTranslation: phraseTranslation,
-            selectedChips: selected,
-            meanings: meanings
-        )
-        let submission = builder.makeSubmission()
+        guard canSave else { return }
+        isPreparingSave = true
 
-        let result = saveCoordinator.save(
-            submission,
-            storage: storage,
-            onSaved: onSave
-        )
+        Task { @MainActor in
+            // Let SwiftUI render the disabled/saving button before file I/O.
+            await Task.yield()
+            let builder = TranslationProviderSubmissionBuilder(
+                sourceText: sourceText,
+                phraseTranslation: phraseTranslation,
+                selectedChips: selected,
+                meanings: meanings
+            )
+            let submission = builder.makeSubmission()
 
-        if case .completed(let error) = result {
-            persistenceError = error
+            let result = saveCoordinator.save(
+                submission,
+                storage: storage,
+                onSaved: onSave
+            )
+
+            if case .completed(let error) = result {
+                persistenceError = error
+            }
+            isPreparingSave = false
         }
     }
 

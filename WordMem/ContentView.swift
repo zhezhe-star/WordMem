@@ -419,7 +419,7 @@ extension LookupStatus {
 struct WordEntryDetailView: View {
     let entry: WordEntry
     @Query private var importContexts: [WordImportContext]
-    @StateObject private var pronunciation = EnglishPronunciationPlayer()
+    @EnvironmentObject private var pronunciation: EnglishPronunciationPlayer
 
     init(entry: WordEntry) {
         self.entry = entry
@@ -471,6 +471,7 @@ struct WordEntryDetailView: View {
                     .foregroundStyle(pronunciation.isSpeaking ? Color.accentColor : Color.primary)
                 }
                 .accessibilityValue(pronunciation.isSpeaking ? "正在播放" : "未播放")
+                .accessibilityAddTraits(pronunciation.isSpeaking ? .isSelected : [])
             }
 
             if entry.senses.isEmpty {
