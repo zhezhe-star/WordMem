@@ -137,7 +137,7 @@ struct WordbookView: View {
                     AddWordView(dictionaryService: dictionaryService) { outcome in
                         presentFeedback(for: outcome)
                     }
-                    .presentationDetents([.height(280)])
+                    .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
                 case .image:
                     ImageImportView(dictionaryService: dictionaryService) { summary in

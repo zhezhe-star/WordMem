@@ -13,6 +13,28 @@ struct AddWordView: View {
     @State private var errorMessage: String?
     @FocusState private var isInputFocused: Bool
 
+#if DEBUG
+    init(
+        dictionaryService: any DictionaryLookupService,
+        completion: @escaping (AddWordOutcome) -> Void,
+        previewState: ImportPreviewState = ImportPreviewState()
+    ) {
+        self.dictionaryService = dictionaryService
+        self.completion = completion
+        _word = State(initialValue: previewState.word)
+        let normalizedWord = WordInputNormalizer.normalizedKey(from: previewState.word)
+        let initialChips = normalizedWord.isEmpty
+            ? []
+            : [ImportCandidateChip(id: normalizedWord, text: previewState.word, sourceOrder: 0)]
+        _selection = State(
+            initialValue: ImportPreviewFixtures.selection(
+                for: initialChips,
+                deselectedOffsets: previewState.deselectedOffsets
+            )
+        )
+    }
+#endif
+
     private var repository: WordbookRepository {
         WordbookRepository(modelContext: modelContext)
     }

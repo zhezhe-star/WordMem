@@ -32,9 +32,32 @@ struct ImageImportSourceCard: View {
         if currentStep == .content {
             sourceActions
         } else {
-            Text("可重新选择图片")
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
+            reselectionActions
+        }
+    }
+
+    private var reselectionActions: some View {
+        HStack(spacing: 8) {
+            PhotosPicker(
+                selection: $photoItem,
+                matching: .images,
+                photoLibrary: .shared()
+            ) {
+                Label("更换照片", systemImage: "photo")
+                    .font(.caption.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+            .disabled(isRecognizing || isSaving)
+
+            Button(action: presentCamera) {
+                Label("重拍", systemImage: "camera")
+                    .font(.caption.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+            .tint(.blue)
+            .disabled(isRecognizing || isSaving)
         }
     }
 

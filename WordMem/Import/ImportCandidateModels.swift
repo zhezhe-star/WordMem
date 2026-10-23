@@ -23,6 +23,43 @@ struct ImportCandidateChip: Identifiable, Hashable, Sendable {
     }
 }
 
+extension ImportCandidateChip {
+    /// Keeps the first appearance of every identity so reusable views cannot
+    /// crash on duplicate IDs and stable source order remains predictable.
+    static func uniquelyIdentified(_ chips: [ImportCandidateChip]) -> [ImportCandidateChip] {
+        var seenIDs = Set<String>()
+        return chips.filter { seenIDs.insert($0.id).inserted }
+    }
+}
+
+enum ImportCandidateAccessibility {
+    static func label(text: String, meaning: String?) -> String {
+        let trimmedMeaning = meaning?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmedMeaning.isEmpty ? text : "\(text)，\(trimmedMeaning)"
+    }
+}
+
+/// `Text` has no public wrapped-line count, so long unwrapped paragraphs use a
+/// conservative character threshold in addition to explicit line breaks.
+struct ImportContextExpansion: Equatable {
+    let isExpandable: Bool
+    private(set) var isExpanded = false
+
+    init(text: String, collapsedLineLimit: Int = 5, wrappedCharacterLimit: Int = 220) {
+        let lineCount = text.components(separatedBy: .newlines).count
+        isExpandable = lineCount > collapsedLineLimit || text.count > wrappedCharacterLimit
+    }
+
+    var lineLimit: Int? {
+        isExpandable && !isExpanded ? 5 : nil
+    }
+
+    mutating func toggle() {
+        guard isExpandable else { return }
+        isExpanded.toggle()
+    }
+}
+
 struct ImportCandidateSection: Identifiable, Hashable, Sendable {
     let title: String?
     let chips: [ImportCandidateChip]
@@ -63,8 +100,9 @@ struct ImportChipSelection: Equatable, Sendable {
     private var selectedIDs: Set<String>
 
     init(chips: [ImportCandidateChip], selectsAllByDefault: Bool = true) {
-        orderedIDs = chips.map(\.id)
-        chipsByID = Dictionary(uniqueKeysWithValues: chips.map { ($0.id, $0) })
+        let uniqueChips = ImportCandidateChip.uniquelyIdentified(chips)
+        orderedIDs = uniqueChips.map(\.id)
+        chipsByID = Dictionary(uniqueKeysWithValues: uniqueChips.map { ($0.id, $0) })
         selectedIDs = selectsAllByDefault ? Set(orderedIDs) : []
     }
 
@@ -107,9 +145,10 @@ struct ImportChipSelection: Equatable, Sendable {
 
     mutating func updateChips(_ chips: [ImportCandidateChip]) {
         let oldDeselectedIDs = Set(orderedIDs).subtracting(selectedIDs)
-        orderedIDs = chips.map(\.id)
-        chipsByID = Dictionary(uniqueKeysWithValues: chips.map { ($0.id, $0) })
-        selectedIDs = Set(orderedIDs).subtracting(oldDeselectedIDs)
+        let uniqueChips = ImportCandidateChip.uniquelyIdentified(chips)
+        orderedIDs = uniqueChips.map(\.id)
+        chipsByID = Dictionary(uniqueKeysWithValues: uniqueChips.map { ($0.id, $0) })
+        selectedIDs = selectedIDs.intersection(orderedIDs).union(orderedIDs).subtracting(oldDeselectedIDs)
     }
 
 }

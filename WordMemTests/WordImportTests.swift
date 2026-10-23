@@ -161,6 +161,56 @@ final class WordImportTests: XCTestCase {
         XCTAssertEqual(selection.selectedChips.map(\.text), candidates.map(\.text))
     }
 
+    func testSharedChipSelectionDeduplicatesFirstSeenChipsDeterministically() {
+        let duplicatedChips = [
+            ImportCandidateChip(id: "cat", text: "cat", sourceOrder: 2),
+            ImportCandidateChip(id: "dog", text: "dog", sourceOrder: 3),
+            ImportCandidateChip(id: "cat", text: "Cat", sourceOrder: 1),
+        ]
+
+        let uniqueChips = ImportCandidateChip.uniquelyIdentified(duplicatedChips)
+        var selection = ImportChipSelection(chips: duplicatedChips)
+
+        XCTAssertEqual(uniqueChips.map(\.id), ["cat", "dog"])
+        XCTAssertEqual(uniqueChips.map(\.text), ["cat", "dog"])
+        XCTAssertEqual(selection.selectedChips.map(\.id), ["cat", "dog"])
+        XCTAssertEqual(selection.selectedChips.map(\.text), ["cat", "dog"])
+
+        selection.updateChips(duplicatedChips)
+        XCTAssertEqual(selection.selectedChips.map(\.id), ["cat", "dog"])
+        XCTAssertEqual(selection.selectedChips.map(\.text), ["cat", "dog"])
+    }
+
+    func testChipAccessibilityLabelCombinesMeaningWithoutVisualChange() {
+        XCTAssertEqual(ImportCandidateAccessibility.label(text: "cat", meaning: nil), "cat")
+        XCTAssertEqual(ImportCandidateAccessibility.label(text: "cat", meaning: ""), "cat")
+        XCTAssertEqual(
+            ImportCandidateAccessibility.label(text: "cat", meaning: "猫"),
+            "cat，猫"
+        )
+    }
+
+    func testContextExpansionDetectsLongTextAndTogglesAccessibly() {
+        let multiline = (1...7).map { "line \($0)" }.joined(separator: "\n")
+        var multilineExpansion = ImportContextExpansion(text: multiline)
+
+        XCTAssertTrue(multilineExpansion.isExpandable)
+        XCTAssertFalse(multilineExpansion.isExpanded)
+        XCTAssertEqual(multilineExpansion.lineLimit, 5)
+
+        multilineExpansion.toggle()
+        XCTAssertTrue(multilineExpansion.isExpanded)
+        XCTAssertNil(multilineExpansion.lineLimit)
+
+        let longWrappedText = String(repeating: "word ", count: 48)
+        let wrappedExpansion = ImportContextExpansion(text: longWrappedText)
+        XCTAssertTrue(wrappedExpansion.isExpandable)
+
+        let shortExpansion = ImportContextExpansion(text: "short context")
+        XCTAssertFalse(shortExpansion.isExpandable)
+        XCTAssertNil(shortExpansion.lineLimit)
+    }
+
     func testTextBatchImportCreatesSelectedWordsWithSharedSourceSentence() async throws {
         let fixture = try makeFixture()
         let sourceSentence = "The quick brown fox jumps over the lazy dog."

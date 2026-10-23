@@ -28,6 +28,27 @@ struct ImageImportView: View {
     private let recognitionService: any TextRecognitionService = VisionTextRecognitionService()
     private let processingCoordinator = WordImageProcessingCoordinator()
 
+#if DEBUG
+    init(
+        dictionaryService: any DictionaryLookupService,
+        completion: @escaping (WordImportSummary) -> Void,
+        previewState: ImportPreviewState = ImportPreviewState()
+    ) {
+        self.dictionaryService = dictionaryService
+        self.completion = completion
+        _capturedImage = State(initialValue: previewState.thumbnail)
+        _imageData = State(initialValue: previewState.thumbnail?.jpegData(compressionQuality: 0.9))
+        _recognizedText = State(initialValue: previewState.recognizedText)
+        _chips = State(initialValue: previewState.chips)
+        _selection = State(
+            initialValue: ImportPreviewFixtures.selection(
+                for: previewState.chips,
+                deselectedOffsets: previewState.deselectedOffsets
+            )
+        )
+    }
+#endif
+
     private var repository: WordbookRepository {
         WordbookRepository(modelContext: modelContext)
     }
@@ -153,6 +174,7 @@ struct ImageImportView: View {
     private func loadImage(from item: PhotosPickerItem?) async {
         guard let item else { return }
 
+        clearStaleResult()
         let token = processingCoordinator.begin()
         isRecognizing = true
         defer {
@@ -172,6 +194,10 @@ struct ImageImportView: View {
     }
 
     private func processImageData(_ data: Data?, inheritedToken token: UUID? = nil) async {
+        if token == nil {
+            clearStaleResult()
+        }
+
         // When loading supplies a token, the load phase already owns processing state.
         let ownsProcessing: Bool
         let activeToken: UUID
@@ -226,6 +252,13 @@ struct ImageImportView: View {
         }
     }
 
+    private func clearStaleResult() {
+        recognizedText = ""
+        chips = []
+        selection = ImportChipSelection(chips: [])
+        errorMessage = nil
+    }
+
     private func presentCameraIfAvailable() {
         let availability = CameraAvailability.current()
         cameraAvailability = availability
@@ -276,7 +309,34 @@ struct ImageImportView: View {
     }
 }
 
-#Preview("图片导入") {
+#if DEBUG
+#Preview("图片导入 · 空状态") {
     ImageImportView(dictionaryService: BareWordDictionaryLookupService()) { _ in }
 }
 
+#Preview("图片导入 · 正常候选") {
+    ImageImportView(
+        dictionaryService: BareWordDictionaryLookupService(),
+        completion: { _ in },
+        previewState: ImportPreviewState(
+            recognizedText: "Beautiful mountain views appear after the morning rain.",
+            chips: ImportPreviewFixtures.chips(count: 8),
+            deselectedOffsets: [2],
+            thumbnail: ImportPreviewFixtures.thumbnail()
+        )
+    )
+}
+
+#Preview("图片导入 · 55 个候选") {
+    ImageImportView(
+        dictionaryService: BareWordDictionaryLookupService(),
+        completion: { _ in },
+        previewState: ImportPreviewState(
+            recognizedText: String(repeating: "Beautiful mountain views appear after rain. ", count: 8),
+            chips: ImportPreviewFixtures.chips(count: 55),
+            deselectedOffsets: [0, 27, 54],
+            thumbnail: ImportPreviewFixtures.thumbnail()
+        )
+    )
+}
+#endif

@@ -14,6 +14,25 @@ struct TextImportView: View {
     @State private var isSaving = false
     @State private var errorMessage: String?
 
+#if DEBUG
+    init(
+        dictionaryService: any DictionaryLookupService,
+        completion: @escaping (WordImportSummary) -> Void,
+        previewState: ImportPreviewState = ImportPreviewState()
+    ) {
+        self.dictionaryService = dictionaryService
+        self.completion = completion
+        _sourceText = State(initialValue: previewState.sourceText)
+        _chips = State(initialValue: previewState.chips)
+        _selection = State(
+            initialValue: ImportPreviewFixtures.selection(
+                for: previewState.chips,
+                deselectedOffsets: previewState.deselectedOffsets
+            )
+        )
+    }
+#endif
+
     private var repository: WordbookRepository {
         WordbookRepository(modelContext: modelContext)
     }
@@ -149,7 +168,32 @@ struct TextImportView: View {
     }
 }
 
-#Preview("文本导入") {
+#if DEBUG
+#Preview("文本导入 · 空状态") {
     TextImportView(dictionaryService: BareWordDictionaryLookupService()) { _ in }
 }
 
+#Preview("文本导入 · 正常候选") {
+    TextImportView(
+        dictionaryService: BareWordDictionaryLookupService(),
+        completion: { _ in },
+        previewState: ImportPreviewState(
+            sourceText: ImportPreviewFixtures.text(count: 8),
+            chips: ImportPreviewFixtures.chips(count: 8),
+            deselectedOffsets: [1, 4]
+        )
+    )
+}
+
+#Preview("文本导入 · 55 个候选") {
+    TextImportView(
+        dictionaryService: BareWordDictionaryLookupService(),
+        completion: { _ in },
+        previewState: ImportPreviewState(
+            sourceText: ImportPreviewFixtures.text(count: 55),
+            chips: ImportPreviewFixtures.chips(count: 55),
+            deselectedOffsets: [0, 27, 54]
+        )
+    )
+}
+#endif

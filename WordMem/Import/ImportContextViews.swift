@@ -79,6 +79,23 @@ struct ImportContextCard<Accessory: View>: View {
     var isContextHidden = false
     @ViewBuilder var accessory: () -> Accessory
 
+    @State private var expansion: ImportContextExpansion
+
+    init(
+        title: String,
+        text: String,
+        thumbnail: UIImage? = nil,
+        isContextHidden: Bool = false,
+        @ViewBuilder accessory: @escaping () -> Accessory
+    ) {
+        self.title = title
+        self.text = text
+        self.thumbnail = thumbnail
+        self.isContextHidden = isContextHidden
+        self.accessory = accessory
+        _expansion = State(initialValue: ImportContextExpansion(text: text))
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 5) {
@@ -92,7 +109,7 @@ struct ImportContextCard<Accessory: View>: View {
             HStack(alignment: .top, spacing: 14) {
                 Text(text)
                     .font(.body.weight(.medium))
-                    .lineLimit(5)
+                    .lineLimit(expansion.lineLimit)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 if let thumbnail {
@@ -110,6 +127,25 @@ struct ImportContextCard<Accessory: View>: View {
             }
 
             accessory()
+
+            if expansion.isExpandable {
+                Button {
+                    withAnimation(.snappy) {
+                        expansion.toggle()
+                    }
+                } label: {
+                    Label(
+                        expansion.isExpanded ? "收起" : "显示全部",
+                        systemImage: expansion.isExpanded ? "chevron.up" : "chevron.down"
+                    )
+                    .font(.footnote.weight(.semibold))
+                }
+                .buttonStyle(.plain)
+                .tint(.blue)
+                .accessibilityLabel(expansion.isExpanded ? "收起原文" : "显示全部原文")
+                .accessibilityValue(expansion.isExpanded ? "已展开" : "已折叠")
+                .accessibilityAddTraits(.isButton)
+            }
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -119,6 +155,9 @@ struct ImportContextCard<Accessory: View>: View {
                 .strokeBorder(.white.opacity(0.16), lineWidth: 0.5)
         }
         .accessibilityHidden(isContextHidden)
+        .onChange(of: text, initial: true) {
+            expansion = ImportContextExpansion(text: text)
+        }
     }
 }
 
@@ -137,12 +176,15 @@ struct ImportSourceEditorCard: View {
                 .scrollContentBackground(.hidden)
                 .font(.body)
                 .frame(minHeight: 94)
+                .accessibilityLabel(title)
+                .accessibilityHint("输入英文内容后挑选单词")
                 .overlay(alignment: .topLeading) {
                     if text.isEmpty {
                         Text(placeholder)
                             .foregroundStyle(.tertiary)
                             .padding(.top, 8)
                             .allowsHitTesting(false)
+                            .accessibilityHidden(true)
                     }
                 }
         }
