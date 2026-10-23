@@ -1,8 +1,9 @@
 import SwiftUI
 import Translation
 
-/// Word picker modeled after the reference experience:
-/// selectable chips for the whole phrase and each word, then save.
+
+/// Word picker modeled after the system Translation Provider card:
+/// visible context, source-ordered chips, and explicit save.
 struct WordPickerView: View {
     let sourceText: String
     let phraseTranslation: String
@@ -11,7 +12,7 @@ struct WordPickerView: View {
     let onCancel: () -> Void
     let onSave: () -> Void
 
-    @State private var selected: Set<String> = []
+    @State private var selection = ImportChipSelection(chips: [])
     @State private var meanings: [String: String] = [:]
     @State private var configuration: TranslationSession.Configuration?
     @State private var isPreparingChips = true
@@ -29,44 +30,66 @@ struct WordPickerView: View {
     }
 
     private var canSave: Bool {
-        !selected.isEmpty && !isPreparing && !isSaving
+        selection.selectedCount > 0 && !isPreparing && !isSaving
     }
 
-    private var chips: [String] {
+    private var chips: [ImportCandidateChip] {
+        let phrase = TranslationWordTokenizer.normalizedPhrase(from: sourceText)
+        return TranslationWordTokenizer.pickerChips(from: sourceText)
+            .enumerated()
+            .map { offset, token in
+                ImportCandidateChip(
+                    id: token,
+                    text: token,
+                    sourceOrder: offset,
+                    group: token == phrase ? "整句" : "单词"
+                )
+            }
+    }
+
+    private var sourceTokens: [String] {
         TranslationWordTokenizer.pickerChips(from: sourceText)
     }
 
     var body: some View {
         VStack(spacing: 0) {
             topBar
+
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 18) {
                     if let persistenceError {
-                        Label(persistenceError, systemImage: "externaldrive.badge.exclamationmark")
-                            .font(.footnote)
-                            .foregroundStyle(.orange)
+                        persistenceBanner(persistenceError)
                     }
 
                     if isPreparing {
                         loadingContent
                     } else {
-                        selectionSummary
-                        sourceSection
-                        phraseTranslationSection
-                        chipGrid
+                        contextSection
+                        selectionSection
                     }
                 }
-                .padding(16)
+                .padding(20)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .scrollBounceBehavior(.basedOnSize)
+
+            ImportPrimaryCTA(
+                title: isSaving ? "正在保存…" : "保存 \(selection.selectedCount) 个",
+                isLoading: isSaving,
+                action: save
+            )
+            .padding(.horizontal, 20)
+            .padding(.top, 10)
+            .padding(.bottom, 14)
+            .background(.bar)
+            .disabled(!canSave)
         }
+        .background(Color(.systemGroupedBackground).ignoresSafeArea())
         .animation(.easeInOut(duration: 0.28), value: isPreparing)
         .translationTask(configuration) { session in
             await translateChips(with: session)
         }
-        .onAppear {
-            startChipTranslation()
-        }
+        .onAppear(perform: startChipTranslation)
         .onChange(of: isPhraseTranslationReady) { _, isReady in
             if isReady {
                 startChipTranslation()
@@ -78,40 +101,76 @@ struct WordPickerView: View {
         HStack {
             Button("取消", action: onCancel)
                 .font(.body.weight(.semibold))
+
             Spacer()
+
             Text("英文")
-                .font(.footnote.weight(.semibold))
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.blue)
                 .padding(.horizontal, 10)
-                .padding(.vertical, 4)
-                .overlay(Capsule().stroke(Color.green, lineWidth: 1))
-                .foregroundStyle(.green)
-            Spacer()
-            Button(action: save) {
-                HStack(spacing: 6) {
-                    if isSaving {
-                        ProgressView()
-                            .controlSize(.small)
-                            .tint(.white)
-                    }
-                    Text(saveButtonTitle)
-                }
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(.green)
-            .clipShape(Capsule())
-            .disabled(!canSave)
-            .accessibilityLabel(saveButtonTitle)
-            .accessibilityHint("将所选卡片保存到 WordMem")
-            .accessibilityValue(isSaving ? "正在保存" : "未在保存")
+                .padding(.vertical, 5)
+                .background(Color.blue.opacity(0.11), in: .capsule)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
+        .background(.bar)
     }
 
-    private var selectionSummary: some View {
-        Text(selectionSummaryText)
-            .font(.footnote)
-            .foregroundStyle(.secondary)
+    private func persistenceBanner(_ message: String) -> some View {
+        Label(message, systemImage: "externaldrive.badge.exclamationmark")
+            .font(.footnote.weight(.medium))
+            .foregroundStyle(.orange)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(message)
+    }
+
+    private var contextSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            ImportStepHeader(
+                currentStep: .selection,
+                title: "挑选单词",
+                subtitle: selectionSummaryText
+            )
+
+            ImportContextCard(
+                title: "原句",
+                text: sourceText
+            ) {
+                phraseTranslationAccessory
+            }
+        }
+    }
+
+    private var phraseTranslationAccessory: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("整句翻译")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            Text(phraseTranslation.isEmpty ? "暂无整句翻译" : phraseTranslation)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(phraseTranslation.isEmpty ? AnyShapeStyle(.secondary) : AnyShapeStyle(.primary))
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(.secondarySystemBackground), in: .rect(cornerRadius: 14))
+    }
+
+    private var selectionSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            ImportSelectionToolbar(
+                selectedCount: selection.selectedCount,
+                totalCount: chips.count,
+                onSelectAll: { selection.selectAll() },
+                onClear: { selection.clear() }
+            )
+
+            ImportCandidateChipGrid(
+                chips: chips,
+                selection: $selection,
+                meanings: meanings
+            )
+        }
     }
 
     private var selectionSummaryText: String {
@@ -123,25 +182,7 @@ struct WordPickerView: View {
         if wordCount == 0 {
             return "已保留整句，可选择后保存到 WordMem。"
         }
-        return "已保留整句，并拆出 \(wordCount) 个单词；选择后保存到 WordMem。"
-    }
-
-    private var saveButtonTitle: String {
-        isSaving ? "正在保存…" : "保存 \(selected.count) 个"
-    }
-
-    private var sourceSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("原句")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(.secondary)
-            Text(sourceText)
-                .font(.body)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(12)
-                .background(Color(.secondarySystemGroupedBackground))
-                .cornerRadius(12)
-        }
+        return "已保留整句，并拆出 \(wordCount) 个单词。"
     }
 
     private var loadingContent: some View {
@@ -153,21 +194,18 @@ struct WordPickerView: View {
                     .foregroundStyle(.secondary)
             }
 
-            sourceSection
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("整句翻译")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.secondary)
+            ImportContextCard(title: "原句", text: sourceText) {
                 ShimmerBox(height: 46)
             }
+            .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 10) {
                 Text("单词")
-                    .font(.footnote.weight(.semibold))
+                    .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
+
                 FlowLayout(spacing: 10) {
-                    ForEach(chips, id: \.self) { chip in
+                    ForEach(sourceTokens, id: \.self) { chip in
                         HStack(spacing: 8) {
                             Text(chip)
                             ShimmerBox(width: 38, height: 12, capsule: true)
@@ -184,70 +222,11 @@ struct WordPickerView: View {
         .accessibilityHidden(true)
     }
 
-    private var phraseTranslationSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("整句翻译")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(.secondary)
-            Text(phraseTranslation.isEmpty ? "暂无整句翻译" : phraseTranslation)
-                .font(.body)
-                .foregroundStyle(phraseTranslation.isEmpty ? .secondary : .primary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(12)
-                .background(Color(.secondarySystemGroupedBackground))
-                .cornerRadius(12)
-        }
-    }
-
-    private var chipGrid: some View {
-        FlowLayout(spacing: 10) {
-            ForEach(chips, id: \.self) { chip in
-                let isSelected = selected.contains(chip)
-                Button {
-                    if isSelected {
-                        selected.remove(chip)
-                    } else {
-                        selected.insert(chip)
-                    }
-                } label: {
-                    HStack(spacing: 6) {
-                        Text(chip)
-                        if let meaning = meanings[chip], !meaning.isEmpty {
-                            Text(meaning)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        if isSelected {
-                            Image(systemName: "checkmark")
-                                .font(.caption.weight(.bold))
-                        }
-                    }
-                    .font(.body.weight(isSelected ? .semibold : .regular))
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .background(
-                        isSelected
-                            ? Color.green.opacity(0.18) : Color(.secondarySystemGroupedBackground)
-                    )
-                    .overlay(
-                        Capsule().stroke(isSelected ? Color.green : Color.clear, lineWidth: 1.5)
-                    )
-                    .clipShape(Capsule())
-                }
-                .buttonStyle(.plain)
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel(
-                    meanings[chip].map { "\(chip)，\($0)" } ?? chip
-                )
-                .accessibilityValue(isSelected ? "已选择" : "未选择")
-                .accessibilityAddTraits(isSelected ? [.isSelected] : [])
-            }
-        }
-    }
-
     private func startChipTranslation() {
         guard isPhraseTranslationReady, !hasPreparedChips else { return }
         hasPreparedChips = true
+        selection = ImportChipSelection(chips: chips)
+
         guard !chips.isEmpty else {
             isPreparingChips = false
             return
@@ -259,15 +238,15 @@ struct WordPickerView: View {
     }
 
     private func translateChips(with session: TranslationSession) async {
-        for chip in chips where meanings[chip] == nil {
-            if chip == TranslationWordTokenizer.normalizedPhrase(from: sourceText),
+        for chip in chips where meanings[chip.id] == nil {
+            if chip.id == TranslationWordTokenizer.normalizedPhrase(from: sourceText),
                 !phraseTranslation.isEmpty
             {
-                meanings[chip] = phraseTranslation
+                meanings[chip.id] = phraseTranslation
                 continue
             }
-            if let meaning = try? await session.translate(chip).targetText {
-                meanings[chip] = meaning
+            if let meaning = try? await session.translate(chip.text).targetText {
+                meanings[chip.id] = meaning
             }
         }
         configuration = nil
@@ -284,7 +263,7 @@ struct WordPickerView: View {
             let builder = TranslationProviderSubmissionBuilder(
                 sourceText: sourceText,
                 phraseTranslation: phraseTranslation,
-                selectedChips: selected,
+                selectedChips: Set(selection.selectedChips.map(\.id)),
                 meanings: meanings
             )
             let submission = builder.makeSubmission()
@@ -339,47 +318,6 @@ private struct ShimmerEffect: ViewModifier {
                 .offset(x: isAnimating ? proxy.size.width * 1.1 : -proxy.size.width * 0.8)
             }
             .mask(content)
-        }
-    }
-}
-
-struct FlowLayout: Layout {
-    var spacing: CGFloat = 8
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let maxWidth = proposal.width ?? .infinity
-        var x: CGFloat = 0
-        var y: CGFloat = 0
-        var rowHeight: CGFloat = 0
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
-            if x + size.width > maxWidth, x > 0 {
-                x = 0
-                y += rowHeight + spacing
-                rowHeight = 0
-            }
-            x += size.width + spacing
-            rowHeight = max(rowHeight, size.height)
-        }
-        return CGSize(width: maxWidth == .infinity ? x : maxWidth, height: y + rowHeight)
-    }
-
-    func placeSubviews(
-        in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()
-    ) {
-        var x = bounds.minX
-        var y = bounds.minY
-        var rowHeight: CGFloat = 0
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
-            if x + size.width > bounds.maxX, x > bounds.minX {
-                x = bounds.minX
-                y += rowHeight + spacing
-                rowHeight = 0
-            }
-            subview.place(at: CGPoint(x: x, y: y), anchor: .topLeading, proposal: .unspecified)
-            x += size.width + spacing
-            rowHeight = max(rowHeight, size.height)
         }
     }
 }

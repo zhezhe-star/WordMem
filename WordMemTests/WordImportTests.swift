@@ -62,6 +62,155 @@ final class WordImportTests: XCTestCase {
         XCTAssertEqual(selection.selectedWords(in: refreshedCandidates), ["The", "and", "dog"])
     }
 
+    func testSharedChipSelectionDefaultsToAllAndPreservesSourceOrder() {
+        let chips = [
+            ImportCandidateChip(id: "the", text: "The", sourceOrder: 0),
+            ImportCandidateChip(id: "cat", text: "cat", sourceOrder: 1),
+            ImportCandidateChip(id: "ran", text: "ran", sourceOrder: 2),
+        ]
+        var selection = ImportChipSelection(chips: chips)
+
+        XCTAssertEqual(Set(selection.selectedChips.map(\.id)), ["the", "cat", "ran"])
+
+        selection.toggle("cat")
+        XCTAssertEqual(selection.selectedChips.map(\.id), ["the", "ran"])
+
+        selection.clear()
+        XCTAssertTrue(selection.selectedChips.isEmpty)
+
+        selection.selectAll()
+        XCTAssertEqual(selection.selectedChips.map(\.id), ["the", "cat", "ran"])
+    }
+
+    func testSharedChipSelectionUpdatesSelectedCountAndIsSelected() {
+        let chips = [
+            ImportCandidateChip(id: "one", text: "one", sourceOrder: 0),
+            ImportCandidateChip(id: "two", text: "two", sourceOrder: 1),
+        ]
+        var selection = ImportChipSelection(chips: chips, selectsAllByDefault: false)
+
+        XCTAssertEqual(selection.selectedCount, 0)
+        XCTAssertFalse(selection.isSelected("one"))
+
+        selection.select("one")
+        XCTAssertEqual(selection.selectedCount, 1)
+        XCTAssertTrue(selection.isSelected("one"))
+        XCTAssertFalse(selection.isSelected("two"))
+    }
+
+    func testSharedChipSelectionRefreshPreservesDeselectionsAndSelectsNewChips() {
+        let initialChips = [
+            ImportCandidateChip(id: "the", text: "The", sourceOrder: 0),
+            ImportCandidateChip(id: "cat", text: "cat", sourceOrder: 1),
+        ]
+        var selection = ImportChipSelection(chips: initialChips)
+        selection.toggle("cat")
+
+        let refreshedChips = initialChips + [
+            ImportCandidateChip(id: "dog", text: "dog", sourceOrder: 2),
+        ]
+        selection.updateChips(refreshedChips)
+
+        XCTAssertFalse(selection.isSelected("cat"))
+        XCTAssertTrue(selection.isSelected("dog"))
+        XCTAssertEqual(selection.selectedChips.map(\.id), ["the", "dog"])
+    }
+
+    func testSharedChipOrganizerGroupsAndSortsBySourceOrder() {
+        let chips = [
+            ImportCandidateChip(
+                id: "second",
+                text: "second",
+                sourceOrder: 1,
+                group: "单词"
+            ),
+            ImportCandidateChip(
+                id: "phrase",
+                text: "first second",
+                sourceOrder: 0,
+                group: "整句"
+            ),
+            ImportCandidateChip(
+                id: "first",
+                text: "first",
+                sourceOrder: 2,
+                group: "单词"
+            ),
+        ]
+
+        let sections = ImportCandidateOrganizer.sections(from: chips)
+
+        XCTAssertEqual(sections.map(\.title), ["整句", "单词"])
+        XCTAssertEqual(sections[0].chips.map(\.id), ["phrase"])
+        XCTAssertEqual(sections[1].chips.map(\.id), ["second", "first"])
+    }
+
+    func testWordImportCandidatesConvertToStableSourceOrderedChips() {
+        let letters = Array("abcdefghijklmnopqrstuvwxyz")
+        let source = (0..<55)
+            .map { "\(letters[$0 / 26])\(letters[$0 % 26])" }
+            .joined(separator: " ")
+        let candidates = EnglishWordCandidateSplitter.candidates(from: source)
+
+        let chips = ImportCandidateAdapter.chips(from: candidates)
+        var selection = ImportChipSelection(chips: chips)
+
+        XCTAssertEqual(chips.count, 55)
+        XCTAssertEqual(chips.map(\.sourceOrder), Array(0..<55))
+        XCTAssertEqual(chips.map(\.id), candidates.map(\.normalizedKey))
+        XCTAssertEqual(selection.selectedChips.map(\.text), candidates.map(\.text))
+    }
+
+    func testSharedChipSelectionDeduplicatesFirstSeenChipsDeterministically() {
+        let duplicatedChips = [
+            ImportCandidateChip(id: "cat", text: "cat", sourceOrder: 2),
+            ImportCandidateChip(id: "dog", text: "dog", sourceOrder: 3),
+            ImportCandidateChip(id: "cat", text: "Cat", sourceOrder: 1),
+        ]
+
+        let uniqueChips = ImportCandidateChip.uniquelyIdentified(duplicatedChips)
+        var selection = ImportChipSelection(chips: duplicatedChips)
+
+        XCTAssertEqual(uniqueChips.map(\.id), ["cat", "dog"])
+        XCTAssertEqual(uniqueChips.map(\.text), ["cat", "dog"])
+        XCTAssertEqual(selection.selectedChips.map(\.id), ["cat", "dog"])
+        XCTAssertEqual(selection.selectedChips.map(\.text), ["cat", "dog"])
+
+        selection.updateChips(duplicatedChips)
+        XCTAssertEqual(selection.selectedChips.map(\.id), ["cat", "dog"])
+        XCTAssertEqual(selection.selectedChips.map(\.text), ["cat", "dog"])
+    }
+
+    func testChipAccessibilityLabelCombinesMeaningWithoutVisualChange() {
+        XCTAssertEqual(ImportCandidateAccessibility.label(text: "cat", meaning: nil), "cat")
+        XCTAssertEqual(ImportCandidateAccessibility.label(text: "cat", meaning: ""), "cat")
+        XCTAssertEqual(
+            ImportCandidateAccessibility.label(text: "cat", meaning: "猫"),
+            "cat，猫"
+        )
+    }
+
+    func testContextExpansionDetectsLongTextAndTogglesAccessibly() {
+        let multiline = (1...7).map { "line \($0)" }.joined(separator: "\n")
+        var multilineExpansion = ImportContextExpansion(text: multiline)
+
+        XCTAssertTrue(multilineExpansion.isExpandable)
+        XCTAssertFalse(multilineExpansion.isExpanded)
+        XCTAssertEqual(multilineExpansion.lineLimit, 5)
+
+        multilineExpansion.toggle()
+        XCTAssertTrue(multilineExpansion.isExpanded)
+        XCTAssertNil(multilineExpansion.lineLimit)
+
+        let longWrappedText = String(repeating: "word ", count: 48)
+        let wrappedExpansion = ImportContextExpansion(text: longWrappedText)
+        XCTAssertTrue(wrappedExpansion.isExpandable)
+
+        let shortExpansion = ImportContextExpansion(text: "short context")
+        XCTAssertFalse(shortExpansion.isExpandable)
+        XCTAssertNil(shortExpansion.lineLimit)
+    }
+
     func testTextBatchImportCreatesSelectedWordsWithSharedSourceSentence() async throws {
         let fixture = try makeFixture()
         let sourceSentence = "The quick brown fox jumps over the lazy dog."
