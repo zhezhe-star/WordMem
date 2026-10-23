@@ -142,7 +142,7 @@ enum LegacyWordbookMigrator {
     ) throws -> Bool {
         guard let result,
               result.status != .notFound,
-              result.entry != nil,
+              result.entry?.isContentBearing == true,
               entry.lookupStatus == .notFound || entry.lookupStatus == .userSaved
         else { return false }
 

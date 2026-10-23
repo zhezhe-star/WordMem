@@ -58,6 +58,17 @@ struct DictionaryEntry: Codable, Hashable, Sendable, Identifiable {
     var primaryTranslation: String {
         senses.first?.chinese ?? ""
     }
+
+    /// True when the entry carries authoritative dictionary content
+    /// (definitions, pronunciation, forms, tags). System-dictionary lookups
+    /// produce key-only entries that must never overwrite stored or
+    /// user-supplied content.
+    var isContentBearing: Bool {
+        phonetic?.isEmpty == false
+            || !senses.isEmpty
+            || !forms.isEmpty
+            || !tags.isEmpty
+    }
 }
 
 struct DictionaryLookupResult: Hashable, Sendable {

@@ -311,12 +311,12 @@ struct ImageImportView: View {
 
 #if DEBUG
 #Preview("图片导入 · 空状态") {
-    ImageImportView(dictionaryService: BareWordDictionaryLookupService()) { _ in }
+    ImageImportView(dictionaryService: SystemDictionaryLookupService()) { _ in }
 }
 
 #Preview("图片导入 · 正常候选") {
     ImageImportView(
-        dictionaryService: BareWordDictionaryLookupService(),
+        dictionaryService: SystemDictionaryLookupService(),
         completion: { _ in },
         previewState: ImportPreviewState(
             recognizedText: "Beautiful mountain views appear after the morning rain.",
@@ -329,7 +329,7 @@ struct ImageImportView: View {
 
 #Preview("图片导入 · 55 个候选") {
     ImageImportView(
-        dictionaryService: BareWordDictionaryLookupService(),
+        dictionaryService: SystemDictionaryLookupService(),
         completion: { _ in },
         previewState: ImportPreviewState(
             recognizedText: String(repeating: "Beautiful mountain views appear after rain. ", count: 8),
