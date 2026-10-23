@@ -4,6 +4,7 @@ import SwiftUI
 class LocalStorageManager: ObservableObject {
     static let appGroupSuiteName = "group.com.zhezhe.wordmem"
     static let migrationCompletedKey = "did_migrate_standard_saved_words"
+    static let pendingSubmissionsKey = "pending_word_import_submissions.v1"
 
     private let userDefaults: UserDefaults
     private let wordsKey: String
@@ -42,8 +43,9 @@ class LocalStorageManager: ObservableObject {
         guard !userDefaults.bool(forKey: Self.migrationCompletedKey) else { return }
 
         if userDefaults.data(forKey: wordsKey) == nil,
-           let legacyData = legacyDefaults.data(forKey: wordsKey),
-           !legacyData.isEmpty {
+            let legacyData = legacyDefaults.data(forKey: wordsKey),
+            !legacyData.isEmpty
+        {
             userDefaults.set(legacyData, forKey: wordsKey)
         }
 
@@ -85,6 +87,37 @@ class LocalStorageManager: ObservableObject {
             errorMessage = "加载失败: \(error.localizedDescription)"
             words = []
         }
+    }
+
+    @discardableResult
+    func appendSubmission(_ submission: WordImportSubmission) -> Bool {
+        do {
+            try WordImportSubmissionQueue.append(
+                submission,
+                baseDirectory: WordImportSubmissionQueue.defaultBaseDirectory(),
+                legacyDefaults: userDefaults
+            )
+            errorMessage = nil
+            return true
+        } catch {
+            errorMessage = "保存导入记录失败，请重试。"
+            return false
+        }
+    }
+
+    func loadSubmissions() -> [WordImportSubmission] {
+        WordImportSubmissionQueue.load(
+            baseDirectory: WordImportSubmissionQueue.defaultBaseDirectory(),
+            legacyDefaults: userDefaults
+        )
+    }
+
+    func removeSubmissions(payloadIDs: Set<UUID>) {
+        try? WordImportSubmissionQueue.remove(
+            payloadIDs,
+            baseDirectory: WordImportSubmissionQueue.defaultBaseDirectory(),
+            legacyDefaults: userDefaults
+        )
     }
 
     // MARK: - 添加单个单词
@@ -133,4 +166,8 @@ class LocalStorageManager: ObservableObject {
     var wordCount: Int {
         return words.count
     }
+}
+
+extension LocalStorageManager: WordImportSubmissionStoring {
+    var persistenceMessage: String? { errorMessage }
 }

@@ -1,4 +1,6 @@
+import AVFAudio
 import XCTest
+
 @testable import WordMem
 
 final class CalendarChallengeTests: XCTestCase {
@@ -22,10 +24,11 @@ final class CalendarChallengeTests: XCTestCase {
         _ text: String,
         translation: String,
         createdAt: Date,
-        example: String? = nil
+        example: String? = nil,
+        id: UUID = UUID()
     ) -> CalendarWord {
         CalendarWord(
-            id: UUID(),
+            id: id,
             word: text,
             translation: translation,
             phonetic: nil,
@@ -82,11 +85,41 @@ final class CalendarChallengeTests: XCTestCase {
         let (service, _) = makeService()
         let base = makeDate(year: 2026, month: 10, day: 20)
         let words = [
-            makeWord("apple", translation: "苹果", createdAt: base, example: "I eat an apple."),
-            makeWord("banana", translation: "香蕉", createdAt: base, example: "A banana is yellow."),
-            makeWord("cat", translation: "猫", createdAt: base, example: "The cat sleeps."),
-            makeWord("dog", translation: "狗", createdAt: base, example: "The dog runs."),
-            makeWord("egg", translation: "鸡蛋", createdAt: base, example: "I boiled an egg."),
+            makeWord(
+                "apple",
+                translation: "苹果",
+                createdAt: base,
+                example: "I eat an apple.",
+                id: UUID(uuidString: "00000000-0000-0000-0000-000000000004")!
+            ),
+            makeWord(
+                "banana",
+                translation: "香蕉",
+                createdAt: base,
+                example: "A banana is yellow.",
+                id: UUID(uuidString: "00000000-0000-0000-0000-000000000005")!
+            ),
+            makeWord(
+                "cat",
+                translation: "猫",
+                createdAt: base,
+                example: "The cat sleeps.",
+                id: UUID(uuidString: "00000000-0000-0000-0000-000000000006")!
+            ),
+            makeWord(
+                "dog",
+                translation: "狗",
+                createdAt: base,
+                example: "The dog runs.",
+                id: UUID(uuidString: "00000000-0000-0000-0000-000000000007")!
+            ),
+            makeWord(
+                "egg",
+                translation: "鸡蛋",
+                createdAt: base,
+                example: "I boiled an egg.",
+                id: UUID(uuidString: "00000000-0000-0000-0000-000000000008")!
+            ),
         ]
 
         let questions = service.questions(on: base, from: words)
@@ -254,6 +287,157 @@ final class CalendarChallengeTests: XCTestCase {
         XCTAssertEqual(
             SpellingHintSlots.tokens(for: "go", revealedCount: 5),
             ["g", "o"]
+        )
+    }
+}
+
+// MARK: - Pronunciation lifecycle
+
+@MainActor
+private final class MockPronunciationAudioSession: PronunciationAudioSessionControlling {
+    struct Transition: Equatable {
+        let isActive: Bool
+        let options: AVAudioSession.SetActiveOptions
+    }
+
+    struct CategoryCall: Equatable {
+        let category: AVAudioSession.Category
+        let options: AVAudioSession.CategoryOptions
+    }
+
+    private(set) var categoryCalls: [CategoryCall] = []
+    private(set) var transitions: [Transition] = []
+    var activationError: Error?
+    var category: AVAudioSession.Category = .ambient
+    var categoryOptions: AVAudioSession.CategoryOptions = [.mixWithOthers]
+
+    func setCategory(_ category: AVAudioSession.Category, options: AVAudioSession.CategoryOptions) throws {
+        categoryCalls.append(CategoryCall(category: category, options: options))
+    }
+
+    func setActive(_ active: Bool, options: AVAudioSession.SetActiveOptions) throws {
+        if active, let activationError {
+            throw activationError
+        }
+        transitions.append(Transition(isActive: active, options: options))
+    }
+}
+
+@MainActor
+private final class MockPronunciationSpeechEngine: PronunciationSpeechEngine {
+    weak var pronunciationDelegate: PronunciationPlaybackDelegate?
+    private(set) var utterances: [AVSpeechUtterance] = []
+    private(set) var stopCalls = 0
+
+    func speak(_ utterance: AVSpeechUtterance) {
+        utterances.append(utterance)
+    }
+
+    func stopSpeaking(at boundary: AVSpeechBoundary) -> Bool {
+        stopCalls += 1
+        return true
+    }
+}
+
+@MainActor
+final class EnglishPronunciationPlayerTests: XCTestCase {
+    func testSharedPlayerIsOneAppScopedLifecycleOwner() {
+        XCTAssertIdentical(EnglishPronunciationPlayer.shared, EnglishPronunciationPlayer.shared)
+    }
+
+    func testOverlappingUtterancesKeepDuckedSessionActiveUntilLastDelegateFinishes() throws {
+        let session = MockPronunciationAudioSession()
+        let engine = MockPronunciationSpeechEngine()
+        let player = EnglishPronunciationPlayer(audioSession: session, speechEngine: engine)
+
+        XCTAssertTrue(player.play("apple"))
+        XCTAssertTrue(player.play("apple"))
+        XCTAssertEqual(engine.utterances.count, 2)
+        XCTAssertEqual(engine.utterances.map(\.speechString), ["apple", "apple"])
+        XCTAssertEqual(engine.utterances.map(\.voice?.language), ["en-US", "en-US"])
+        XCTAssertEqual(engine.utterances.map(\.rate), [0.5, 0.5])
+        XCTAssertEqual(session.categoryCalls.count, 1)
+        XCTAssertEqual(session.categoryCalls.first?.category, .playback)
+        XCTAssertEqual(session.categoryCalls.first?.options, .duckOthers)
+        XCTAssertEqual(session.transitions, [MockPronunciationAudioSession.Transition(isActive: true, options: [])])
+        XCTAssertTrue(player.isSpeaking)
+
+        player.pronunciationEngine(engine, didCancel: engine.utterances[0])
+        XCTAssertTrue(player.isSpeaking, "A delegate callback for one queued utterance must not restore background audio while another remains active.")
+        XCTAssertTrue(session.transitions.allSatisfy(\.isActive))
+
+        player.pronunciationEngine(engine, didFinish: engine.utterances[1])
+        XCTAssertFalse(player.isSpeaking)
+        XCTAssertEqual(
+            session.transitions,
+            [
+                MockPronunciationAudioSession.Transition(isActive: true, options: []),
+                MockPronunciationAudioSession.Transition(isActive: false, options: .notifyOthersOnDeactivation),
+            ]
+        )
+    }
+
+    func testCancelRetiresEveryUtteranceAndNotifiesOtherAudioOnce() {
+        let session = MockPronunciationAudioSession()
+        let engine = MockPronunciationSpeechEngine()
+        let player = EnglishPronunciationPlayer(audioSession: session, speechEngine: engine)
+
+        XCTAssertTrue(player.play("apple"))
+        XCTAssertTrue(player.play("apple"))
+        XCTAssertTrue(player.isSpeaking)
+
+        player.cancel()
+
+        XCTAssertFalse(player.isSpeaking)
+        XCTAssertEqual(engine.stopCalls, 1)
+        XCTAssertEqual(
+            session.transitions,
+            [
+                MockPronunciationAudioSession.Transition(isActive: true, options: []),
+                MockPronunciationAudioSession.Transition(isActive: false, options: .notifyOthersOnDeactivation),
+            ]
+        )
+
+        player.pronunciationEngine(engine, didCancel: engine.utterances[0])
+        player.pronunciationEngine(engine, didCancel: engine.utterances[1])
+        XCTAssertEqual(session.transitions.count, 2, "Late delegate callbacks after cancellation must not deactivate twice.")
+    }
+
+    func testSlowRatePlaybackPreservesConfiguredRate() {
+        let session = MockPronunciationAudioSession()
+        let engine = MockPronunciationSpeechEngine()
+        let player = EnglishPronunciationPlayer(audioSession: session, speechEngine: engine)
+
+        XCTAssertTrue(player.play("apple", rate: 0.28))
+
+        XCTAssertEqual(engine.utterances.map(\.rate), [0.28])
+        XCTAssertTrue(player.isSpeaking)
+    }
+
+    func testActivationFailureDoesNotTrackUtterance() {
+        let session = MockPronunciationAudioSession()
+        session.category = .playback
+        session.categoryOptions = [.mixWithOthers]
+        session.activationError = NSError(domain: NSPOSIXErrorDomain, code: 1)
+        let engine = MockPronunciationSpeechEngine()
+        let player = EnglishPronunciationPlayer(audioSession: session, speechEngine: engine)
+
+        XCTAssertFalse(player.play("apple"))
+        XCTAssertFalse(player.isSpeaking)
+        XCTAssertTrue(engine.utterances.isEmpty)
+        XCTAssertTrue(session.transitions.isEmpty)
+        XCTAssertEqual(
+            session.categoryCalls,
+            [
+                MockPronunciationAudioSession.CategoryCall(
+                    category: .playback,
+                    options: .duckOthers
+                ),
+                MockPronunciationAudioSession.CategoryCall(
+                    category: .playback,
+                    options: .mixWithOthers
+                ),
+            ]
         )
     }
 }

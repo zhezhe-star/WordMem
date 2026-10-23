@@ -97,7 +97,24 @@ struct AddWordView: View {
             defer { isSaving = false }
 
             do {
-                let outcome = try await repository.add(input, using: dictionaryService)
+                let submission = WordImportSubmission(
+                    source: .manual,
+                    sourceText: input,
+                    candidates: [
+                        WordImportCandidatePayload(
+                            text: input,
+                            normalizedKey: WordInputNormalizer.normalizedKey(from: input)
+                        )
+                    ],
+                    metadata: ["channel": WordImportSource.manual.rawValue]
+                )
+                let outcomes = try await repository.importSubmission(
+                    submission,
+                    using: dictionaryService
+                )
+                guard let outcome = outcomes.first else {
+                    throw WordImportError.emptySelection
+                }
                 completion(outcome)
                 dismiss()
             } catch {
