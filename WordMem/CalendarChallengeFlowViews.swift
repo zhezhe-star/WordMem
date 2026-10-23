@@ -1,4 +1,3 @@
-import AVFoundation
 import SwiftUI
 
 #if DEBUG
@@ -247,7 +246,7 @@ private struct ChallengeQuestionPage: View {
     @State private var attemptCount = 0
     @State private var feedback: ChallengeFeedback?
     @State private var revealedLetterCount = 0
-    @StateObject private var speaker = ChallengeSpeaker()
+    @StateObject private var speaker = EnglishPronunciationPlayer()
 
     private var savedAnswer: CalendarChallengeAnswer? {
         challengeService.answer(for: question, on: date)
@@ -291,6 +290,9 @@ private struct ChallengeQuestionPage: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityElement(children: .contain)
+        .onDisappear {
+            speaker.cancel()
+        }
     }
 
     // MARK: Hero content per form
@@ -321,13 +323,16 @@ private struct ChallengeQuestionPage: View {
                 Button {
                     speaker.play(question.answer)
                 } label: {
-                    Image(systemName: "speaker.wave.2.fill")
+                    Image(systemName: speaker.isSpeaking ? "speaker.wave.3.fill" : "speaker.wave.2.fill")
                         .font(.system(size: 40))
                         .frame(width: 96, height: 96)
-                        .background(Color.accentColor.opacity(0.14))
+                        .foregroundStyle(speaker.isSpeaking ? Color.accentColor : Color.primary)
+                        .background(Color.accentColor.opacity(speaker.isSpeaking ? 0.28 : 0.14))
                         .clipShape(Circle())
                 }
                 .accessibilityLabel("播放发音")
+                .accessibilityValue(speaker.isSpeaking ? "正在播放" : "未播放")
+                .accessibilityAddTraits(speaker.isSpeaking ? .isSelected : [])
 
                 Button {
                     speaker.play(question.answer, rate: 0.28)
@@ -426,13 +431,16 @@ private struct ChallengeQuestionPage: View {
         Button {
             speaker.play(text)
         } label: {
-            Image(systemName: "speaker.wave.2.fill")
+            Image(systemName: speaker.isSpeaking ? "speaker.wave.3.fill" : "speaker.wave.2.fill")
                 .font(.title3)
                 .frame(width: 40, height: 40)
-                .background(Color.accentColor.opacity(0.14))
+                .foregroundStyle(speaker.isSpeaking ? Color.accentColor : Color.primary)
+                .background(Color.accentColor.opacity(speaker.isSpeaking ? 0.28 : 0.14))
                 .clipShape(Circle())
         }
         .accessibilityLabel("播放 \(text) 的发音")
+        .accessibilityValue(speaker.isSpeaking ? "正在播放" : "未播放")
+        .accessibilityAddTraits(speaker.isSpeaking ? .isSelected : [])
     }
 
     // MARK: Answered (locked) state
@@ -665,20 +673,6 @@ private struct ChallengeFeedback {
     let text: String
     let isCorrect: Bool
     let isRetry: Bool
-}
-
-final class ChallengeSpeaker: ObservableObject {
-    @Published private(set) var isSpeaking = false
-    let isAvailable = AVSpeechSynthesisVoice(language: "en-US") != nil
-    private let synthesizer = AVSpeechSynthesizer()
-
-    func play(_ text: String, rate: Float = 0.5) {
-        guard isAvailable, !text.isEmpty else { return }
-        let utterance = AVSpeechUtterance(string: text)
-        utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
-        utterance.rate = rate
-        synthesizer.speak(utterance)
-    }
 }
 
 extension CalendarChallengeForm {
