@@ -189,7 +189,7 @@ struct ImportPrimaryCTA: View {
     var sourceText = ""
     var recognizedText = ""
     var chips: [ImportCandidateChip] = []
-    var deselectedOffsets: Set<Int> = []
+    var selectedOffsets: Set<Int> = []
     var thumbnail: UIImage?
   }
 
@@ -223,10 +223,10 @@ struct ImportPrimaryCTA: View {
 
     static func selection(
       for chips: [ImportCandidateChip],
-      deselectedOffsets: Set<Int>
+      selectedOffsets: Set<Int>
     ) -> ImportChipSelection {
       var selection = ImportChipSelection(chips: chips)
-      for offset in Array(deselectedOffsets).sorted() where chips.indices.contains(offset) {
+      for offset in Array(selectedOffsets).sorted() where chips.indices.contains(offset) {
         selection.toggle(chips[offset].id)
       }
       return selection

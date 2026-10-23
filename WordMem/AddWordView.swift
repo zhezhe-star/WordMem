@@ -29,7 +29,7 @@ struct AddWordView: View {
         _selection = State(
             initialValue: ImportPreviewFixtures.selection(
                 for: initialChips,
-                deselectedOffsets: previewState.deselectedOffsets
+                selectedOffsets: previewState.selectedOffsets
             )
         )
     }

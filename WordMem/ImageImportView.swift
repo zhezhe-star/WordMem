@@ -43,7 +43,7 @@ struct ImageImportView: View {
         _selection = State(
             initialValue: ImportPreviewFixtures.selection(
                 for: previewState.chips,
-                deselectedOffsets: previewState.deselectedOffsets
+                selectedOffsets: previewState.selectedOffsets
             )
         )
     }
@@ -321,7 +321,7 @@ struct ImageImportView: View {
         previewState: ImportPreviewState(
             recognizedText: "Beautiful mountain views appear after the morning rain.",
             chips: ImportPreviewFixtures.chips(count: 8),
-            deselectedOffsets: [2],
+            selectedOffsets: [2],
             thumbnail: ImportPreviewFixtures.thumbnail()
         )
     )
@@ -334,7 +334,7 @@ struct ImageImportView: View {
         previewState: ImportPreviewState(
             recognizedText: String(repeating: "Beautiful mountain views appear after rain. ", count: 8),
             chips: ImportPreviewFixtures.chips(count: 55),
-            deselectedOffsets: [0, 27, 54],
+            selectedOffsets: [0, 27, 54],
             thumbnail: ImportPreviewFixtures.thumbnail()
         )
     )

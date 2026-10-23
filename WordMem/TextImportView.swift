@@ -27,7 +27,7 @@ struct TextImportView: View {
         _selection = State(
             initialValue: ImportPreviewFixtures.selection(
                 for: previewState.chips,
-                deselectedOffsets: previewState.deselectedOffsets
+                selectedOffsets: previewState.selectedOffsets
             )
         )
     }
@@ -180,7 +180,7 @@ struct TextImportView: View {
         previewState: ImportPreviewState(
             sourceText: ImportPreviewFixtures.text(count: 8),
             chips: ImportPreviewFixtures.chips(count: 8),
-            deselectedOffsets: [1, 4]
+            selectedOffsets: [1, 4]
         )
     )
 }
@@ -192,7 +192,7 @@ struct TextImportView: View {
         previewState: ImportPreviewState(
             sourceText: ImportPreviewFixtures.text(count: 55),
             chips: ImportPreviewFixtures.chips(count: 55),
-            deselectedOffsets: [0, 27, 54]
+            selectedOffsets: [0, 27, 54]
         )
     )
 }
