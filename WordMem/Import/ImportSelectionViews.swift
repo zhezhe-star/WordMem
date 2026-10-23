@@ -5,6 +5,7 @@ struct ImportCandidateChipGrid: View {
   let chips: [ImportCandidateChip]
   @Binding var selection: ImportChipSelection
   var meanings: [String: String] = [:]
+  var onRestoreOriginal: ((ImportCandidateChip) -> Void)? = nil
   @State private var sections: [ImportCandidateSection] = []
 
   var body: some View {
@@ -35,7 +36,8 @@ struct ImportCandidateChipGrid: View {
           ImportCandidateChipButton(
             chip: chip,
             isSelected: selection.isSelected(chip.id),
-            meaning: meanings[chip.id]
+            meaning: meanings[chip.id],
+            onRestoreOriginal: onRestoreOriginal
           ) {
             selection.toggle(chip.id)
           }
@@ -49,6 +51,7 @@ private struct ImportCandidateChipButton: View {
   let chip: ImportCandidateChip
   let isSelected: Bool
   let meaning: String?
+  let onRestoreOriginal: ((ImportCandidateChip) -> Void)?
   let action: () -> Void
 
   private var detailText: String? {
@@ -79,16 +82,38 @@ private struct ImportCandidateChipButton: View {
   }
 
   var body: some View {
-    Button(action: action) {
-      chipLabel
+    if chip.isImportable {
+      Button(action: action) {
+        chipLabel
+      }
+      .buttonStyle(.plain)
+      .animation(.spring(response: 0.28, dampingFraction: 0.82), value: isSelected)
+      .accessibilityElement(children: .ignore)
+      .accessibilityLabel(accessibilityLabel)
+      .accessibilityHint("连按切换选择状态")
+      .accessibilityValue(isSelected ? "已选择" : "未选择")
+      .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+    } else {
+      HStack(spacing: 6) {
+        chipLabel
+
+        Button {
+          if let onRestoreOriginal {
+            onRestoreOriginal(chip)
+          }
+        } label: {
+          Text("还原原拼写")
+            .font(.caption2.weight(.semibold))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(Color.orange.opacity(0.13), in: .capsule)
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.orange)
+        .accessibilityLabel("还原原拼写 \(chip.advice?.originalText ?? chip.text)")
+      }
+      .padding(.vertical, 3)
     }
-    .buttonStyle(.plain)
-    .animation(.spring(response: 0.28, dampingFraction: 0.82), value: isSelected)
-    .accessibilityElement(children: .ignore)
-    .accessibilityLabel(ImportCandidateAccessibility.label(text: chip.text, meaning: meaning))
-    .accessibilityHint("连按切换选择状态")
-    .accessibilityValue(isSelected ? "已选择" : "未选择")
-    .accessibilityAddTraits(isSelected ? [.isSelected] : [])
   }
 
   private var chipLabel: some View {
@@ -104,6 +129,18 @@ private struct ImportCandidateChipButton: View {
           .lineLimit(1)
       }
 
+      if let lemmaText = chip.lemmaBadgeText {
+        adviceBadge(lemmaText, color: .indigo)
+      }
+
+      if let spellingText = chip.spellingBadgeText {
+        adviceBadge(spellingText, color: .orange)
+      }
+
+      if let availabilityText = chip.availabilityBadgeText {
+        adviceBadge(availabilityText, color: .red)
+      }
+
       Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
         .font(.footnote)
         .foregroundStyle(iconColor)
@@ -117,6 +154,24 @@ private struct ImportCandidateChipButton: View {
         .strokeBorder(strokeColor, lineWidth: 1)
     }
     .contentShape(.capsule)
+  }
+
+  private var accessibilityLabel: String {
+    var label = ImportCandidateAccessibility.label(text: chip.text, meaning: meaning)
+    if let lemmaText = chip.lemmaBadgeText { label += "，\(lemmaText)" }
+    if let spellingText = chip.spellingBadgeText { label += "，\(spellingText)" }
+    if let availabilityText = chip.availabilityBadgeText { label += "，\(availabilityText)" }
+    return label
+  }
+
+  private func adviceBadge(_ text: String, color: Color) -> some View {
+    Text(text)
+      .font(.caption2.weight(.semibold))
+      .foregroundStyle(color)
+      .padding(.horizontal, 6)
+      .padding(.vertical, 3)
+      .background(color.opacity(0.11), in: .capsule)
+      .lineLimit(1)
   }
 }
 

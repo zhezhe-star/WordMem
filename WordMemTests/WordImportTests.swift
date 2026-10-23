@@ -776,3 +776,120 @@ final class WordImageProcessingCoordinatorTests: XCTestCase {
         XCTAssertFalse(coordinator.isProcessing)
     }
 }
+
+@MainActor
+final class ImportCandidateAdvisorTests: XCTestCase {
+    private struct FixedLemmaProvider: ImportWordLemmaProviding {
+        let lemmas: [String: String]
+
+        func lemma(for word: String, context: String?) async -> String? {
+            lemmas[word.lowercased()]
+        }
+    }
+
+    private struct FixedSpellingSuggester: ImportWordSpellingSuggesting {
+        let corrections: [String: String]
+
+        func correction(for word: String) async -> String? {
+            // Returning the input models "already spelled correctly"; nil is
+            // reserved for live no-suggestion behavior.
+            corrections[word.lowercased()] ?? word
+        }
+    }
+
+    private struct FixedAvailability: ImportWordAvailabilityChecking {
+        let available: Set<String>
+
+        func hasDefinition(forTerm term: String) async -> Bool {
+            available.contains(term)
+        }
+    }
+
+    private func makeAdvisor(
+        lemmas: [String: String] = [:],
+        corrections: [String: String] = [:],
+        available: Set<String> = []
+    ) -> ImportWordAdvisor {
+        ImportWordAdvisor(
+            lemmaProvider: FixedLemmaProvider(lemmas: lemmas),
+            spellingSuggester: FixedSpellingSuggester(corrections: corrections),
+            availability: FixedAvailability(available: available)
+        )
+    }
+
+    func testAdvisorNormalizesLemmaAndSpellingWhilePreservingSourceOrderAndDedupe() async {
+        let source = "Gave gave recieve zq."
+        let candidates = EnglishWordCandidateSplitter.candidates(from: source)
+        let advisor = makeAdvisor(
+            lemmas: ["gave": "give"],
+            corrections: ["recieve": "receive"],
+            available: ["give", "receive"]
+        )
+
+        let chips = await advisor.chips(from: candidates, context: source)
+
+        XCTAssertEqual(chips.map(\.text), ["give", "receive", "zq"])
+        XCTAssertEqual(chips.map(\.id), ["give", "receive", "zq"])
+        XCTAssertEqual(chips.map(\.sourceOrder), [0, 1, 2])
+        XCTAssertEqual(chips[0].advice?.originalText, "Gave")
+        XCTAssertEqual(chips[0].advice?.lemma, "give")
+        XCTAssertTrue(chips[0].advice?.isLemmaNormalized ?? false)
+        XCTAssertEqual(chips[1].advice?.originalText, "recieve")
+        XCTAssertEqual(chips[1].advice?.spellingCorrection, "receive")
+        XCTAssertTrue(chips[1].advice?.isSpellingCorrected ?? false)
+        XCTAssertEqual(chips[0].lemmaBadgeText, "原形 give")
+        XCTAssertEqual(chips[1].spellingBadgeText, "拼写纠正 recieve → receive")
+    }
+
+    func testAdvisorKeepsUnavailableWordsOutOfDefaultSelectionUntilExplicitRestore() async {
+        let source = "zqword"
+        let candidates = EnglishWordCandidateSplitter.candidates(from: source)
+        let advisor = makeAdvisor(available: [])
+
+        let chips = await advisor.chips(from: candidates, context: source)
+        var selection = ImportChipSelection(chips: chips)
+
+        XCTAssertEqual(chips.map(\.text), ["zqword"])
+        XCTAssertFalse(chips[0].isImportable)
+        XCTAssertEqual(chips[0].availabilityBadgeText, "词典不可用")
+        selection.selectAll()
+        XCTAssertTrue(selection.selectedChips.isEmpty)
+
+        let restored = chips[0].restoringOriginal()
+        selection.updateChips([restored])
+        selection.select(restored.id)
+
+        XCTAssertEqual(restored.text, "zqword")
+        XCTAssertTrue(restored.isImportable)
+        XCTAssertTrue(restored.advice?.isOriginalRestored ?? false)
+        XCTAssertEqual(selection.selectedChips.map(\.id), [restored.id])
+    }
+
+    func testTranslationPipelineKeepsPhraseContextAndGatesOnlyWordCandidates() async {
+        let source = "A recieve day"
+        let wordCandidates = EnglishWordCandidateSplitter.candidates(from: source)
+        let advisor = makeAdvisor(
+            corrections: ["recieve": "receive"],
+            available: ["a", "day", "receive"]
+        )
+
+        let chips = await ImportCandidatePipeline.translationChips(
+            from: source,
+            advisor: advisor
+        )
+        var selection = ImportChipSelection(chips: chips)
+        selection.selectAll()
+
+        XCTAssertEqual(chips.first?.text, "A recieve day")
+        XCTAssertEqual(chips.dropFirst().map(\.text), ["A", "receive", "day"])
+        XCTAssertTrue(chips.first?.isImportable ?? false)
+        XCTAssertNil(chips.first?.advice)
+        XCTAssertEqual(selection.selectedChips.map(\.id), ["A recieve day", "a", "receive", "day"])
+
+        let payloads = ImportCandidatePipeline.payloads(from: selection.selectedChips)
+        XCTAssertEqual(payloads.first?.metadata["phraseContext"], "true")
+        XCTAssertEqual(payloads[1].text, "A")
+        XCTAssertEqual(payloads[1].metadata["originalWord"], "A")
+        XCTAssertEqual(payloads.first { $0.text == "receive" }?.metadata["originalWord"], "recieve")
+    }
+}

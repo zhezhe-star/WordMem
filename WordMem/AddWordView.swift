@@ -9,6 +9,8 @@ struct AddWordView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var word = ""
     @State private var selection = ImportChipSelection(chips: [])
+    @State private var advisorChips: [ImportCandidateChip] = []
+    @State private var advisorToken = UUID()
     @State private var isSaving = false
     @State private var errorMessage: String?
     @FocusState private var isInputFocused: Bool
@@ -26,6 +28,7 @@ struct AddWordView: View {
         let initialChips = normalizedWord.isEmpty
             ? []
             : [ImportCandidateChip(id: normalizedWord, text: previewState.word, sourceOrder: 0)]
+        _advisorChips = State(initialValue: initialChips)
         _selection = State(
             initialValue: ImportPreviewFixtures.selection(
                 for: initialChips,
@@ -43,13 +46,8 @@ struct AddWordView: View {
         WordInputNormalizer.normalizedKey(from: word)
     }
 
-    private var chips: [ImportCandidateChip] {
-        guard !normalizedInput.isEmpty else { return [] }
-        return [ImportCandidateChip(id: normalizedInput, text: word, sourceOrder: 0)]
-    }
-
     private var currentStep: ImportStep {
-        chips.isEmpty ? .content : .selection
+        advisorChips.isEmpty ? .content : .selection
     }
 
     var body: some View {
@@ -65,7 +63,7 @@ struct AddWordView: View {
 
                         inputCard
 
-                        if chips.isEmpty {
+                        if advisorChips.isEmpty {
                             ContentUnavailableView(
                                 "输入后挑选单词",
                                 systemImage: "square.and.pencil",
@@ -108,8 +106,8 @@ struct AddWordView: View {
             .task {
                 isInputFocused = true
             }
-            .onChange(of: normalizedInput) {
-                selection = ImportChipSelection(chips: chips)
+            .onChange(of: word, initial: true) {
+                refreshCandidate()
             }
         }
     }
@@ -145,13 +143,48 @@ struct AddWordView: View {
         VStack(alignment: .leading, spacing: 14) {
             ImportSelectionToolbar(
                 selectedCount: selection.selectedCount,
-                totalCount: chips.count,
+                totalCount: advisorChips.count,
                 onSelectAll: { selection.selectAll() },
                 onClear: { selection.clear() }
             )
 
-            ImportCandidateChipGrid(chips: chips, selection: $selection)
+            ImportCandidateChipGrid(
+                chips: advisorChips,
+                selection: $selection,
+                onRestoreOriginal: restoreOriginal
+            )
         }
+    }
+
+    private func refreshCandidate() {
+        let token = UUID()
+        advisorToken = token
+        let rawWord = word
+        guard !WordInputNormalizer.normalizedKey(from: rawWord).isEmpty else {
+            advisorChips = []
+            selection = ImportChipSelection(chips: [])
+            return
+        }
+
+        Task {
+            let candidate = WordImportCandidate(
+                text: rawWord,
+                normalizedKey: WordInputNormalizer.normalizedKey(from: rawWord)
+            )
+            let advisedChips = await ImportWordAdvisor.live().chips(
+                from: [candidate],
+                context: nil
+            )
+            guard advisorToken == token else { return }
+            advisorChips = advisedChips
+            selection = ImportChipSelection(chips: advisedChips)
+        }
+    }
+
+    private func restoreOriginal(_ chip: ImportCandidateChip) {
+        let restored = chip.restoringOriginal()
+        advisorChips = advisorChips.map { $0.id == chip.id ? restored : $0 }
+        selection = ImportChipSelection(chips: advisorChips)
     }
 
     private func save() {
@@ -168,12 +201,7 @@ struct AddWordView: View {
                 let submission = WordImportSubmission(
                     source: .manual,
                     sourceText: input,
-                    candidates: [
-                        WordImportCandidatePayload(
-                            text: input,
-                            normalizedKey: WordInputNormalizer.normalizedKey(from: input)
-                        )
-                    ],
+                    candidates: ImportCandidatePipeline.payloads(from: selection.selectedChips),
                     metadata: ["channel": WordImportSource.manual.rawValue]
                 )
                 let outcomes = try await repository.importSubmission(

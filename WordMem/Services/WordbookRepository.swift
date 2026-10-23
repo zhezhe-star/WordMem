@@ -169,8 +169,35 @@ struct WordbookRepository {
         var lookups: [(input: WordImportCandidatePayload, result: DictionaryLookupResult)] = []
 
         for candidate in orderedInputs {
-            let result = try await dictionaryService.lookup(candidate.input.text)
-            lookups.append((candidate.input, result))
+            let input = candidate.input
+            var result: DictionaryLookupResult
+
+            if input.metadata["phraseContext"] == "true" {
+                // Phrase context is intentionally not a dictionary-gated word.
+                // Keep it importable and preserve the full multiword value.
+                let key = WordInputNormalizer.normalizedKey(from: input.text)
+                    .replacingOccurrences(of: "'", with: "")
+                result = DictionaryLookupResult(
+                    originalInput: input.metadata["originalWord"] ?? input.text,
+                    status: .userSaved,
+                    entry: DictionaryEntry(
+                        id: "phrase.\(key)",
+                        headword: input.text,
+                        normalizedKey: key,
+                        phonetic: nil,
+                        senses: [],
+                        forms: [],
+                        tags: [],
+                        frequencyRank: nil,
+                        dictionaryVersion: "phrase-context"
+                    )
+                )
+            } else {
+                result = try await dictionaryService.lookup(input.text)
+                result.originalInput = input.metadata["originalWord"] ?? input.text
+            }
+
+            lookups.append((input, result))
         }
 
         // Key by the caller's input so distinct words that resolve to one lemma keep distinct outcomes.
@@ -197,6 +224,10 @@ struct WordbookRepository {
                         }
                     }
                     applySuppliedFields(lookup.input, to: existing)
+                    if let advisedStatus = Self.advisedStatus(for: lookup.input.metadata) {
+                        existing.lookupStatus = advisedStatus
+                        existing.updatedAt = .now
+                    }
 
                     insertImportContext(
                         for: existing,
@@ -221,6 +252,9 @@ struct WordbookRepository {
                     // See add(_:using:) for the iOS 27 SwiftData registration workaround.
                     entry.apply(lookup.result)
                     applySuppliedFields(lookup.input, to: entry)
+                    if let advisedStatus = Self.advisedStatus(for: lookup.input.metadata) {
+                        entry.lookupStatus = advisedStatus
+                    }
                     insertImportContext(
                         for: entry,
                         input: lookup.input,
@@ -375,6 +409,21 @@ struct WordbookRepository {
                 }
             )
         }
+    }
+
+    private static func advisedStatus(
+        for metadata: [String: String]
+    ) -> LookupStatus? {
+        if metadata["spellingCorrection"]?.isEmpty == false {
+            return .autoCorrected
+        }
+        if metadata["lemma"]?.isEmpty == false {
+            return .lemmaResolved
+        }
+        if metadata["originalSpellingRestored"] == "true" {
+            return .userSaved
+        }
+        return nil
     }
 
     private func applySuppliedFields(_ candidate: WordImportCandidatePayload, to entry: WordEntry) {

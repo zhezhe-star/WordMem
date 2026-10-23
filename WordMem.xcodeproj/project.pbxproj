@@ -18,6 +18,7 @@
 		SHRD28 /* ImportSelectionViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = SHRD27 /* ImportSelectionViews.swift */; };
 		SHRD10 /* ImportCandidateModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = SHRD11 /* ImportCandidateModels.swift */; };
 		SHRD12 /* ImportCandidateModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = SHRD11 /* ImportCandidateModels.swift */; };
+		SHRD14 /* ImportCandidateModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = SHRD11 /* ImportCandidateModels.swift */; };
 		APP01 /* WordMemApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP02 /* WordMemApp.swift */; };
 		APP03 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP04 /* ContentView.swift */; };
 		APP15 /* WordData.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP16 /* WordData.swift */; };
@@ -39,8 +40,14 @@
 		CAL03 /* CalendarChallengeViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAL04 /* CalendarChallengeViews.swift */; };
 		CAL05 /* CalendarChallengeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAL06 /* CalendarChallengeTests.swift */; };
 		MEM01 /* DictionaryModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM11 /* DictionaryModels.swift */; };
+		MEM38 /* DictionaryModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM11 /* DictionaryModels.swift */; };
+		MEM39 /* DictionaryModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM11 /* DictionaryModels.swift */; };
 		MEM02 /* WordInputNormalizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM12 /* WordInputNormalizer.swift */; };
+		MEM34 /* WordInputNormalizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM12 /* WordInputNormalizer.swift */; };
+		MEM35 /* WordInputNormalizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM12 /* WordInputNormalizer.swift */; };
 		MEM03 /* WordEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM13 /* WordEntry.swift */; };
+		MEM40 /* WordEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM13 /* WordEntry.swift */; };
+		MEM41 /* WordEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM13 /* WordEntry.swift */; };
 		MEM06 /* WordbookRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM18 /* WordbookRepository.swift */; };
 		IMP03 /* WordImportModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = IMP04 /* WordImportModels.swift */; };
 		IMP09 /* WordMemMigrationPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = IMP10 /* WordMemMigrationPlan.swift */; };
@@ -53,6 +60,8 @@
 		MEM07 /* LegacyWordbookMigrator.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM19 /* LegacyWordbookMigrator.swift */; };
 		PRN01 /* EnglishPronunciationPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = PRN02 /* EnglishPronunciationPlayer.swift */; };
 		MEM30 /* SystemDictionaryLookupService.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM31 /* SystemDictionaryLookupService.swift */; };
+		MEM36 /* SystemDictionaryLookupService.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM31 /* SystemDictionaryLookupService.swift */; };
+		MEM37 /* SystemDictionaryLookupService.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM31 /* SystemDictionaryLookupService.swift */; };
 		MEM32 /* SystemDictionaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM33 /* SystemDictionaryView.swift */; };
 		TEST02 /* DictionaryLookupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = TEST14 /* DictionaryLookupTests.swift */; };
 		TEST15 /* WordbookRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = TEST16 /* WordbookRepositoryTests.swift */; };
@@ -519,6 +528,11 @@
 			files = (
 				EXT03 /* ShareViewController.swift in Sources */,
 				EXT05 /* ShareTextExtractor.swift in Sources */,
+				MEM39 /* DictionaryModels.swift in Sources */,
+				MEM41 /* WordEntry.swift in Sources */,
+				MEM35 /* WordInputNormalizer.swift in Sources */,
+				MEM37 /* SystemDictionaryLookupService.swift in Sources */,
+				SHRD14 /* ImportCandidateModels.swift in Sources */,
 				SUB12 /* WordImportSubmission.swift in Sources */,
 				EXT07 /* WordData.swift in Sources */,
 				EXT08 /* LocalStorageManager.swift in Sources */,
@@ -533,6 +547,10 @@
 				TPR05 /* TranslationCardView.swift in Sources */,
 				TPR07 /* WordPickerView.swift in Sources */,
 				SHRD12 /* ImportCandidateModels.swift in Sources */,
+				MEM38 /* DictionaryModels.swift in Sources */,
+				MEM40 /* WordEntry.swift in Sources */,
+				MEM34 /* WordInputNormalizer.swift in Sources */,
+				MEM36 /* SystemDictionaryLookupService.swift in Sources */,
 				SHRD22 /* ImportFlowLayout.swift in Sources */,
 				SHRD25 /* ImportContextViews.swift in Sources */,
 				SHRD28 /* ImportSelectionViews.swift in Sources */,
