@@ -13,6 +13,7 @@ struct TextImportView: View {
     @State private var selection = ImportChipSelection(chips: [])
     @State private var isSaving = false
     @State private var errorMessage: String?
+    @State private var advisorToken = UUID()
 
 #if DEBUG
     init(
@@ -123,15 +124,35 @@ struct TextImportView: View {
                 onClear: { selection.clear() }
             )
 
-            ImportCandidateChipGrid(chips: chips, selection: $selection)
+            ImportCandidateChipGrid(
+                chips: chips,
+                selection: $selection,
+                onRestoreOriginal: restoreOriginal
+            )
         }
     }
 
     private func refreshCandidates() {
-        let candidates = EnglishWordCandidateSplitter.candidates(from: sourceText)
-        let refreshedChips = ImportCandidateAdapter.chips(from: candidates)
-        chips = refreshedChips
-        selection.updateChips(refreshedChips)
+        let token = UUID()
+        advisorToken = token
+        let context = sourceText
+
+        Task {
+            let candidates = EnglishWordCandidateSplitter.candidates(from: context)
+            let refreshedChips = await ImportCandidatePipeline.chips(
+                from: candidates,
+                context: context
+            )
+            guard advisorToken == token else { return }
+            chips = refreshedChips
+            selection.updateChips(refreshedChips)
+        }
+    }
+
+    private func restoreOriginal(_ chip: ImportCandidateChip) {
+        let restored = chip.restoringOriginal()
+        chips = chips.map { $0.id == chip.id ? restored : $0 }
+        selection.updateChips(chips)
     }
 
     private func importSelectedWords() {
@@ -147,12 +168,7 @@ struct TextImportView: View {
                 let submission = WordImportSubmission(
                     source: .text,
                     sourceText: sourceText,
-                    candidates: selectedWords.map {
-                        WordImportCandidatePayload(
-                            text: $0,
-                            normalizedKey: WordInputNormalizer.normalizedKey(from: $0)
-                        )
-                    },
+                    candidates: ImportCandidatePipeline.payloads(from: selection.selectedChips),
                     metadata: ["channel": WordImportSource.text.rawValue]
                 )
                 let outcomes = try await repository.importSubmission(

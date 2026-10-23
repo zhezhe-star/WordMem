@@ -13,6 +13,8 @@ struct WordPickerView: View {
     let onSave: () -> Void
 
     @State private var selection = ImportChipSelection(chips: [])
+    @State private var advisorChips: [ImportCandidateChip] = []
+    @State private var advisorToken = UUID()
     @State private var meanings: [String: String] = [:]
     @State private var configuration: TranslationSession.Configuration?
     @State private var isPreparingChips = true
@@ -31,20 +33,6 @@ struct WordPickerView: View {
 
     private var canSave: Bool {
         selection.selectedCount > 0 && !isPreparing && !isSaving
-    }
-
-    private var chips: [ImportCandidateChip] {
-        let phrase = TranslationWordTokenizer.normalizedPhrase(from: sourceText)
-        return TranslationWordTokenizer.pickerChips(from: sourceText)
-            .enumerated()
-            .map { offset, token in
-                ImportCandidateChip(
-                    id: token,
-                    text: token,
-                    sourceOrder: offset,
-                    group: token == phrase ? "整句" : "单词"
-                )
-            }
     }
 
     private var sourceTokens: [String] {
@@ -160,15 +148,16 @@ struct WordPickerView: View {
         VStack(alignment: .leading, spacing: 14) {
             ImportSelectionToolbar(
                 selectedCount: selection.selectedCount,
-                totalCount: chips.count,
+                totalCount: advisorChips.count,
                 onSelectAll: { selection.selectAll() },
                 onClear: { selection.clear() }
             )
 
             ImportCandidateChipGrid(
-                chips: chips,
+                chips: advisorChips,
                 selection: $selection,
-                meanings: meanings
+                meanings: meanings,
+                onRestoreOriginal: restoreOriginal
             )
         }
     }
@@ -225,20 +214,33 @@ struct WordPickerView: View {
     private func startChipTranslation() {
         guard isPhraseTranslationReady, !hasPreparedChips else { return }
         hasPreparedChips = true
-        selection = ImportChipSelection(chips: chips)
+        let token = UUID()
+        advisorToken = token
 
-        guard !chips.isEmpty else {
-            isPreparingChips = false
-            return
+        Task {
+            let preparedChips = await ImportCandidatePipeline.translationChips(from: sourceText)
+            guard advisorToken == token else { return }
+            advisorChips = preparedChips
+            selection = ImportChipSelection(chips: preparedChips)
+            guard !preparedChips.isEmpty else {
+                isPreparingChips = false
+                return
+            }
+            configuration = TranslationSession.Configuration(
+                source: Locale.Language(identifier: "en"),
+                target: Locale.Language(identifier: "zh-Hans")
+            )
         }
-        configuration = TranslationSession.Configuration(
-            source: Locale.Language(identifier: "en"),
-            target: Locale.Language(identifier: "zh-Hans")
-        )
+    }
+
+    private func restoreOriginal(_ chip: ImportCandidateChip) {
+        let restored = chip.restoringOriginal()
+        advisorChips = advisorChips.map { $0.id == chip.id ? restored : $0 }
+        selection.updateChips(advisorChips)
     }
 
     private func translateChips(with session: TranslationSession) async {
-        for chip in chips where meanings[chip.id] == nil {
+        for chip in advisorChips where meanings[chip.id] == nil {
             if chip.id == TranslationWordTokenizer.normalizedPhrase(from: sourceText),
                 !phraseTranslation.isEmpty
             {
@@ -264,7 +266,8 @@ struct WordPickerView: View {
                 sourceText: sourceText,
                 phraseTranslation: phraseTranslation,
                 selectedChips: Set(selection.selectedChips.map(\.id)),
-                meanings: meanings
+                meanings: meanings,
+                advisedChips: advisorChips
             )
             let submission = builder.makeSubmission()
 

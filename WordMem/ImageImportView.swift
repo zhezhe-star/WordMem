@@ -167,7 +167,11 @@ struct ImageImportView: View {
                 onClear: { selection.clear() }
             )
 
-            ImportCandidateChipGrid(chips: chips, selection: $selection)
+            ImportCandidateChipGrid(
+                chips: chips,
+                selection: $selection,
+                onRestoreOriginal: restoreOriginal
+            )
         }
     }
 
@@ -238,9 +242,15 @@ struct ImageImportView: View {
             let refreshedCandidates = EnglishWordCandidateSplitter.candidates(from: text)
             guard !refreshedCandidates.isEmpty else { throw WordImageImportError.noRecognizedText }
 
+            let advisedChips = await ImportCandidatePipeline.chips(
+                from: refreshedCandidates,
+                context: text
+            )
+            guard !advisedChips.isEmpty else { throw WordImageImportError.noRecognizedText }
+
             recognizedText = text
-            chips = ImportCandidateAdapter.chips(from: refreshedCandidates)
-            selection = ImportChipSelection(chips: chips)
+            chips = advisedChips
+            selection = ImportChipSelection(chips: advisedChips)
 
         } catch {
             guard processingCoordinator.shouldCommit(activeToken) else { return }
@@ -250,6 +260,12 @@ struct ImageImportView: View {
             selection = ImportChipSelection(chips: [])
             errorMessage = (error as? WordImageImportError)?.errorDescription ?? "文字识别失败，请重试。"
         }
+    }
+
+    private func restoreOriginal(_ chip: ImportCandidateChip) {
+        let restored = chip.restoringOriginal()
+        chips = chips.map { $0.id == chip.id ? restored : $0 }
+        selection = ImportChipSelection(chips: chips)
     }
 
     private func clearStaleResult() {
@@ -285,12 +301,7 @@ struct ImageImportView: View {
                     sourceText: recognizedText,
                     recognizedText: recognizedText,
                     imageData: imageData,
-                    candidates: selectedWords.map {
-                        WordImportCandidatePayload(
-                            text: $0,
-                            normalizedKey: WordInputNormalizer.normalizedKey(from: $0)
-                        )
-                    },
+                    candidates: ImportCandidatePipeline.payloads(from: selection.selectedChips),
                     metadata: [
                         "channel": WordImportSource.image.rawValue,
                         "imageByteCount": "\(imageData.count)",
