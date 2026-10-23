@@ -20,10 +20,10 @@ Implemented the 2026-10-23 canonical clean-reset plan in the dedicated `canonica
 ## Test and build evidence
 
 - Red-first evidence: `/tmp/canonical-red.log` failed compilation because `WordMemStore`, `WordIdentity`, `SystemDictionaryAuthorizing`, and `OCRTextSanitizer` were absent.
-- Final focused suite: `CanonicalCleanResetTests` — 11 tests, 0 failures.
-- Full suite run A: `TEST SUCCEEDED`; 11 tests, 0 failures (`/tmp/full-suite-run-A.log`).
-- Full suite run B: `TEST SUCCEEDED`; 11 tests, 0 failures (`/tmp/full-suite-run-B.log`).
-- Release build: `generic/platform=iOS Simulator`, Release, signing-disabled flags, `BUILD SUCCEEDED` (`/tmp/release-build.log`).
+- Final focused suite after review fixes: `CanonicalCleanResetTests` — 13 tests, 0 failures.
+- Full suite run A after review fixes: `TEST SUCCEEDED`; 13 tests, 0 failures (`/tmp/canonical-review-full-1.log`).
+- Full suite run B after review fixes: `TEST SUCCEEDED`; 13 tests, 0 failures (`/tmp/canonical-review-full-2.log`).
+- Release build after review fixes: `generic/platform=iOS Simulator`, Release, signing-disabled flags, `BUILD SUCCEEDED` (`/tmp/canonical-review-release.log`).
 - Acceptance grep returned no `ECDICT|LegacyA0|legacyExample|LegacyWordbook|WordMemMigrationPlan|BundledDictionaryLookupService|本地词典` runtime matches.
 - No deprecated repository API or compatibility-only `add`/batch API remains.
 
@@ -32,3 +32,15 @@ Implemented the 2026-10-23 canonical clean-reset plan in the dedicated `canonica
 - The repository logic is covered by deterministic authorizer tests, but no simulator UI automation was run; the Apple dictionary sheet and accessibility flow should get one human smoke check.
 - Live Apple dictionary availability varies by installed dictionaries and simulator state, so manual acceptance of `deliberately` must use a simulator with English dictionary assets.
 - The one-time reset is intentionally destructive; existing exploration-era words and queued imports are unrecoverable by design.
+
+## Independent Claude review follow-up
+
+Claude's read-only audit returned `REQUEST_CHANGES` with no HIGH findings. The following findings were fixed and verified:
+
+- Reset now defaults to the WordMem app-group `UserDefaults`; the inactive standard domain is also cleared during the production reset.
+- Reset removes the historical import queue directory, including pending/quarantine artifacts, instead of only queue defaults.
+- Tests with injected temporary stores no longer delete the production default store; sibling-store sweeping is limited to production default paths.
+- Reset marks completion only after file cleanup succeeds, avoiding a false “already reset” marker after a partial filesystem failure.
+- Deleting word entries also removes orphaned phrase contexts.
+
+Claude's medium finding about reduced broad test coverage is acknowledged: this clean reset intentionally deleted exploration-era compatibility tests. The native replacement suite now covers the current store/identity/gating/OCR contract; calendar scheduling and queue quarantine deserve dedicated native tests in a later hardening pass.

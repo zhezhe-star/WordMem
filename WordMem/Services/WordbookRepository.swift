@@ -108,19 +108,15 @@ struct WordbookRepository {
         let expectedIDs = Set(validatedCandidates(submission).map(\.payloadID))
         guard !expectedIDs.isEmpty else { return false }
 
-        let payloadID = submission.payloadID
-        let contexts = try modelContext.fetch(
-            FetchDescriptor<WordImportContext>(
-                predicate: #Predicate { $0.submissionPayloadID == payloadID }
-            )
-        )
-        let actualIDs = Set(contexts.compactMap { $0.submissionPayloadID == payloadID ? $0.candidatePayloadID : nil })
+        let contexts = try modelContext.fetch(FetchDescriptor<WordImportContext>())
+        let actualIDs = Set(contexts.compactMap(\.candidatePayloadID))
         return expectedIDs.isSubset(of: actualIDs)
     }
 
     func delete(_ entries: [WordEntry]) throws {
+        let entryIDs = Set(entries.map(\.id))
         let allContexts = try modelContext.fetch(FetchDescriptor<WordImportContext>())
-        for context in allContexts where entries.contains(where: { context.entry?.id == $0.id }) {
+        for context in allContexts where context.entry == nil || entryIDs.contains(context.entry?.id ?? UUID()) {
             modelContext.delete(context)
         }
         entries.forEach(modelContext.delete)

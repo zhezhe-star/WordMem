@@ -124,6 +124,28 @@ final class CanonicalCleanResetTests: XCTestCase {
         XCTAssertTrue(try repository.hasCompletedImport(replay))
     }
 
+    func testDeleteRemovesOrphanedPhraseContexts() async throws {
+        let context = try makeContext()
+        let repository = WordbookRepository(modelContext: context)
+        let entry = WordEntry(normalizedKey: "give", headword: "give", originalText: "give")
+        context.insert(entry)
+        try context.save()
+        let phrase = WordImportCandidatePayload(
+            payloadID: UUID(), text: "solid rock", normalizedKey: "solid-rock",
+            metadata: ["phraseContext": "true"]
+        )
+        _ = try await repository.importSubmission(
+            WordImportSubmission(source: .text, sourceText: "solid rock", candidates: [phrase]),
+            using: FixedSystemDictionaryAuthorizer(available: [])
+        )
+        XCTAssertEqual(try context.fetch(FetchDescriptor<WordImportContext>()).count, 1)
+
+        try repository.delete([entry])
+
+        XCTAssertTrue(try context.fetch(FetchDescriptor<WordEntry>()).isEmpty)
+        XCTAssertTrue(try context.fetch(FetchDescriptor<WordImportContext>()).isEmpty)
+    }
+
     func testPhraseContextIsStoredSeparatelyFromWordEntry() async throws {
         let context = try makeContext()
         let repository = WordbookRepository(modelContext: context)
@@ -143,15 +165,36 @@ final class CanonicalCleanResetTests: XCTestCase {
     func testDestructiveResetRemovesHistoricalStoreFilesAndQueueDefaults() throws {
         let historical = directory.appendingPathComponent("historical.store")
         try Data("historical".utf8).write(to: historical)
+        let queueDirectory = directory.appendingPathComponent("WordMemImportQueue", isDirectory: true)
+        try FileManager.default.createDirectory(at: queueDirectory, withIntermediateDirectories: true)
+        try Data("queue".utf8).write(to: queueDirectory.appendingPathComponent("submission.json"))
         defaults.set(Data("historical".utf8), forKey: "saved_words")
         defaults.set(Data("queue".utf8), forKey: "pending_word_import_submissions.v1")
 
-        _ = WordMemStore(storeURL: directory.appendingPathComponent("v3.store"), defaults: defaults)
-
+        _ = WordMemStore(
+            storeURL: directory.appendingPathComponent("v3.store"),
+            defaults: defaults,
+            legacyStoreURL: historical,
+            legacyQueueDirectory: queueDirectory
+        )
         XCTAssertFalse(FileManager.default.fileExists(atPath: historical.path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: queueDirectory.path))
         XCTAssertNil(defaults.data(forKey: "saved_words"))
         XCTAssertNil(defaults.data(forKey: "pending_word_import_submissions.v1"))
         XCTAssertTrue(defaults.bool(forKey: "wordmem.nativeStoreV3.resetCompleted"))
+    }
+
+    func testCustomStoreResetDoesNotDeleteProductionDefaultStore() throws {
+        let defaultStore = directory.appendingPathComponent("default.store")
+        try Data("default".utf8).write(to: defaultStore)
+        _ = WordMemStore(
+            storeURL: directory.appendingPathComponent("custom.store"),
+            defaults: defaults,
+            legacyStoreURL: nil,
+            legacyQueueDirectory: nil
+        )
+
+        XCTAssertTrue(FileManager.default.fileExists(atPath: defaultStore.path))
     }
 
     func testPersistentModelSurfaceContainsOnlyUserAndIdentityFields() throws {
