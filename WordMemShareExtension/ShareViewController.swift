@@ -53,6 +53,8 @@ private struct ShareCardView: View {
     @State private var translatedText = ""
     @State private var noteText = ""
     @State private var wordText = ""
+    @State private var advisedChip: ImportCandidateChip?
+    @State private var advisorToken = UUID()
     @State private var phoneticText = ""
     @State private var exampleText = ""
     @State private var showAdvancedFields = false
@@ -73,6 +75,7 @@ private struct ShareCardView: View {
         let meaning = translatedText.trimmingCharacters(in: .whitespacesAndNewlines)
         return status != .extracting && status != .translating && status != .saved
             && !word.isEmpty && !meaning.isEmpty
+            && (advisedChip?.isImportable == true)
     }
 
     var body: some View {
@@ -129,10 +132,48 @@ private struct ShareCardView: View {
                         TextField("单词", text: $wordText)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
+                            .onChange(of: wordText, initial: true) {
+                                refreshAdvice()
+                            }
                         TextField("音标", text: $phoneticText)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                         TextField("例句", text: $exampleText)
+                    }
+                }
+
+                if let chip = advisedChip {
+                    Section("系统词典检查") {
+                        HStack(spacing: 8) {
+                            if let lemmaText = chip.lemmaBadgeText {
+                                Text(lemmaText)
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.indigo)
+                            }
+                            if let spellingText = chip.spellingBadgeText {
+                                Text(spellingText)
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.orange)
+                            }
+                            if let unavailableText = chip.availabilityBadgeText {
+                                Text(unavailableText)
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.red)
+                            }
+                            if chip.isImportable && chip.advice?.isOriginalRestored != true {
+                                Label("可导入", systemImage: "checkmark.circle.fill")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.green)
+                            }
+                            Spacer()
+                            if !chip.isImportable {
+                                Button("还原原拼写") {
+                                    advisedChip = chip.restoringOriginal()
+                                }
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.orange)
+                            }
+                        }
                     }
                 }
 
@@ -214,21 +255,41 @@ private struct ShareCardView: View {
         }
     }
 
+    private func refreshAdvice() {
+        let token = UUID()
+        advisorToken = token
+        let rawWord = wordText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !rawWord.isEmpty else {
+            advisedChip = nil
+            return
+        }
+
+        Task {
+            let candidate = WordImportCandidate(
+                text: rawWord,
+                normalizedKey: WordInputNormalizer.normalizedKey(from: rawWord)
+            )
+            let chip = await ImportWordAdvisor.live().chips(
+                from: [candidate],
+                context: sourceText.isEmpty ? nil : sourceText
+            ).first
+            guard advisorToken == token else { return }
+            advisedChip = chip
+        }
+    }
+
     private func save() {
-        let normalizedWord = wordText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let selectedChip = advisedChip, selectedChip.isImportable else { return }
         let normalizedMeaning = translatedText.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedNote = noteText.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedPhonetic = phoneticText.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedExample = exampleText.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        let candidate = WordImportCandidatePayload(
-            text: normalizedWord,
-            normalizedKey: normalizedWord.lowercased(),
-            userTranslation: normalizedMeaning,
-            userPhonetic: normalizedPhonetic.isEmpty ? nil : normalizedPhonetic,
-            userExample: normalizedExample.isEmpty ? nil : normalizedExample,
-            userNote: normalizedNote.isEmpty ? nil : normalizedNote
-        )
+        var candidate = ImportCandidatePipeline.payload(from: selectedChip)
+        candidate.userTranslation = normalizedMeaning
+        candidate.userPhonetic = normalizedPhonetic.isEmpty ? nil : normalizedPhonetic
+        candidate.userExample = normalizedExample.isEmpty ? nil : normalizedExample
+        candidate.userNote = normalizedNote.isEmpty ? nil : normalizedNote
 
         let submission = WordImportSubmission(
             source: .shareExtension,
