@@ -187,7 +187,14 @@ struct WordbookRepository {
                     if lookup.result.status != .notFound,
                         existing.lookupStatus == .notFound || existing.lookupStatus == .userSaved
                     {
-                        existing.apply(lookup.result)
+                        if lookup.result.entry?.isContentBearing == true {
+                            existing.apply(lookup.result)
+                        } else if existing.lookupStatus == .notFound {
+                            // Key-only availability (system dictionary): refresh the
+                            // badge without overwriting stored or user content.
+                            existing.lookupStatus = lookup.result.status
+                            existing.updatedAt = .now
+                        }
                     }
                     applySuppliedFields(lookup.input, to: existing)
 

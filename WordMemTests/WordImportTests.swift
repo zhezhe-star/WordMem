@@ -49,20 +49,7 @@ final class WordImportTests: XCTestCase {
         XCTAssertEqual(candidates.map(\.normalizedKey), ["a", "mother-in-law", "visited"])
     }
 
-    func testCandidateRefreshPreservesDeselectionsAndSelectsNewCandidates() {
-        var selection = WordImportSelection()
-        let initialCandidates = EnglishWordCandidateSplitter.candidates(from: "The cat")
-        XCTAssertEqual(selection.selectedWords(in: initialCandidates), ["The", "cat"])
-
-        selection.toggle("cat")
-        let refreshedCandidates = EnglishWordCandidateSplitter.candidates(from: "The cat and dog")
-
-        XCTAssertFalse(selection.isSelected("cat"))
-        XCTAssertTrue(selection.isSelected("dog"))
-        XCTAssertEqual(selection.selectedWords(in: refreshedCandidates), ["The", "and", "dog"])
-    }
-
-    func testSharedChipSelectionDefaultsToAllAndPreservesSourceOrder() {
+    func testSharedChipSelectionDefaultsToNoneAndPreservesSourceOrder() {
         let chips = [
             ImportCandidateChip(id: "the", text: "The", sourceOrder: 0),
             ImportCandidateChip(id: "cat", text: "cat", sourceOrder: 1),
@@ -70,10 +57,10 @@ final class WordImportTests: XCTestCase {
         ]
         var selection = ImportChipSelection(chips: chips)
 
-        XCTAssertEqual(Set(selection.selectedChips.map(\.id)), ["the", "cat", "ran"])
+        XCTAssertTrue(selection.selectedChips.isEmpty)
 
         selection.toggle("cat")
-        XCTAssertEqual(selection.selectedChips.map(\.id), ["the", "ran"])
+        XCTAssertEqual(selection.selectedChips.map(\.id), ["cat"])
 
         selection.clear()
         XCTAssertTrue(selection.selectedChips.isEmpty)
@@ -87,7 +74,7 @@ final class WordImportTests: XCTestCase {
             ImportCandidateChip(id: "one", text: "one", sourceOrder: 0),
             ImportCandidateChip(id: "two", text: "two", sourceOrder: 1),
         ]
-        var selection = ImportChipSelection(chips: chips, selectsAllByDefault: false)
+        var selection = ImportChipSelection(chips: chips)
 
         XCTAssertEqual(selection.selectedCount, 0)
         XCTAssertFalse(selection.isSelected("one"))
@@ -98,22 +85,23 @@ final class WordImportTests: XCTestCase {
         XCTAssertFalse(selection.isSelected("two"))
     }
 
-    func testSharedChipSelectionRefreshPreservesDeselectionsAndSelectsNewChips() {
+    func testSharedChipSelectionRefreshPreservesSelectionsAndLeavesNewChipsUnselected() {
         let initialChips = [
             ImportCandidateChip(id: "the", text: "The", sourceOrder: 0),
             ImportCandidateChip(id: "cat", text: "cat", sourceOrder: 1),
         ]
         var selection = ImportChipSelection(chips: initialChips)
-        selection.toggle("cat")
+        selection.select("the")
 
         let refreshedChips = initialChips + [
             ImportCandidateChip(id: "dog", text: "dog", sourceOrder: 2),
         ]
         selection.updateChips(refreshedChips)
 
+        XCTAssertTrue(selection.isSelected("the"))
         XCTAssertFalse(selection.isSelected("cat"))
-        XCTAssertTrue(selection.isSelected("dog"))
-        XCTAssertEqual(selection.selectedChips.map(\.id), ["the", "dog"])
+        XCTAssertFalse(selection.isSelected("dog"))
+        XCTAssertEqual(selection.selectedChips.map(\.id), ["the"])
     }
 
     func testSharedChipOrganizerGroupsAndSortsBySourceOrder() {
@@ -158,7 +146,7 @@ final class WordImportTests: XCTestCase {
         XCTAssertEqual(chips.count, 55)
         XCTAssertEqual(chips.map(\.sourceOrder), Array(0..<55))
         XCTAssertEqual(chips.map(\.id), candidates.map(\.normalizedKey))
-        XCTAssertEqual(selection.selectedChips.map(\.text), candidates.map(\.text))
+        XCTAssertTrue(selection.selectedChips.isEmpty)
     }
 
     func testSharedChipSelectionDeduplicatesFirstSeenChipsDeterministically() {
@@ -170,6 +158,7 @@ final class WordImportTests: XCTestCase {
 
         let uniqueChips = ImportCandidateChip.uniquelyIdentified(duplicatedChips)
         var selection = ImportChipSelection(chips: duplicatedChips)
+        selection.selectAll()
 
         XCTAssertEqual(uniqueChips.map(\.id), ["cat", "dog"])
         XCTAssertEqual(uniqueChips.map(\.text), ["cat", "dog"])

@@ -95,7 +95,7 @@ struct WordbookView: View {
     @State private var maintenanceCoordinator = WordImportMaintenanceCoordinator()
 
     @State private var dictionaryService: any DictionaryLookupService =
-        BareWordDictionaryLookupService()
+        SystemDictionaryLookupService()
 
     var body: some View {
         NavigationStack(path: $route) {
@@ -196,7 +196,6 @@ struct WordbookView: View {
                 Text(queueAttentionMessage ?? "")
             }
             .task {
-                initializeDictionaryService()
                 await performImportMaintenance()
             }
             .onReceive(
@@ -219,7 +218,7 @@ struct WordbookView: View {
         ContentUnavailableView {
             Label("单词本还是空的", systemImage: "book.closed")
         } description: {
-            Text("输入一个单词，WordMem 会从本地词典补充它的完整信息。")
+            Text("输入一个单词，WordMem 会保存它，释义可随时在系统词典中查看。")
         } actions: {
             Button("添加第一个单词") {
                 activeImportSheet = .manual
@@ -273,11 +272,10 @@ struct WordbookView: View {
             // Share 与翻译扩展都写入 App Group 的 saved_words，迁移时优先读取它。
             let extensionSharedDefaults =
                 UserDefaults(suiteName: WordImportSubmissionQueue.appGroupIdentifier) ?? .standard
-            let localDictionary = dictionaryService as? SQLiteDictionaryLookupService
             try await LegacyWordbookMigrator.migrateIfNeeded(
                 defaults: extensionSharedDefaults,
                 into: modelContext,
-                dictionaryService: localDictionary
+                dictionaryService: dictionaryService
             )
         } catch {
             alertMessage = "旧单词本迁移失败。WordMem 已保留原始数据。"
@@ -311,16 +309,6 @@ struct WordbookView: View {
             }
         }
     }
-
-    private func initializeDictionaryService() {
-        guard dictionaryService is BareWordDictionaryLookupService else { return }
-
-        do {
-            dictionaryService = try SQLiteDictionaryLookupService()
-        } catch {
-            alertMessage = "本地词典加载失败。核心记录功能仍可用。"
-        }
-    }
 }
 
 private struct WordRowView: View {
@@ -344,7 +332,7 @@ private struct WordRowView: View {
             }
 
             if entry.displayTranslation.isEmpty {
-                Text("本地词典暂未收录，已保存为待补充。")
+                Text("点按查看系统词典释义。")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             } else {
@@ -420,6 +408,11 @@ struct WordEntryDetailView: View {
     let entry: WordEntry
     @Query private var importContexts: [WordImportContext]
     @EnvironmentObject private var pronunciation: EnglishPronunciationPlayer
+    @State private var systemDictionary: any SystemDictionaryAvailabilityProviding =
+        UIKitSystemDictionaryAvailability()
+    @State private var systemDefinitionAvailable = false
+    @State private var didCheckSystemDictionary = false
+    @State private var isSystemDictionaryPresented = false
 
     init(entry: WordEntry) {
         self.entry = entry
@@ -474,25 +467,8 @@ struct WordEntryDetailView: View {
                 .accessibilityAddTraits(pronunciation.isSpeaking ? .isSelected : [])
             }
 
-            if entry.senses.isEmpty {
-                Section("释义") {
-                    if entry.userTranslation.isEmpty {
-                        Text("本地词典暂未收录。")
-                            .foregroundStyle(.secondary)
-                    } else {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("导入释义")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(.tint)
-                            Text(entry.userTranslation)
-                        }
-                        Text("本地词典暂未收录，词典释义可稍后补充。")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            } else {
-                Section("释义") {
+            Section("释义") {
+                if !entry.senses.isEmpty {
                     ForEach(entry.senses, id: \.self) { sense in
                         VStack(alignment: .leading, spacing: 4) {
                             if let partOfSpeech = sense.partOfSpeech {
@@ -526,7 +502,16 @@ struct WordEntryDetailView: View {
                         }
                         .padding(.vertical, 2)
                     }
+                } else if !entry.userTranslation.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("导入释义")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.tint)
+                        Text(entry.userTranslation)
+                    }
                 }
+
+                systemDictionaryContent
             }
 
             if let userExample = entry.userExample, !userExample.isEmpty {
@@ -595,8 +580,44 @@ struct WordEntryDetailView: View {
         }
         .navigationTitle(entry.headword)
         .navigationBarTitleDisplayMode(.inline)
+        .task(id: entry.normalizedKey) {
+            didCheckSystemDictionary = false
+            systemDefinitionAvailable = await systemDictionary.hasDefinition(
+                forTerm: entry.headword
+            )
+            didCheckSystemDictionary = true
+        }
+        .sheet(isPresented: $isSystemDictionaryPresented) {
+            SystemDictionaryView(term: entry.headword)
+        }
         .onDisappear {
             pronunciation.cancel()
+        }
+    }
+
+    @ViewBuilder
+    private var systemDictionaryContent: some View {
+        if systemDefinitionAvailable {
+            Button {
+                isSystemDictionaryPresented = true
+            } label: {
+                Label("在系统词典中查看释义", systemImage: "character.book.closed")
+            }
+            .accessibilityIdentifier("showSystemDictionaryButton")
+        } else if didCheckSystemDictionary, entry.senses.isEmpty {
+            if entry.userTranslation.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("系统词典暂未收录该词。")
+                        .foregroundStyle(.secondary)
+                    Text("可在“设置 › 通用 › 词典”中下载词典后重试。")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            } else {
+                Text("系统词典暂未收录该词，词典释义可稍后补充。")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 
