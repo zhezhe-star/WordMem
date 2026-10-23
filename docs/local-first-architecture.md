@@ -1,47 +1,41 @@
-# WordMem Local-First Architecture
+# WordMem Canonical Local-First Architecture
 
 ## Product principles
 
-- **Capture first.** The user enters or selects a word. WordMem stores the normalized word key and the user-created/imported context immediately. Authoritative definitions are delegated to iOS at read time instead of requiring local dictionary enrichment.
-- **No independent dictionary corpus.** WordMem keeps a word-key list. Definitions and pronunciations come from the iOS system dictionary through public UIKit APIs; data the system does not provide is intentionally not synthesized or bundled.
-- **Apple-native.** The app uses SwiftUI, `NavigationStack`, SwiftData, structured concurrency, system accessibility, and iOS 26+ Liquid Glass controls. The minimum deployment target is iOS 27.0.
-- **System-dictionary-backed details.** `UIReferenceLibraryViewController.dictionaryHasDefinition(forTerm:)` checks availability, and `UIReferenceLibraryViewController(term:)` presents Apple's dictionary UI. There is no public iOS API that programmatically extracts definition content, so WordMem does not persist authoritative meanings for new entries.
+- **Capture first.** A selected English word is saved as `locale + normalizedKey`, together only with the user's translation, example, note, and import context.
+- **No independent dictionary corpus.** WordMem stores no definitions, senses, phonetics, forms, tags, dictionary IDs, dictionary versions, or bundled lookup data.
+- **Apple dictionary is authoritative.** `UIReferenceLibraryViewController.dictionaryHasDefinition(forTerm:)` gates capture. `UIReferenceLibraryViewController(term:)` presents Apple's dictionary UI in a medium sheet; WordMem never copies or synthesizes its content.
+- **Destructive v3 reset.** The native SwiftData store starts empty and discards incompatible exploration-era stores, queue defaults, and migration markers once. No schema migration plan or compatibility repository API remains.
 
-## Runtime layers
+## Runtime flow
 
 ```text
-AddWordView / TextImportView / ImageImportView
-  / ShareViewController / Translation provider picker
-  → ImportCandidatePipeline
-    → ImportWordAdvisor
-      → NaturalLanguage lemma lookup
-      → UITextChecker spelling suggestion
-      → UIKit system dictionary availability check
-  → WordbookRepository (@MainActor + ModelContext)
-    → DictionaryLookupService (Sendable)
-      → SystemDictionaryLookupService
-        → UIKit system dictionary availability check
-      → WordEntry SwiftData store
-ContentView (@Query)
-  → list, detail, duplicate feedback, undo
-WordEntryDetailView
-  → live system-dictionary availability check
-  → SystemDictionaryView sheet for Apple dictionary presentation
-LegacyWordbookMigrator
-  → one-time UserDefaults backup + import
+Manual / text / image / share / translation provider
+  → cleaned source context
+  → English word candidate splitter
+  → ImportWordAdvisor
+      • NaturalLanguage lemma
+      • UITextChecker spelling suggestion
+      • SystemDictionaryAuthorizing final availability
+      • SystemDictionaryAuthorizing restored-original availability
+  → WordbookRepository
+      • preserves advisor normalizedKey
+      • revalidates final and restored keys
+      • skips unavailable candidates
+      • stores phrase context separately from WordEntry
+      • deduplicates replay by stable payload IDs
+  → WordMemStore v3
 ```
 
-## Current boundaries
+## Model boundaries
 
-- `ImportCandidatePipeline` is the shared sentence-splitting boundary. After a sentence is split into unique source words, every word passes through `ImportWordAdvisor`; manual, text, image, share, and translation-provider imports use the same candidate model and payload metadata.
-- The advisor applies NaturalLanguage lemma normalization and UITextChecker spelling correction automatically. The corrected key is the default, while immutable advice retains the original word for an explicit restore action.
-- Both corrected and restored keys are gated independently by system-dictionary availability. The restore control is offered only when the original key is also present; otherwise the candidate remains non-selectable.
-- `ImportCandidateChip` uses indigo for lemma normalization, orange for spelling correction, and red for system-dictionary unavailability. A candidate that the system dictionary cannot resolve is not selectable by default; the explicit restore control is the only override.
-- Candidate selection remains default-none. Advice changes identity, availability, and display only; it never automatically selects a word for import.
-- Translation-provider phrase context remains available as non-dictionary-gated context, while individual source words continue through the same advisor.
-- `DictionaryLookupService` is the only capture-time dictionary boundary. New runtime lookups return key-only entries; an available system word is reported as enriched, otherwise as not found.
-- `WordbookRepository` owns duplicate detection, creation, enrichment of bare legacy entries, undo, and SwiftData saves.
-- `LegacyWordbookMigrator` backs up the raw legacy payload before import and records a migration flag only after a successful save. User translations and legacy examples are retained in dedicated fields; dictionary enrichment updates canonical metadata without erasing that history.
-- Repository and migration operations roll back pending SwiftData changes when persistence fails, so the reported result and visible context stay aligned.
-- Existing SwiftData records keep their legacy senses, phonetics, forms, tags, and user fields. They are preserved for backward compatibility; new records do not receive an independent local copy of that content.
-- The detail view rechecks system availability on appearance and offers Apple's dictionary sheet when available. If unavailable, it directs the user to Settings › General › Dictionary. This avoids a false “local dictionary missing” state.
+- `WordEntry` is a word identity and user record. It contains `id`, locale, normalized key, headword, original text, system availability, user fields, and timestamps.
+- `WordImportContext` stores cleaned source text, selected candidate, recognized text, image bytes, submission/candidate payload IDs, and metadata. Phrase context has `phraseContext: true`, has no `WordEntry`, and is never dictionary gated.
+- `SystemDictionaryAuthorizing` is the only dictionary boundary and exposes availability only. `UIKitSystemDictionaryAuthorizer` delegates to the public iOS dictionary API.
+- Import metadata records canonical key, original word/key, lemma or spelling advice, and both final/restored availability results. These are provenance fields, not dictionary content.
+- `OCRTextSanitizer` removes clocks, carrier/status noise, battery numbers, standalone numerics, and symbol-only lines before display, persistence, candidate splitting, or advisory lookup.
+- Calendar challenges receive only entries with nonempty user-provided translation and use only user-provided examples. Dictionary-content hints and fallbacks do not exist.
+
+## Persistence
+
+`WordMemStore` creates `Application Support/WordMem/wordmem-v3.store` with `WordEntry` and `WordImportContext` in one native schema. Its one-time destructive reset removes historical `.store` SQLite files and historical queue/default keys. On later launches the marker is present, so v3 data persists normally. Persistence failures roll back the model context.

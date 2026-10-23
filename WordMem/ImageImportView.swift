@@ -7,7 +7,7 @@ import SwiftUI
 import UIKit
 
 struct ImageImportView: View {
-    let dictionaryService: any DictionaryLookupService
+    let dictionary: any SystemDictionaryAuthorizing
     let completion: (WordImportSummary) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -30,11 +30,11 @@ struct ImageImportView: View {
 
 #if DEBUG
     init(
-        dictionaryService: any DictionaryLookupService,
+        dictionary: any SystemDictionaryAuthorizing,
         completion: @escaping (WordImportSummary) -> Void,
         previewState: ImportPreviewState = ImportPreviewState()
     ) {
-        self.dictionaryService = dictionaryService
+        self.dictionary = dictionary
         self.completion = completion
         _capturedImage = State(initialValue: previewState.thumbnail)
         _imageData = State(initialValue: previewState.thumbnail?.jpegData(compressionQuality: 0.9))
@@ -236,7 +236,8 @@ struct ImageImportView: View {
         do {
             let lines = try await recognitionService.recognizeText(in: preparedData)
             guard processingCoordinator.shouldCommit(activeToken) else { return }
-            let text = lines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+            let rawText = lines.joined(separator: "\n")
+            let text = OCRTextSanitizer.sanitizedText(from: rawText)
             guard !text.isEmpty else { throw WordImageImportError.noRecognizedText }
 
             let refreshedCandidates = EnglishWordCandidateSplitter.candidates(from: text)
@@ -309,7 +310,7 @@ struct ImageImportView: View {
                 )
                 let outcomes = try await repository.importSubmission(
                     submission,
-                    using: dictionaryService
+                    using: dictionary
                 )
                 completion(WordImportSummary(outcomes: outcomes))
                 dismiss()
@@ -322,12 +323,12 @@ struct ImageImportView: View {
 
 #if DEBUG
 #Preview("图片导入 · 空状态") {
-    ImageImportView(dictionaryService: SystemDictionaryLookupService()) { _ in }
+    ImageImportView(dictionary: UIKitSystemDictionaryAuthorizer()) { _ in }
 }
 
 #Preview("图片导入 · 正常候选") {
     ImageImportView(
-        dictionaryService: SystemDictionaryLookupService(),
+        dictionary: UIKitSystemDictionaryAuthorizer(),
         completion: { _ in },
         previewState: ImportPreviewState(
             recognizedText: "Beautiful mountain views appear after the morning rain.",
@@ -340,7 +341,7 @@ struct ImageImportView: View {
 
 #Preview("图片导入 · 55 个候选") {
     ImageImportView(
-        dictionaryService: SystemDictionaryLookupService(),
+        dictionary: UIKitSystemDictionaryAuthorizer(),
         completion: { _ in },
         previewState: ImportPreviewState(
             recognizedText: String(repeating: "Beautiful mountain views appear after rain. ", count: 8),

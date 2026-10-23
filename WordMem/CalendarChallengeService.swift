@@ -9,19 +9,20 @@ struct CalendarWord: Identifiable, Equatable {
     let id: UUID
     let word: String
     let translation: String
-    let phonetic: String?
     let exampleSentence: String?
     let createdAt: Date
 }
 
 extension WordEntry {
-    var calendarWord: CalendarWord {
-        CalendarWord(
+    var calendarWord: CalendarWord? {
+        let translation = userTranslation.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !translation.isEmpty else { return nil }
+
+        return CalendarWord(
             id: id,
             word: headword,
-            translation: displayTranslation,
-            phonetic: phonetic,
-            exampleSentence: legacyExampleSentence ?? legacyExample,
+            translation: translation,
+            exampleSentence: userExample,
             createdAt: createdAt
         )
     }
@@ -52,7 +53,6 @@ struct CalendarChallengeQuestion: Identifiable, Codable, Equatable {
     let exampleText: String?
     let options: [String]
     let answer: String
-    let hint: String?
 }
 
 struct CalendarChallengeAnswer: Codable, Equatable {
@@ -290,8 +290,7 @@ final class CalendarChallengeService: ObservableObject {
                 accessibilityPrompt: "请选择单词 \(word.word) 的正确释义。",
                 exampleText: nil,
                 options: options(answer: word.translation, distractors: distractors.translations, seed: stableSeed(seedFor: word.id.uuidString + form.rawValue)),
-                answer: word.translation,
-                hint: word.phonetic
+                answer: word.translation
             )
 
         case .listeningChoice:
@@ -305,8 +304,7 @@ final class CalendarChallengeService: ObservableObject {
                 accessibilityPrompt: "这是听力选择题。播放发音后，请选择正确的单词。",
                 exampleText: nil,
                 options: options(answer: word.word, distractors: distractors.words, seed: stableSeed(seedFor: word.id.uuidString + form.rawValue)),
-                answer: word.word,
-                hint: word.phonetic
+                answer: word.word
             )
 
         case .reverseTranslation:
@@ -320,8 +318,7 @@ final class CalendarChallengeService: ObservableObject {
                 accessibilityPrompt: "请选择释义 \(word.translation) 对应的英文单词。",
                 exampleText: nil,
                 options: options(answer: word.word, distractors: distractors.words, seed: stableSeed(seedFor: word.id.uuidString + form.rawValue)),
-                answer: word.word,
-                hint: word.phonetic
+                answer: word.word
             )
 
         case .exampleCloze:
@@ -342,8 +339,7 @@ final class CalendarChallengeService: ObservableObject {
                 accessibilityPrompt: "请根据语境，选择补充到例句中的单词。",
                 exampleText: cloze,
                 options: options(answer: word.word, distractors: distractors.words, seed: stableSeed(seedFor: word.id.uuidString + form.rawValue)),
-                answer: word.word,
-                hint: word.phonetic
+                answer: word.word
             )
 
         case .spellingInput:
@@ -357,8 +353,7 @@ final class CalendarChallengeService: ObservableObject {
                 accessibilityPrompt: "请拼写出释义 \(word.translation) 对应的英文单词。",
                 exampleText: example,
                 options: [],
-                answer: word.word,
-                hint: word.phonetic
+                answer: word.word
             )
         }
     }

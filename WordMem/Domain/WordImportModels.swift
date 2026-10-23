@@ -9,10 +9,8 @@ final class WordImportContext {
     var selectedCandidate: String?
     var recognizedText: String?
     @Attribute(.externalStorage) var imageData: Data?
-    var entryID: UUID?
     var submissionPayloadID: UUID?
     var candidatePayloadID: UUID?
-    var payloadSchemaVersion: Int?
     private var metadataData: Data
     var createdAt: Date
     @Relationship var entry: WordEntry?
@@ -42,7 +40,6 @@ final class WordImportContext {
         imageData: Data? = nil,
         submissionPayloadID: UUID? = nil,
         candidatePayloadID: UUID? = nil,
-        payloadSchemaVersion: Int? = nil,
         metadata: [String: String] = [:],
         createdAt: Date = .now
     ) {
@@ -52,11 +49,9 @@ final class WordImportContext {
         self.sourceText = sourceText
         self.selectedCandidate = selectedCandidate
         self.recognizedText = recognizedText
-        self.entryID = entry?.id
         self.imageData = imageData
         self.submissionPayloadID = submissionPayloadID
         self.candidatePayloadID = candidatePayloadID
-        self.payloadSchemaVersion = payloadSchemaVersion
         self.metadataData = (try? JSONEncoder().encode(metadata)) ?? Data()
         self.createdAt = createdAt
     }
@@ -71,17 +66,7 @@ struct WordImportSummary: Equatable {
     }
 
     init(outcomes: [AddWordOutcome]) {
-        var added = 0
-        var duplicated = 0
-
-        for outcome in outcomes {
-            switch outcome {
-            case .added: added += 1
-            case .duplicate: duplicated += 1
-            }
-        }
-
-        self.addedCount = added
-        self.duplicateCount = duplicated
+        addedCount = outcomes.filter(\.isAdded).count
+        duplicateCount = outcomes.count - addedCount
     }
 }

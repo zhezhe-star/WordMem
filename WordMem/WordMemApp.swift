@@ -3,10 +3,12 @@ import SwiftUI
 
 @main
 struct WordMemApp: App {
+    private let store = WordMemStore()
+
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .modelContainer(for: [WordEntry.self, WordImportContext.self])
+                .modelContainer(try! store.makeContainer())
                 .environmentObject(EnglishPronunciationPlayer.shared)
         }
     }

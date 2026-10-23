@@ -6,13 +6,10 @@ enum WordInputNormalizer {
             .replacingOccurrences(of: "’", with: "'")
             .replacingOccurrences(of: "‘", with: "'")
             .trimmingCharacters(in: .whitespacesAndNewlines)
-
         let folded = replaced.folding(
             options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive],
-            locale: Locale(identifier: "en_US_POSIX")
+            locale: Locale(identifier: WordIdentity.defaultLocaleIdentifier)
         )
-
-        let trimmed = folded.trimmingCharacters(in: .punctuationCharacters)
-        return trimmed.lowercased()
+        return folded.trimmingCharacters(in: .punctuationCharacters).lowercased()
     }
 }
