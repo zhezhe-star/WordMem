@@ -13,6 +13,7 @@ final class WordEntry {
     var translation: String
     var userTranslation: String = ""
     var legacyExample: String?
+    var userExample: String?
     var legacyExampleSentence: String?
     var legacyTranslatedExampleSentence: String?
     private var sensesData: Data
@@ -64,6 +65,7 @@ final class WordEntry {
         translation: String = "",
         userTranslation: String = "",
         legacyExample: String? = nil,
+        userExample: String? = nil,
         legacyExampleSentence: String? = nil,
         legacyTranslatedExampleSentence: String? = nil,
         senses: [WordSense] = [],
@@ -83,6 +85,7 @@ final class WordEntry {
         self.translation = translation
         self.userTranslation = userTranslation
         self.legacyExample = legacyExample
+        self.userExample = userExample
         self.legacyExampleSentence = legacyExampleSentence
         self.legacyTranslatedExampleSentence = legacyTranslatedExampleSentence
         self.sensesData = WordEntry.encode(senses)

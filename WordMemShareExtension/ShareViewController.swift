@@ -57,6 +57,7 @@ private struct ShareCardView: View {
     @State private var exampleText = ""
     @State private var showAdvancedFields = false
     @State private var status: Status = .extracting
+    @State private var persistenceError: String?
 
     enum Status: Equatable {
         case extracting
@@ -77,6 +78,14 @@ private struct ShareCardView: View {
     var body: some View {
         NavigationView {
             Form {
+                if let persistenceError {
+                    Section {
+                        Label(persistenceError, systemImage: "externaldrive.badge.exclamationmark")
+                            .font(.footnote)
+                            .foregroundStyle(.orange)
+                    }
+                }
+
                 Section("原文") {
                     Text(sourceText.isEmpty ? "正在获取分享内容…" : sourceText)
                         .font(.body)
@@ -211,23 +220,33 @@ private struct ShareCardView: View {
         let normalizedNote = noteText.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedPhonetic = phoneticText.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedExample = exampleText.trimmingCharacters(in: .whitespacesAndNewlines)
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
 
-        let word = WordData(
-            word: normalizedWord,
-            translation: normalizedMeaning,
-            phonetic: normalizedPhonetic.isEmpty ? nil : normalizedPhonetic,
-            createDateString: formatter.string(from: Date()),
-            exampleSentence: normalizedExample.isEmpty ? nil : normalizedExample,
-            note: normalizedNote.isEmpty ? nil : normalizedNote
+        let candidate = WordImportCandidatePayload(
+            text: normalizedWord,
+            normalizedKey: normalizedWord.lowercased(),
+            userTranslation: normalizedMeaning,
+            userPhonetic: normalizedPhonetic.isEmpty ? nil : normalizedPhonetic,
+            userExample: normalizedExample.isEmpty ? nil : normalizedExample,
+            userNote: normalizedNote.isEmpty ? nil : normalizedNote
         )
 
-        storageManager.addWord(word)
-        status = .saved
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
-            storageManager.loadWords()
-            onClose()
-        }
+        let submission = WordImportSubmission(
+            source: .shareExtension,
+            sourceText: sourceText,
+            recognizedText: sourceText,
+            candidates: [candidate],
+            metadata: ["channel": "share_extension"]
+        )
+        let error = WordImportExtensionSaveService.saveShare(
+            submission,
+            storage: storageManager,
+            onSaved: {
+                status = .saved
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+                    onClose()
+                }
+            }
+        )
+        persistenceError = error
     }
 }

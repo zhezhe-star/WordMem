@@ -31,8 +31,17 @@
 		MEM02 /* WordInputNormalizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM12 /* WordInputNormalizer.swift */; };
 		MEM03 /* WordEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM13 /* WordEntry.swift */; };
 		MEM06 /* WordbookRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM18 /* WordbookRepository.swift */; };
+		IMP03 /* WordImportModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = IMP04 /* WordImportModels.swift */; };
+		IMP09 /* WordMemMigrationPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = IMP10 /* WordMemMigrationPlan.swift */; };
+		IMP05 /* VisionTextRecognitionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = IMP06 /* VisionTextRecognitionService.swift */; };
+		IMP07 /* WordImportViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = IMP08 /* WordImportViews.swift */; };
+		SUB10 /* WordImportSubmission.swift in Sources */ = {isa = PBXBuildFile; fileRef = SUB11 /* WordImportSubmission.swift */; };
+		SUB12 /* WordImportSubmission.swift in Sources */ = {isa = PBXBuildFile; fileRef = SUB11 /* WordImportSubmission.swift */; };
+		SUB13 /* WordImportSubmission.swift in Sources */ = {isa = PBXBuildFile; fileRef = SUB11 /* WordImportSubmission.swift */; };
+		IMP01 /* WordImportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = IMP02 /* WordImportTests.swift */; };
 		MEM07 /* LegacyWordbookMigrator.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM19 /* LegacyWordbookMigrator.swift */; };
 		MEM08 /* SQLiteDictionaryLookupService.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM20 /* SQLiteDictionaryLookupService.swift */; };
+		PRN01 /* EnglishPronunciationPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = PRN02 /* EnglishPronunciationPlayer.swift */; };
 		MEM09 /* Dictionary.sqlite in Resources */ = {isa = PBXBuildFile; fileRef = MEM22 /* Dictionary.sqlite */; };
 		MEM10 /* ECDICT-LICENSE.txt in Resources */ = {isa = PBXBuildFile; fileRef = MEM23 /* ECDICT-LICENSE.txt */; };
 		MEM25 /* BareWordDictionaryLookupService.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM26 /* BareWordDictionaryLookupService.swift */; };
@@ -70,11 +79,18 @@
 		MEM12 /* WordInputNormalizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordInputNormalizer.swift; sourceTree = "<group>"; };
 		MEM13 /* WordEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordEntry.swift; sourceTree = "<group>"; };
 		MEM18 /* WordbookRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordbookRepository.swift; sourceTree = "<group>"; };
+		IMP04 /* WordImportModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordImportModels.swift; sourceTree = "<group>"; };
+		SUB11 /* WordImportSubmission.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordImportSubmission.swift; sourceTree = "<group>"; };
+		IMP10 /* WordMemMigrationPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordMemMigrationPlan.swift; sourceTree = "<group>"; };
+		IMP06 /* VisionTextRecognitionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisionTextRecognitionService.swift; sourceTree = "<group>"; };
+		IMP08 /* WordImportViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordImportViews.swift; sourceTree = "<group>"; };
+		IMP02 /* WordImportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordImportTests.swift; sourceTree = "<group>"; };
 		MEM19 /* LegacyWordbookMigrator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyWordbookMigrator.swift; sourceTree = "<group>"; };
 		MEM20 /* SQLiteDictionaryLookupService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteDictionaryLookupService.swift; sourceTree = "<group>"; };
 		MEM22 /* Dictionary.sqlite */ = {isa = PBXFileReference; lastKnownFileType = file; path = Dictionary.sqlite; sourceTree = "<group>"; };
 		MEM23 /* ECDICT-LICENSE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "ECDICT-LICENSE.txt"; sourceTree = "<group>"; };
 		MEM26 /* BareWordDictionaryLookupService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BareWordDictionaryLookupService.swift; sourceTree = "<group>"; };
+		PRN02 /* EnglishPronunciationPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnglishPronunciationPlayer.swift; sourceTree = "<group>"; };
 		TEST04 /* WordMemTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WordMemTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		TEST14 /* DictionaryLookupTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictionaryLookupTests.swift; sourceTree = "<group>"; };
 		TEST16 /* WordbookRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordbookRepositoryTests.swift; sourceTree = "<group>"; };
@@ -83,6 +99,8 @@
 		TEST19 /* BundledDictionaryLookupService.swift in Sources */ = {isa = PBXBuildFile; fileRef = TEST21 /* BundledDictionaryLookupService.swift */; };
 		TEST20 /* DevelopmentSeedDictionaryCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevelopmentSeedDictionaryCatalog.swift; sourceTree = "<group>"; };
 		TEST21 /* BundledDictionaryLookupService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundledDictionaryLookupService.swift; sourceTree = "<group>"; };
+		TEST22 /* WordImportSubmissionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = TEST23 /* WordImportSubmissionTests.swift */; };
+		TEST23 /* WordImportSubmissionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordImportSubmissionTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -158,6 +176,7 @@
 				APP02 /* WordMemApp.swift */,
 				APP04 /* ContentView.swift */,
 				APP23 /* AddWordView.swift */,
+				IMP08 /* WordImportViews.swift */,
 				CAL02 /* CalendarChallengeService.swift */,
 				CAL04 /* CalendarChallengeViews.swift */,
 				CAL08 /* CalendarChallengeFlowViews.swift */,
@@ -213,6 +232,9 @@
 				MEM11 /* DictionaryModels.swift */,
 				MEM12 /* WordInputNormalizer.swift */,
 				MEM13 /* WordEntry.swift */,
+				IMP04 /* WordImportModels.swift */,
+				SUB11 /* WordImportSubmission.swift */,
+				IMP10 /* WordMemMigrationPlan.swift */,
 			);
 			path = Domain;
 			sourceTree = "<group>";
@@ -224,6 +246,8 @@
 				MEM19 /* LegacyWordbookMigrator.swift */,
 				MEM20 /* SQLiteDictionaryLookupService.swift */,
 				MEM26 /* BareWordDictionaryLookupService.swift */,
+				PRN02 /* EnglishPronunciationPlayer.swift */,
+				IMP06 /* VisionTextRecognitionService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -245,6 +269,8 @@
 				TEST20 /* DevelopmentSeedDictionaryCatalog.swift */,
 				TEST21 /* BundledDictionaryLookupService.swift */,
 				TEST16 /* WordbookRepositoryTests.swift */,
+				IMP02 /* WordImportTests.swift */,
+				TEST23 /* WordImportSubmissionTests.swift */,
 				TEST17 /* SQLiteDictionaryLookupServiceTests.swift */,
 			);
 			path = WordMemTests;
@@ -438,10 +464,16 @@
 				MEM01 /* DictionaryModels.swift in Sources */,
 				MEM02 /* WordInputNormalizer.swift in Sources */,
 				MEM03 /* WordEntry.swift in Sources */,
+				IMP03 /* WordImportModels.swift in Sources */,
+				IMP09 /* WordMemMigrationPlan.swift in Sources */,
+				IMP05 /* VisionTextRecognitionService.swift in Sources */,
+				SUB10 /* WordImportSubmission.swift in Sources */,
+				IMP07 /* WordImportViews.swift in Sources */,
 				MEM06 /* WordbookRepository.swift in Sources */,
 				MEM07 /* LegacyWordbookMigrator.swift in Sources */,
 				MEM08 /* SQLiteDictionaryLookupService.swift in Sources */,
 				MEM25 /* BareWordDictionaryLookupService.swift in Sources */,
+				PRN01 /* EnglishPronunciationPlayer.swift in Sources */,
 				APP15 /* WordData.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -455,6 +487,8 @@
 				TEST18 /* DevelopmentSeedDictionaryCatalog.swift in Sources */,
 				TEST19 /* BundledDictionaryLookupService.swift in Sources */,
 				TEST15 /* WordbookRepositoryTests.swift in Sources */,
+				IMP01 /* WordImportTests.swift in Sources */,
+				TEST22 /* WordImportSubmissionTests.swift in Sources */,
 				TEST03 /* SQLiteDictionaryLookupServiceTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -465,6 +499,7 @@
 			files = (
 				EXT03 /* ShareViewController.swift in Sources */,
 				EXT05 /* ShareTextExtractor.swift in Sources */,
+				SUB12 /* WordImportSubmission.swift in Sources */,
 				EXT07 /* WordData.swift in Sources */,
 				EXT08 /* LocalStorageManager.swift in Sources */,
 			);
@@ -477,6 +512,7 @@
 				TPR03 /* TranslationProviderMain.swift in Sources */,
 				TPR05 /* TranslationCardView.swift in Sources */,
 				TPR07 /* WordPickerView.swift in Sources */,
+				SUB13 /* WordImportSubmission.swift in Sources */,
 				TPR09 /* WordData.swift in Sources */,
 				TPR10 /* LocalStorageManager.swift in Sources */,
 			);

@@ -7,7 +7,7 @@ struct WordPickerView: View {
     let sourceText: String
     let phraseTranslation: String
     let isPhraseTranslationReady: Bool
-    let storage: LocalStorageManager
+    let storage: any WordImportSubmissionStoring
     let onCancel: () -> Void
     let onSave: () -> Void
 
@@ -16,9 +16,20 @@ struct WordPickerView: View {
     @State private var configuration: TranslationSession.Configuration?
     @State private var isPreparingChips = true
     @State private var hasPreparedChips = false
+    @State private var persistenceError: String?
+    @State private var saveCoordinator = TranslationProviderSaveCoordinator()
+    @State private var isPreparingSave = false
 
     private var isPreparing: Bool {
         !isPhraseTranslationReady || isPreparingChips
+    }
+
+    private var isSaving: Bool {
+        saveCoordinator.isSaving || isPreparingSave
+    }
+
+    private var canSave: Bool {
+        !selected.isEmpty && !isPreparing && !isSaving
     }
 
     private var chips: [String] {
@@ -30,6 +41,12 @@ struct WordPickerView: View {
             topBar
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
+                    if let persistenceError {
+                        Label(persistenceError, systemImage: "externaldrive.badge.exclamationmark")
+                            .font(.footnote)
+                            .foregroundStyle(.orange)
+                    }
+
                     if isPreparing {
                         loadingContent
                     } else {
@@ -69,10 +86,23 @@ struct WordPickerView: View {
                 .overlay(Capsule().stroke(Color.green, lineWidth: 1))
                 .foregroundStyle(.green)
             Spacer()
-            Button("保存", action: save)
-                .font(.body.weight(.semibold))
-                .foregroundStyle(selected.isEmpty ? AnyShapeStyle(.secondary) : AnyShapeStyle(Color.green))
-                .disabled(selected.isEmpty || isPreparing)
+            Button(action: save) {
+                HStack(spacing: 6) {
+                    if isSaving {
+                        ProgressView()
+                            .controlSize(.small)
+                            .tint(.white)
+                    }
+                    Text(saveButtonTitle)
+                }
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.green)
+            .clipShape(Capsule())
+            .disabled(!canSave)
+            .accessibilityLabel(saveButtonTitle)
+            .accessibilityHint("将所选卡片保存到 WordMem")
+            .accessibilityValue(isSaving ? "正在保存" : "未在保存")
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
@@ -94,6 +124,10 @@ struct WordPickerView: View {
             return "已保留整句，可选择后保存到 WordMem。"
         }
         return "已保留整句，并拆出 \(wordCount) 个单词；选择后保存到 WordMem。"
+    }
+
+    private var saveButtonTitle: String {
+        isSaving ? "正在保存…" : "保存 \(selected.count) 个"
     }
 
     private var sourceSection: some View {
@@ -191,13 +225,22 @@ struct WordPickerView: View {
                     .font(.body.weight(isSelected ? .semibold : .regular))
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
-                    .background(isSelected ? Color.green.opacity(0.18) : Color(.secondarySystemGroupedBackground))
+                    .background(
+                        isSelected
+                            ? Color.green.opacity(0.18) : Color(.secondarySystemGroupedBackground)
+                    )
                     .overlay(
                         Capsule().stroke(isSelected ? Color.green : Color.clear, lineWidth: 1.5)
                     )
                     .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(
+                    meanings[chip].map { "\(chip)，\($0)" } ?? chip
+                )
+                .accessibilityValue(isSelected ? "已选择" : "未选择")
+                .accessibilityAddTraits(isSelected ? [.isSelected] : [])
             }
         }
     }
@@ -217,7 +260,9 @@ struct WordPickerView: View {
 
     private func translateChips(with session: TranslationSession) async {
         for chip in chips where meanings[chip] == nil {
-            if chip == TranslationWordTokenizer.normalizedPhrase(from: sourceText), !phraseTranslation.isEmpty {
+            if chip == TranslationWordTokenizer.normalizedPhrase(from: sourceText),
+                !phraseTranslation.isEmpty
+            {
                 meanings[chip] = phraseTranslation
                 continue
             }
@@ -230,21 +275,33 @@ struct WordPickerView: View {
     }
 
     private func save() {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        for chip in selected.sorted() {
-            let meaning = meanings[chip]
-                ?? (chip == TranslationWordTokenizer.normalizedPhrase(from: sourceText) ? phraseTranslation : nil)
-                ?? ""
-            let word = WordData(
-                word: chip,
-                translation: meaning.trimmingCharacters(in: .whitespacesAndNewlines),
-                createDateString: formatter.string(from: Date())
+        guard canSave else { return }
+        isPreparingSave = true
+
+        Task { @MainActor in
+            // Let SwiftUI render the disabled/saving button before file I/O.
+            await Task.yield()
+            let builder = TranslationProviderSubmissionBuilder(
+                sourceText: sourceText,
+                phraseTranslation: phraseTranslation,
+                selectedChips: selected,
+                meanings: meanings
             )
-            storage.addWord(word)
+            let submission = builder.makeSubmission()
+
+            let result = saveCoordinator.save(
+                submission,
+                storage: storage,
+                onSaved: onSave
+            )
+
+            if case .completed(let error) = result {
+                persistenceError = error
+            }
+            isPreparingSave = false
         }
-        onSave()
     }
+
 }
 
 private struct ShimmerBox: View {
@@ -307,7 +364,9 @@ struct FlowLayout: Layout {
         return CGSize(width: maxWidth == .infinity ? x : maxWidth, height: y + rowHeight)
     }
 
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+    func placeSubviews(
+        in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()
+    ) {
         var x = bounds.minX
         var y = bounds.minY
         var rowHeight: CGFloat = 0
