@@ -1,17 +1,24 @@
 import Foundation
 import SwiftData
 
-@MainActor
 enum AddWordOutcome {
     case added(WordEntry)
     case duplicate(WordEntry)
 
+    var isAdded: Bool {
+        if case .added = self { return true }
+        return false
+    }
+
     var entry: WordEntry {
         switch self {
-        case .added(let entry), .duplicate(let entry):
-            entry
+        case .added(let entry), .duplicate(let entry): entry
         }
     }
+}
+
+enum WordImportError: Error, Equatable {
+    case emptySelection
 }
 
 @MainActor
@@ -24,579 +31,162 @@ struct WordbookRepository {
         save saveAction: (@MainActor (ModelContext) throws -> Void)? = nil
     ) {
         self.modelContext = modelContext
-        self.saveAction =
-            saveAction ?? { context in
-                try context.save()
-            }
-    }
-
-    @available(*, deprecated, message: "Use importSubmission(_:using:).")
-    func add(_ rawInput: String, using dictionaryService: any DictionaryLookupService) async throws
-        -> AddWordOutcome
-    {
-        let submission = WordImportSubmission(
-            source: .manual,
-            sourceText: rawInput,
-            candidates: [
-                WordImportCandidatePayload(
-                    text: rawInput,
-                    normalizedKey: WordInputNormalizer.normalizedKey(from: rawInput)
-                )
-            ],
-            metadata: ["channel": WordImportSource.manual.rawValue]
-        )
-        let outcomes = try await importSubmission(submission, using: dictionaryService)
-        guard let outcome = outcomes.first else { throw WordImportError.emptySelection }
-        return outcome
-    }
-
-    @available(*, deprecated, message: "Use importSubmission(_:using:).")
-    func importWords(
-        _ rawWords: [String],
-        source: WordImportSource,
-        sourceText: String? = nil,
-        imageData: Data? = nil,
-        recognizedText: String? = nil,
-        using dictionaryService: any DictionaryLookupService
-    ) async throws -> [AddWordOutcome] {
-        let submission = WordImportSubmission(
-            source: source,
-            sourceText: sourceText ?? "",
-            recognizedText: recognizedText,
-            imageData: imageData,
-            candidates: rawWords.map {
-                WordImportCandidatePayload(
-                    text: $0,
-                    normalizedKey: WordInputNormalizer.normalizedKey(from: $0)
-                )
-            }
-        )
-        return try await importSubmission(submission, using: dictionaryService)
+        self.saveAction = saveAction ?? { try $0.save() }
     }
 
     func importSubmission(
         _ submission: WordImportSubmission,
-        using dictionaryService: any DictionaryLookupService
+        using dictionary: any SystemDictionaryAuthorizing
     ) async throws -> [AddWordOutcome] {
-        let candidates = normalizedSubmissionCandidates(in: submission)
+        let candidates = validatedCandidates(submission)
         guard !candidates.isEmpty else { throw WordImportError.emptySelection }
 
-        return try await importCandidates(
-            candidates,
-            source: submission.source,
-            sourceText: submission.sourceText,
-            imageData: submission.imageData,
-            recognizedText: submission.recognizedText,
-            submissionMetadata: submission.metadata,
-            payloadID: submission.payloadID,
-            schemaVersion: submission.schemaVersion,
-            createdAt: submission.createdAt,
-            using: dictionaryService
-        )
+        var outcomes: [AddWordOutcome] = []
+        var seenIdentities = Set<String>()
+        var inserted = false
+
+        for candidate in candidates {
+            let identityKey = candidate.normalizedKey.lowercased()
+            if candidate.metadata["phraseContext"] == "true" {
+                insertContext(
+                    entry: nil, candidate: candidate, submission: submission,
+                    metadata: candidate.metadata
+                )
+                inserted = true
+                continue
+            }
+
+            guard !identityKey.isEmpty, seenIdentities.insert(identityKey).inserted else { continue }
+            guard await dictionary.hasDefinition(forTerm: candidate.normalizedKey) else { continue }
+
+            let originalKey = candidate.metadata["originalKey"] ?? candidate.normalizedKey
+            let originalAvailable = originalKey == candidate.normalizedKey
+                ? true
+                : await dictionary.hasDefinition(forTerm: originalKey)
+            guard originalAvailable else { continue }
+
+            var metadata = submission.mergedMetadata(for: candidate)
+            metadata["canonicalKey"] = candidate.normalizedKey
+            metadata["originalKey"] = originalKey
+            metadata["dictionaryAvailable"] = "true"
+            metadata["originalDictionaryAvailable"] = "true"
+
+            if let existing = try entry(locale: submission.locale, key: candidate.normalizedKey) {
+                apply(candidate, to: existing, isDictionaryAvailable: true)
+                insertContext(
+                    entry: existing, candidate: candidate, submission: submission,
+                    metadata: metadata
+                )
+                outcomes.append(.duplicate(existing))
+            } else {
+                let entry = WordEntry(
+                    localeIdentifier: submission.locale.identifier,
+                    normalizedKey: candidate.normalizedKey,
+                    headword: candidate.text,
+                    originalText: candidate.metadata["originalWord"] ?? candidate.text,
+                    systemDictionaryAvailable: true
+                )
+                apply(candidate, to: entry, isDictionaryAvailable: true)
+                modelContext.insert(entry)
+                insertContext(
+                    entry: entry, candidate: candidate, submission: submission,
+                    metadata: metadata
+                )
+                outcomes.append(.added(entry))
+            }
+            inserted = true
+        }
+
+        if inserted {
+            do { try saveAction(modelContext) }
+            catch { modelContext.rollback(); throw error }
+        }
+        return outcomes
     }
 
     func hasCompletedImport(_ submission: WordImportSubmission) throws -> Bool {
-        let expectedIDs = Set(normalizedSubmissionCandidates(in: submission).map(\.payloadID))
+        let expectedIDs = Set(validatedCandidates(submission).map(\.payloadID))
         guard !expectedIDs.isEmpty else { return false }
 
         let payloadID = submission.payloadID
         let contexts = try modelContext.fetch(
             FetchDescriptor<WordImportContext>(
-                predicate: #Predicate<WordImportContext> { context in
-                    context.submissionPayloadID == payloadID
-                }
+                predicate: #Predicate { $0.submissionPayloadID == payloadID }
             )
         )
-        let actualIDs = Set<UUID>(
-            contexts.compactMap { context -> UUID? in
-                guard context.submissionPayloadID == payloadID else { return nil }
-                return context.candidatePayloadID
-            }
-        )
-        if expectedIDs.isSubset(of: actualIDs) {
-            return true
-        }
-
-        // Prior unified-import records had payload identity only in metadata, so
-        // candidate UUIDs could not survive backfill. Candidate text plus count
-        // identifies those complete transactions safely.
-        let expected = normalizedSubmissionCandidates(in: submission)
-        let expectedTexts = Set(expected.map(\.text))
-        let actualTexts = Set(contexts.compactMap(\.selectedCandidate))
-        return contexts.count >= expected.count && expectedTexts.isSubset(of: actualTexts)
+        let actualIDs = Set(contexts.compactMap { $0.submissionPayloadID == payloadID ? $0.candidatePayloadID : nil })
+        return expectedIDs.isSubset(of: actualIDs)
     }
 
-    private func normalizedSubmissionCandidates(
-        in submission: WordImportSubmission
+    func delete(_ entries: [WordEntry]) throws {
+        let allContexts = try modelContext.fetch(FetchDescriptor<WordImportContext>())
+        for context in allContexts where entries.contains(where: { context.entry?.id == $0.id }) {
+            modelContext.delete(context)
+        }
+        entries.forEach(modelContext.delete)
+        do { try saveAction(modelContext) }
+        catch { modelContext.rollback(); throw error }
+    }
+
+    private func validatedCandidates(
+        _ submission: WordImportSubmission
     ) -> [WordImportCandidatePayload] {
         var ordered: [WordImportCandidatePayload] = []
-        var seenKeys = Set<String>()
+        var seenPayloadIDs = Set<UUID>()
 
         for candidate in submission.candidates {
-            let normalizedKey = WordInputNormalizer.normalizedKey(from: candidate.text)
-                .replacingOccurrences(of: "'", with: "")
-            guard !normalizedKey.isEmpty, seenKeys.insert(normalizedKey).inserted else { continue }
-            var normalized = candidate
-            normalized.normalizedKey = normalizedKey
-            ordered.append(normalized)
+            let key = candidate.normalizedKey.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            guard !key.isEmpty, seenPayloadIDs.insert(candidate.payloadID).inserted else { continue }
+            var preserved = candidate
+            preserved.normalizedKey = key
+            ordered.append(preserved)
         }
-
         return ordered
     }
 
-    private func importCandidates(
-        _ structuredCandidates: [WordImportCandidatePayload],
-        source: WordImportSource,
-        sourceText: String?,
-        imageData: Data?,
-        recognizedText: String?,
-        submissionMetadata: [String: String],
-        payloadID: UUID?,
-        schemaVersion: Int?,
-        createdAt: Date?,
-        using dictionaryService: any DictionaryLookupService
-    ) async throws -> [AddWordOutcome] {
-        var orderedInputs: [(input: WordImportCandidatePayload, initialKey: String)] = []
-        var seenKeys = Set<String>()
-
-        for candidate in structuredCandidates {
-            let initialKey = WordInputNormalizer.normalizedKey(from: candidate.text)
-                .replacingOccurrences(of: "'", with: "")
-            guard !initialKey.isEmpty, seenKeys.insert(initialKey).inserted else { continue }
-            orderedInputs.append((candidate, initialKey))
-        }
-
-        var lookups: [(input: WordImportCandidatePayload, result: DictionaryLookupResult)] = []
-
-        for candidate in orderedInputs {
-            let input = candidate.input
-            var result: DictionaryLookupResult
-
-            if input.metadata["phraseContext"] == "true" {
-                // Phrase context is intentionally not a dictionary-gated word.
-                // Keep it importable and preserve the full multiword value.
-                let key = WordInputNormalizer.normalizedKey(from: input.text)
-                    .replacingOccurrences(of: "'", with: "")
-                result = DictionaryLookupResult(
-                    originalInput: input.metadata["originalWord"] ?? input.text,
-                    status: .userSaved,
-                    entry: DictionaryEntry(
-                        id: "phrase.\(key)",
-                        headword: input.text,
-                        normalizedKey: key,
-                        phonetic: nil,
-                        senses: [],
-                        forms: [],
-                        tags: [],
-                        frequencyRank: nil,
-                        dictionaryVersion: "phrase-context"
-                    )
-                )
-            } else {
-                result = try await dictionaryService.lookup(input.text)
-                result.originalInput = input.metadata["originalWord"] ?? input.text
-            }
-
-            lookups.append((input, result))
-        }
-
-        // Key by the caller's input so distinct words that resolve to one lemma keep distinct outcomes.
-        var outcomeByInitialKey: [String: AddWordOutcome] = [:]
-
-        do {
-            for (index, lookup) in lookups.enumerated() {
-                let initialKey = orderedInputs[index].initialKey
-                let key =
-                    lookup.result.entry?.normalizedKey
-                    ?? WordInputNormalizer.normalizedKey(from: lookup.input.text)
-
-                if let existing = try findEntry(normalizedKey: key) {
-                    if lookup.result.status != .notFound,
-                        existing.lookupStatus == .notFound || existing.lookupStatus == .userSaved
-                    {
-                        if lookup.result.entry?.isContentBearing == true {
-                            existing.apply(lookup.result)
-                        } else if existing.lookupStatus == .notFound {
-                            // Key-only availability (system dictionary): refresh the
-                            // badge without overwriting stored or user content.
-                            existing.lookupStatus = lookup.result.status
-                            existing.updatedAt = .now
-                        }
-                    }
-                    applySuppliedFields(lookup.input, to: existing)
-                    if let advisedStatus = Self.advisedStatus(for: lookup.input.metadata) {
-                        existing.lookupStatus = advisedStatus
-                        existing.updatedAt = .now
-                    }
-
-                    insertImportContext(
-                        for: existing,
-                        input: lookup.input,
-                        source: source,
-                        sourceText: sourceText,
-                        imageData: imageData,
-                        recognizedText: recognizedText,
-                        submissionMetadata: submissionMetadata,
-                        payloadID: payloadID,
-                        schemaVersion: schemaVersion,
-                        createdAt: createdAt
-                    )
-                    outcomeByInitialKey[initialKey] = .duplicate(existing)
-                } else {
-                    let entry = WordEntry(
-                        originalInput: lookup.input.text,
-                        normalizedKey: key,
-                        headword: key
-                    )
-                    modelContext.insert(entry)
-                    // See add(_:using:) for the iOS 27 SwiftData registration workaround.
-                    entry.apply(lookup.result)
-                    applySuppliedFields(lookup.input, to: entry)
-                    if let advisedStatus = Self.advisedStatus(for: lookup.input.metadata) {
-                        entry.lookupStatus = advisedStatus
-                    }
-                    insertImportContext(
-                        for: entry,
-                        input: lookup.input,
-                        source: source,
-                        sourceText: sourceText,
-                        imageData: imageData,
-                        recognizedText: recognizedText,
-                        submissionMetadata: submissionMetadata,
-                        payloadID: payloadID,
-                        schemaVersion: schemaVersion,
-                        createdAt: createdAt
-                    )
-                    outcomeByInitialKey[initialKey] = .added(entry)
-                }
-            }
-
-            try saveAction(modelContext)
-            return orderedInputs.compactMap { candidate in
-                outcomeByInitialKey[candidate.initialKey]
-            }
-        } catch {
-            modelContext.rollback()
-            throw error
-        }
-    }
-
-    @available(*, deprecated, message: "Use importSubmission(_:using:).")
-    func addDefaultAppImport(
-        _ rawInput: String,
-        originalText: String,
-        using dictionaryService: any DictionaryLookupService
-    ) async throws -> AddWordOutcome {
-        let submission = WordImportSubmission(
-            source: .defaultApp,
-            sourceText: originalText,
-            candidates: [
-                WordImportCandidatePayload(
-                    text: rawInput,
-                    normalizedKey: WordInputNormalizer.normalizedKey(from: rawInput)
-                )
-            ],
-            metadata: ["channel": WordImportSource.defaultApp.rawValue]
-        )
-        let outcomes = try await importSubmission(submission, using: dictionaryService)
-        guard let outcome = outcomes.first else { throw WordImportError.emptySelection }
-        return outcome
-    }
-
-    func undoAdd(_ entry: WordEntry) throws {
-        try deleteImportContexts(for: [entry])
-        modelContext.delete(entry)
-        do {
-            try saveAction(modelContext)
-        } catch {
-            modelContext.rollback()
-            throw error
-        }
-    }
-
-    func deleteWords(_ entries: [WordEntry]) throws {
-        try deleteImportContexts(for: entries)
-        entries.forEach(modelContext.delete)
-        do {
-            try saveAction(modelContext)
-        } catch {
-            modelContext.rollback()
-            throw error
-        }
-    }
-
-    private func findEntry(normalizedKey key: String) throws -> WordEntry? {
+    private func entry(locale: Locale, key: String) throws -> WordEntry? {
+        let identifier = locale.identifier
         var descriptor = FetchDescriptor<WordEntry>(
-            predicate: #Predicate { $0.normalizedKey == key }
+            predicate: #Predicate { $0.localeIdentifier == identifier && $0.normalizedKey == key }
         )
         descriptor.fetchLimit = 1
         descriptor.includePendingChanges = true
         return try modelContext.fetch(descriptor).first
     }
 
-    private func insertImportContext(
-        for entry: WordEntry,
-        input: WordImportCandidatePayload,
-        source: WordImportSource,
-        sourceText: String?,
-        imageData: Data?,
-        recognizedText: String?,
-        submissionMetadata: [String: String],
-        payloadID: UUID?,
-        schemaVersion: Int?,
-        createdAt: Date?
-    ) {
-        var metadata: [String: String] = [:]
-        metadata["candidateLength"] = "\(input.text.count)"
-        metadata["submittedNormalizedKey"] = input.normalizedKey
-        metadata["candidatePayloadID"] = input.payloadID.uuidString
-        for (key, value) in submissionMetadata {
-            metadata[key] = value
+    private func apply(_ candidate: WordImportCandidatePayload, to entry: WordEntry, isDictionaryAvailable: Bool) {
+        entry.systemDictionaryAvailable = isDictionaryAvailable
+        entry.headword = candidate.text
+        if let translation = candidate.userTranslation?.trimmingCharacters(in: .whitespacesAndNewlines), !translation.isEmpty {
+            entry.userTranslation = translation
         }
-        for (key, value) in input.metadata {
-            metadata[key] = value
+        if let example = candidate.userExample?.trimmingCharacters(in: .whitespacesAndNewlines), !example.isEmpty {
+            entry.userExample = example
         }
-        metadata["submittedNormalizedKey"] = input.normalizedKey
-        metadata["candidatePayloadID"] = input.payloadID.uuidString
-        if let payloadID {
-            metadata["payloadID"] = payloadID.uuidString
+        if let note = candidate.userNote?.trimmingCharacters(in: .whitespacesAndNewlines), !note.isEmpty {
+            entry.userNote = note
         }
-        if let schemaVersion {
-            metadata["payloadSchemaVersion"] = "\(schemaVersion)"
-        }
-        if let createdAt {
-            metadata["submissionCreatedAt"] = ISO8601DateFormatter().string(from: createdAt)
-        }
-        if let note = input.userNote, !note.isEmpty {
-            metadata["userNote"] = note
-        }
-        if let example = input.userExample, !example.isEmpty {
-            metadata["userExample"] = example
-        }
-        if let sourceText {
-            metadata["sourceTextLength"] = "\(sourceText.count)"
-        }
-        if let recognizedText {
-            metadata["recognizedTextLength"] = "\(recognizedText.count)"
-        }
-        if let imageData, !imageData.isEmpty {
-            metadata["imageByteCount"] = "\(imageData.count)"
-        }
+        entry.updatedAt = .now
+    }
 
+    private func insertContext(
+        entry: WordEntry?,
+        candidate: WordImportCandidatePayload,
+        submission: WordImportSubmission,
+        metadata: [String: String]
+    ) {
         modelContext.insert(
             WordImportContext(
                 entry: entry,
-                source: source,
-                sourceText: sourceText,
-                selectedCandidate: input.text,
-                recognizedText: recognizedText,
-                imageData: imageData,
-                submissionPayloadID: payloadID,
-                candidatePayloadID: input.payloadID,
-                payloadSchemaVersion: schemaVersion,
+                source: submission.source,
+                sourceText: submission.sourceText,
+                selectedCandidate: candidate.text,
+                recognizedText: submission.recognizedText,
+                imageData: submission.imageData,
+                submissionPayloadID: submission.payloadID,
+                candidatePayloadID: candidate.payloadID,
                 metadata: metadata
             )
         )
-    }
-
-    private func deleteImportContexts(for entries: [WordEntry]) throws {
-        for entry in entries {
-            let entryID = entry.id
-            try modelContext.delete(
-                model: WordImportContext.self,
-                where: #Predicate<WordImportContext> { context in
-                    context.entryID == entryID
-                }
-            )
-        }
-    }
-
-    private static func advisedStatus(
-        for metadata: [String: String]
-    ) -> LookupStatus? {
-        if metadata["spellingCorrection"]?.isEmpty == false {
-            return .autoCorrected
-        }
-        if metadata["lemma"]?.isEmpty == false {
-            return .lemmaResolved
-        }
-        if metadata["originalSpellingRestored"] == "true" {
-            return .userSaved
-        }
-        return nil
-    }
-
-    private func applySuppliedFields(_ candidate: WordImportCandidatePayload, to entry: WordEntry) {
-        let translation =
-            candidate.userTranslation?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let phonetic = candidate.userPhonetic?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let example = candidate.userExample?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-
-        if !translation.isEmpty {
-            entry.userTranslation = translation
-        }
-        if !phonetic.isEmpty {
-            entry.phonetic = phonetic
-        }
-        if !example.isEmpty {
-            entry.userExample = example
-        }
-    }
-}
-
-@MainActor
-enum WordImportSubmissionMigrator {
-    static func processPendingSubmissions(
-        baseDirectory base: URL? = nil,
-        legacyDefaults: UserDefaults? = nil,
-        into modelContext: ModelContext,
-        dictionaryService: any DictionaryLookupService
-    ) async throws -> WordImportSubmissionMigrationResult {
-        let snapshot = try WordImportSubmissionQueue.snapshot(
-            baseDirectory: base,
-            legacyDefaults: legacyDefaults
-        )
-        let repository = WordbookRepository(modelContext: modelContext)
-        var result = WordImportSubmissionMigrationResult(
-            malformedQuarantinedCount: snapshot.malformedCount,
-            futureSchemaQuarantinedCount: snapshot.futureSchemaCount
-        )
-
-        for submission in snapshot.pending.sorted(by: orderSubmission) {
-            if try repository.hasCompletedImport(submission) {
-                result.skippedReplayedCount += 1
-                try WordImportSubmissionQueue.remove(
-                    [submission.payloadID],
-                    baseDirectory: base,
-                    legacyDefaults: legacyDefaults
-                )
-                continue
-            }
-
-            let outcomes = try await repository.importSubmission(
-                submission,
-                using: dictionaryService
-            )
-            result.importedPayloadCount += 1
-            result.processedCandidateCount += outcomes.count
-            try WordImportSubmissionQueue.remove(
-                [submission.payloadID],
-                baseDirectory: base,
-                legacyDefaults: legacyDefaults
-            )
-        }
-
-        return result
-    }
-}
-
-@MainActor
-struct WordImportSubmissionMigrationResult: Equatable {
-    var importedPayloadCount = 0
-    var processedCandidateCount = 0
-    var skippedReplayedCount = 0
-    var malformedQuarantinedCount = 0
-    var futureSchemaQuarantinedCount = 0
-
-    var attentionMessage: String? {
-        WordImportSubmissionQueue.attentionMessage(
-            for: WordImportQueueSnapshot(
-                pending: [],
-                malformedCount: malformedQuarantinedCount,
-                futureSchemaCount: futureSchemaQuarantinedCount
-            )
-        )
-    }
-}
-
-private func orderSubmission(
-    _ left: WordImportSubmission,
-    _ right: WordImportSubmission
-) -> Bool {
-    if left.createdAt != right.createdAt {
-        return left.createdAt < right.createdAt
-    }
-    return left.payloadID.uuidString < right.payloadID.uuidString
-}
-
-enum WordImportError: Error, Equatable {
-    case emptySelection
-}
-
-@MainActor
-enum WordImportContextMigrator {
-    static let backfillCompletedKey = "wordImportContextEntryIDBackfill.v1.completed"
-    static let submissionIdentityBackfillCompletedKey =
-        "wordImportSubmissionIdentityBackfill.v1.completed"
-
-    static func backfillSubmissionIdentity(
-        in modelContext: ModelContext,
-        defaults: UserDefaults = .standard,
-        save saveAction: ((ModelContext) throws -> Void)? = nil
-    ) throws {
-        guard !defaults.bool(forKey: submissionIdentityBackfillCompletedKey) else { return }
-        let contexts = try modelContext.fetch(FetchDescriptor<WordImportContext>())
-        var didChange = false
-
-        for context in contexts where context.submissionPayloadID == nil {
-            guard let rawID = context.metadata["payloadID"],
-                let payloadID = UUID(uuidString: rawID)
-            else { continue }
-            context.submissionPayloadID = payloadID
-            context.payloadSchemaVersion = context.metadata["payloadSchemaVersion"].flatMap(
-                Int.init)
-            didChange = true
-        }
-
-        guard didChange else {
-            defaults.set(true, forKey: submissionIdentityBackfillCompletedKey)
-            return
-        }
-        let performSave = saveAction ?? { context in try context.save() }
-        do {
-            try performSave(modelContext)
-        } catch {
-            modelContext.rollback()
-            throw error
-        }
-        defaults.set(true, forKey: submissionIdentityBackfillCompletedKey)
-    }
-
-    static func backfillEntryIDs(
-        in modelContext: ModelContext,
-        defaults: UserDefaults = .standard,
-        save saveAction: ((ModelContext) throws -> Void)? = nil
-    ) throws {
-        guard !defaults.bool(forKey: backfillCompletedKey) else { return }
-
-        let migrationContext = ModelContext(modelContext.container)
-        var descriptor = FetchDescriptor<WordImportContext>(
-            predicate: #Predicate<WordImportContext> { context in
-                context.entryID == nil
-            }
-        )
-        descriptor.propertiesToFetch = [\.entryID, \.entry]
-        let legacyContexts = try migrationContext.fetch(descriptor)
-
-        for context in legacyContexts {
-            context.entryID = context.entry?.id
-        }
-
-        guard legacyContexts.contains(where: { $0.entryID != nil }) else {
-            defaults.set(true, forKey: backfillCompletedKey)
-            return
-        }
-
-        let performSave =
-            saveAction ?? { context in
-                try context.save()
-            }
-        do {
-            try performSave(migrationContext)
-        } catch {
-            migrationContext.rollback()
-            throw error
-        }
-        defaults.set(true, forKey: backfillCompletedKey)
     }
 }

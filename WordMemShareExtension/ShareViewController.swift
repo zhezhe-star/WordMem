@@ -55,7 +55,6 @@ private struct ShareCardView: View {
     @State private var wordText = ""
     @State private var advisedChip: ImportCandidateChip?
     @State private var advisorToken = UUID()
-    @State private var phoneticText = ""
     @State private var exampleText = ""
     @State private var showAdvancedFields = false
     @State private var status: Status = .extracting
@@ -128,16 +127,7 @@ private struct ShareCardView: View {
                 }
 
                 Section {
-                    DisclosureGroup("编辑单词详情", isExpanded: $showAdvancedFields) {
-                        TextField("单词", text: $wordText)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                            .onChange(of: wordText, initial: true) {
-                                refreshAdvice()
-                            }
-                        TextField("音标", text: $phoneticText)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
+                    DisclosureGroup("用户补充字段", isExpanded: $showAdvancedFields) {
                         TextField("例句", text: $exampleText)
                     }
                 }
@@ -226,6 +216,7 @@ private struct ShareCardView: View {
             wordText = extracted
             pendingText = extracted
             startTranslation()
+            refreshAdvice()
         }
     }
 
@@ -282,12 +273,10 @@ private struct ShareCardView: View {
         guard let selectedChip = advisedChip, selectedChip.isImportable else { return }
         let normalizedMeaning = translatedText.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedNote = noteText.trimmingCharacters(in: .whitespacesAndNewlines)
-        let normalizedPhonetic = phoneticText.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedExample = exampleText.trimmingCharacters(in: .whitespacesAndNewlines)
 
         var candidate = ImportCandidatePipeline.payload(from: selectedChip)
         candidate.userTranslation = normalizedMeaning
-        candidate.userPhonetic = normalizedPhonetic.isEmpty ? nil : normalizedPhonetic
         candidate.userExample = normalizedExample.isEmpty ? nil : normalizedExample
         candidate.userNote = normalizedNote.isEmpty ? nil : normalizedNote
 

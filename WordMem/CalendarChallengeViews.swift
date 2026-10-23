@@ -71,7 +71,7 @@ struct CalendarHomeView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text("每日挑战")
                 .font(.title2.bold())
-            Text("复习安排只保存在这台 iPhone 上。")
+            Text("复习只使用你补充的中文释义，并保存在这台 iPhone 上。")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }

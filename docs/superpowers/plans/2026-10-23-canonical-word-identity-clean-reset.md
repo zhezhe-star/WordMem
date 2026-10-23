@@ -29,6 +29,9 @@
 
 ### Task 1: Fresh Native SwiftData Store
 
+- [x] Task 1 complete: native v3 model, destructive reset, and app wiring implemented and tested.
+
+
 **Files:**
 - Modify: `WordMem/Domain/WordEntry.swift`
 - Modify: `WordMem/Domain/WordImportModels.swift`
@@ -50,6 +53,9 @@
 - Legacy model types and migration plan symbols are absent.
 
 ### Task 2: Canonical Import and Repository Boundary
+
+- [x] Task 2 complete: advisor identity, system-dictionary repository validation, phrase separation, and cleanup implemented and tested.
+
 
 **Files:**
 - Modify: `WordMem/Domain/WordInputNormalizer.swift`
@@ -80,6 +86,9 @@
 
 ### Task 3: OCR Sanitizer
 
+- [x] Task 3 complete: OCR sanitization is applied before display, persistence, splitting, and advisor lookup; covered by tests.
+
+
 **Files:**
 - Create: `WordMem/Import/OCRTextSanitizer.swift`
 - Modify: `WordMem/ImageImportView.swift`
@@ -97,6 +106,9 @@
 - Candidate splitting on raw and sanitized output differs when garbage introduced fake tokens.
 
 ### Task 4: Clean Detail and Learning UI
+
+- [x] Task 4 complete: detail/calendar/manual/share UI is system-dictionary and user-field only.
+
 
 **Files:**
 - Modify: `WordMem/ContentView.swift`
@@ -120,6 +132,9 @@
 - Accessibility labels still describe selected/corrected/unavailable states.
 
 ### Task 5: Cleanup and Verification
+
+- [x] Task 5 complete: obsolete tests/fixtures removed, docs updated, and verification commands run as specified.
+
 
 **Files:**
 - Delete obsolete legacy tests and fixtures.
