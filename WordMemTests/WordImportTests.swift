@@ -841,7 +841,7 @@ final class ImportCandidateAdvisorTests: XCTestCase {
         XCTAssertEqual(chips[1].spellingBadgeText, "拼写纠正 recieve → receive")
     }
 
-    func testAdvisorKeepsUnavailableWordsOutOfDefaultSelectionUntilExplicitRestore() async {
+    func testAdvisorBlocksUnavailableOriginalEvenAfterRestore() async {
         let source = "zqword"
         let candidates = EnglishWordCandidateSplitter.candidates(from: source)
         let advisor = makeAdvisor(available: [])
@@ -851,6 +851,7 @@ final class ImportCandidateAdvisorTests: XCTestCase {
 
         XCTAssertEqual(chips.map(\.text), ["zqword"])
         XCTAssertFalse(chips[0].isImportable)
+        XCTAssertFalse(chips[0].canRestoreOriginal)
         XCTAssertEqual(chips[0].availabilityBadgeText, "词典不可用")
         selection.selectAll()
         XCTAssertTrue(selection.selectedChips.isEmpty)
@@ -859,10 +860,31 @@ final class ImportCandidateAdvisorTests: XCTestCase {
         selection.updateChips([restored])
         selection.select(restored.id)
 
-        XCTAssertEqual(restored.text, "zqword")
+        XCTAssertEqual(restored, chips[0])
+        XCTAssertFalse(restored.isImportable)
+        XCTAssertFalse(restored.advice?.isOriginalRestored ?? true)
+        XCTAssertTrue(selection.selectedChips.isEmpty)
+    }
+
+    func testAdvisorAllowsOriginalRestoreOnlyWhenSystemDictionaryHasOriginal() async {
+        let source = "Gave"
+        let candidates = EnglishWordCandidateSplitter.candidates(from: source)
+        let advisor = makeAdvisor(
+            lemmas: ["Gave": "give"],
+            available: ["give", "gave"]
+        )
+
+        let chips = await advisor.chips(from: candidates, context: source)
+        let restored = chips[0].restoringOriginal()
+        var selection = ImportChipSelection(chips: [restored])
+        selection.select(restored.id)
+
+        XCTAssertTrue(chips[0].canRestoreOriginal)
+        XCTAssertEqual(restored.text, "Gave")
+        XCTAssertEqual(restored.id, "gave")
         XCTAssertTrue(restored.isImportable)
         XCTAssertTrue(restored.advice?.isOriginalRestored ?? false)
-        XCTAssertEqual(selection.selectedChips.map(\.id), [restored.id])
+        XCTAssertEqual(selection.selectedChips.map(\.id), ["gave"])
     }
 
     func testTranslationPipelineKeepsPhraseContextAndGatesOnlyWordCandidates() async {
