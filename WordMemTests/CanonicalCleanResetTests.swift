@@ -181,7 +181,8 @@ final class CanonicalCleanResetTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: queueDirectory.path))
         XCTAssertNil(defaults.data(forKey: "saved_words"))
         XCTAssertNil(defaults.data(forKey: "pending_word_import_submissions.v1"))
-        XCTAssertTrue(defaults.bool(forKey: "wordmem.nativeStoreV3.resetCompleted"))
+        XCTAssertEqual(defaults.integer(forKey: "wordmem.destructiveResetVersion"), 2)
+        XCTAssertFalse(defaults.bool(forKey: "wordmem.nativeStoreV3.resetCompleted"))
     }
 
     func testCustomStoreResetDoesNotDeleteProductionDefaultStore() throws {
@@ -230,6 +231,13 @@ final class CanonicalCleanResetTests: XCTestCase {
         XCTAssertEqual(selection.selectedCount, 0)
     }
 
+    func testLegacySwiftDataStorePathIsSeparatedFromNativeV3Store() {
+        let legacy = WordMemStore.legacySwiftDataStoreURL
+        XCTAssertEqual(legacy.lastPathComponent, "default.store")
+        XCTAssertEqual(legacy.deletingLastPathComponent().lastPathComponent, "Application Support")
+        XCTAssertNotEqual(legacy, WordMemStore.defaultStoreURL)
+    }
+
     func testOCRSanitizerRemovesStatusBarAndSymbolOnlyLines() {
         let raw = """
         12:32
@@ -240,11 +248,21 @@ final class CanonicalCleanResetTests: XCTestCase {
         The experiment measured steady growth.
         The 5G network remained stable.
         serendipity
+        15:04
+        754?
+        <
+        Φb}...
+        Daily recap...
         """
         let sanitized = OCRTextSanitizer.sanitizedLines(from: raw)
         XCTAssertEqual(
             sanitized,
-            ["The experiment measured steady growth.", "The 5G network remained stable.", "serendipity"]
+            [
+                "The experiment measured steady growth.",
+                "The 5G network remained stable.",
+                "serendipity",
+                "Daily recap...",
+            ]
         )
 
         let rawTokens = EnglishWordCandidateSplitter.candidates(from: raw).map(\.normalizedKey)

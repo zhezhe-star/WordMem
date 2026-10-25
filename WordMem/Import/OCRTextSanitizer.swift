@@ -9,7 +9,7 @@ enum OCRTextSanitizer {
         rawText
             .components(separatedBy: .newlines)
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty && !isClock($0) && !isStatusOrNoise($0) }
+            .filter { !$0.isEmpty && !isClock($0) && !isStatusOrNoise($0) && hasEnglishContext($0) }
     }
 
     private static func isClock(_ line: String) -> Bool {
@@ -26,6 +26,15 @@ enum OCRTextSanitizer {
             let suffix = normalized.dropFirst(term.count)
             return suffix.isEmpty || suffix == "a" || suffix.allSatisfy(\.isNumber)
         }
+    }
+
+    private static func hasEnglishContext(_ line: String) -> Bool {
+        let meaningfulScalars = line.unicodeScalars.filter { !$0.properties.isWhitespace }
+        let asciiLetterCount = meaningfulScalars.filter { scalar in
+            ("a"..."z").contains(Character(scalar)) || ("A"..."Z").contains(Character(scalar))
+        }.count
+        guard asciiLetterCount >= 2, !meaningfulScalars.isEmpty else { return false }
+        return Double(asciiLetterCount) / Double(meaningfulScalars.count) >= 0.4
     }
 
     private static func isNumericOnly(_ value: String) -> Bool {
