@@ -3,7 +3,9 @@ import SwiftData
 
 struct WordMemStore {
     static let appGroupSuiteName = "group.com.zhezhe.wordmem"
-    private static let resetCompletedKey = "wordmem.nativeStoreV3.resetCompleted"
+    private static let legacyResetCompletedKey = "wordmem.nativeStoreV3.resetCompleted"
+    private static let resetVersionKey = "wordmem.destructiveResetVersion"
+    private static let currentResetVersion = 2
 
     let storeURL: URL
     private let defaults: UserDefaults
@@ -16,6 +18,11 @@ struct WordMemStore {
             .appendingPathComponent("wordmem-v3.store")
     }
 
+    static var legacySwiftDataStoreURL: URL {
+        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        return support.appendingPathComponent("default.store")
+    }
+
     static var defaultQueueDirectory: URL? {
         FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupSuiteName)?
             .appendingPathComponent("WordMemImportQueue", isDirectory: true)
@@ -24,7 +31,7 @@ struct WordMemStore {
     init(
         storeURL: URL = WordMemStore.defaultStoreURL,
         defaults: UserDefaults = UserDefaults(suiteName: appGroupSuiteName) ?? .standard,
-        legacyStoreURL: URL? = WordMemStore.defaultStoreURL,
+        legacyStoreURL: URL? = WordMemStore.legacySwiftDataStoreURL,
         legacyQueueDirectory: URL? = WordMemStore.defaultQueueDirectory
     ) {
         self.storeURL = storeURL
@@ -57,13 +64,22 @@ struct WordMemStore {
         legacyStoreURL: URL?,
         legacyQueueDirectory: URL?
     ) -> Bool {
-        guard !defaults.bool(forKey: resetCompletedKey) else { return true }
+        guard defaults.integer(forKey: resetVersionKey) < currentResetVersion else { return true }
 
-        var succeeded = deleteDatabase(at: storeURL, removesSiblingStores: storeURL == defaultStoreURL)
+        // The first v3 reset pointed legacyStoreURL at the native store and
+        // missed SwiftData's default.store. Builds that completed that first
+        // pass may already hold new user data, so preserve their v3 store and
+        // only remove the missed legacy store. Fresh installs delete both.
+        let hadInitialV3Reset = defaults.bool(forKey: legacyResetCompletedKey)
+        var succeeded = true
+        if !hadInitialV3Reset {
+            succeeded = deleteDatabase(at: storeURL, removesSiblingStores: storeURL == defaultStoreURL)
+        }
         if let legacyStoreURL {
             succeeded = succeeded && deleteDatabase(at: legacyStoreURL, removesSiblingStores: true)
         }
 
+        let legacyDefaultKeys = Self.legacyDefaultKeys + [legacyResetCompletedKey]
         for key in legacyDefaultKeys {
             defaults.removeObject(forKey: key)
         }
@@ -82,7 +98,7 @@ struct WordMemStore {
         }
 
         guard succeeded else { return false }
-        defaults.set(true, forKey: resetCompletedKey)
+        defaults.set(currentResetVersion, forKey: resetVersionKey)
         return true
     }
 
