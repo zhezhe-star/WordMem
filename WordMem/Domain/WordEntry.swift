@@ -10,7 +10,6 @@ final class WordEntry {
     var normalizedKey: String
     var headword: String
     var originalText: String
-    var systemDictionaryAvailable: Bool
     var userTranslation: String
     var userExample: String?
     var userNote: String?
@@ -23,7 +22,6 @@ final class WordEntry {
         normalizedKey: String,
         headword: String,
         originalText: String,
-        systemDictionaryAvailable: Bool = false,
         userTranslation: String = "",
         userExample: String? = nil,
         userNote: String? = nil,
@@ -35,7 +33,6 @@ final class WordEntry {
         self.normalizedKey = normalizedKey
         self.headword = headword
         self.originalText = originalText
-        self.systemDictionaryAvailable = systemDictionaryAvailable
         self.userTranslation = userTranslation
         self.userExample = userExample
         self.userNote = userNote

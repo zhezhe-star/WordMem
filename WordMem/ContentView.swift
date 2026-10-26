@@ -24,9 +24,9 @@ struct AddWordFeedback: Identifiable, Equatable {
 @MainActor
 final class WordImportMaintenanceCoordinator {
     private var isRunning = false
-    private let dictionary: any SystemDictionaryAuthorizing
+    private let dictionary: any AuthoritativeDictionaryAuthorizing
 
-    init(dictionary: any SystemDictionaryAuthorizing = UIKitSystemDictionaryAuthorizer()) {
+    init(dictionary: any AuthoritativeDictionaryAuthorizing = WordNetKitAuthoritativeDictionaryProvider.shared) {
         self.dictionary = dictionary
     }
 
@@ -86,7 +86,8 @@ struct WordbookView: View {
     @State private var alertMessage: String?
     @State private var queueAttentionMessage: String?
     @State private var maintenance = WordImportMaintenanceCoordinator()
-    @State private var dictionary = UIKitSystemDictionaryAuthorizer()
+    @State private var isAttributionPresented = false
+    @State private var dictionary = WordNetKitAuthoritativeDictionaryProvider.shared
 
     var body: some View {
         NavigationStack(path: $route) {
@@ -97,6 +98,12 @@ struct WordbookView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
+                        Button {
+                            isAttributionPresented = true
+                        } label: {
+                            Label("词典授权", systemImage: "checkmark.seal")
+                        }
+
                         ForEach(WordImportSheet.allCases) { sheet in
                             Button {
                                 activeImportSheet = sheet
@@ -117,6 +124,10 @@ struct WordbookView: View {
                         WordEntryDetailView(entry: word)
                     }
                 }
+            }
+            .sheet(isPresented: $isAttributionPresented) {
+                NavigationStack { AttributionView() }
+                    .presentationDetents([.medium, .large])
             }
             .sheet(item: $activeImportSheet) { sheet in
                 switch sheet {
@@ -174,7 +185,7 @@ struct WordbookView: View {
         ContentUnavailableView {
             Label("单词本还是空的", systemImage: "book.closed")
         } description: {
-            Text("挑选系统词典收录的英文单词后保存；释义由系统词典提供。")
+            Text("挑选权威词典收录的英文单词后保存；释义由 Open English WordNet 提供。")
         } actions: {
             Button("添加第一个单词") { activeImportSheet = .manual }
                 .buttonStyle(.borderedProminent)
@@ -223,24 +234,65 @@ private struct AddWordFeedbackView: View {
 
 private struct WordRowView: View {
     let entry: WordEntry
+    private enum DefinitionState {
+        case loading
+        case loaded(AuthoritativeDictionaryEntry)
+        case unavailable
+        case failed
+    }
+
+    @State private var dictionaryEntry: AuthoritativeDictionaryEntry?
+    @State private var definitionState: DefinitionState = .loading
+
+    private var definition: String {
+        switch definitionState {
+        case .loading: "正在加载权威释义"
+        case .loaded(let dictionaryEntry): dictionaryEntry.primaryDefinition ?? "暂无释义"
+        case .unavailable: "权威词典未收录"
+        case .failed: "释义暂时无法加载"
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(entry.headword)
-                .font(.headline)
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(entry.headword)
+                    .font(.headline)
 
-            if entry.userTranslation.isEmpty {
-                Text("在系统词典中查看释义")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            } else {
+                if let partOfSpeech = dictionaryEntry?.primaryPartOfSpeech {
+                    Text(partOfSpeech)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Text(definition)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+
+            if !entry.userTranslation.isEmpty {
                 Text(entry.userTranslation)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
+                    .font(.footnote)
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
             }
         }
         .padding(.vertical, 2)
+        .task(id: entry.normalizedKey) {
+            do {
+                let dictionaryEntry = try await WordNetKitAuthoritativeDictionaryProvider.shared
+                    .entry(forTerm: entry.normalizedKey)
+                if let dictionaryEntry {
+                    self.dictionaryEntry = dictionaryEntry
+                    definitionState = .loaded(dictionaryEntry)
+                } else {
+                    definitionState = .unavailable
+                }
+            } catch {
+                definitionState = .failed
+            }
+        }
         .accessibilityElement(children: .combine)
     }
 }
@@ -249,8 +301,8 @@ struct WordEntryDetailView: View {
     let entry: WordEntry
     @Query private var importContexts: [WordImportContext]
     @EnvironmentObject private var pronunciation: EnglishPronunciationPlayer
-    @State private var isSystemDictionaryPresented = false
-    @State private var systemDictionaryAvailable = false
+    @State private var authoritativeEntry: AuthoritativeDictionaryEntry?
+    @State private var isLoadingDictionaryEntry = true
 
     private var contexts: [WordImportContext] {
         importContexts
@@ -286,23 +338,53 @@ struct WordEntryDetailView: View {
                 }
             }
 
-            Section("系统词典") {
-                Button {
-                    isSystemDictionaryPresented = true
-                } label: {
-                    HStack {
-                        Label("在 Apple 系统词典中查看", systemImage: "character.book.closed")
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .foregroundStyle(.tertiary)
+            Section("权威释义") {
+                if isLoadingDictionaryEntry {
+                    HStack(spacing: 10) {
+                        ProgressView()
+                        Text("正在加载 Open English WordNet 释义。")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
                     }
-                }
-                .accessibilityIdentifier("systemDictionaryCard")
-                .accessibilityLabel("在 Apple 系统词典中查看 \(entry.headword)")
+                } else if let dictionaryEntry = authoritativeEntry {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            if let partOfSpeech = dictionaryEntry.primaryPartOfSpeech {
+                                Text(partOfSpeech)
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                            }
+                            if let ipa = dictionaryEntry.primaryIPA {
+                                Text("/\(ipa)/")
+                                    .font(.caption.monospaced())
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
 
-                Text(systemDictionaryAvailable ? "系统词典已收录该词。" : "正在检查系统词典收录状态。")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                        ForEach(dictionaryEntry.senses.prefix(5)) { sense in
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(sense.definition)
+                                    .font(.subheadline)
+                                ForEach(Array(sense.examples.enumerated()), id: \.offset) { _, example in
+                                    Text("“\(example)”")
+                                        .font(.footnote)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    Text("权威词典未收录该词。")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+
+                NavigationLink {
+                    AttributionView()
+                } label: {
+                    Label("Open English WordNet 授权", systemImage: "checkmark.seal")
+                        .font(.footnote)
+                }
             }
 
             if !contexts.isEmpty {
@@ -315,12 +397,10 @@ struct WordEntryDetailView: View {
         }
         .navigationTitle("单词详情")
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $isSystemDictionaryPresented) {
-            SystemDictionaryView(term: entry.headword)
-        }
         .task {
-            systemDictionaryAvailable = await UIKitSystemDictionaryAuthorizer()
-                .hasDefinition(forTerm: entry.headword)
+            authoritativeEntry = try? await WordNetKitAuthoritativeDictionaryProvider.shared
+                .entry(forTerm: entry.normalizedKey)
+            isLoadingDictionaryEntry = false
         }
         .onDisappear { pronunciation.cancel() }
     }

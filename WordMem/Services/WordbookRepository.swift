@@ -36,7 +36,7 @@ struct WordbookRepository {
 
     func importSubmission(
         _ submission: WordImportSubmission,
-        using dictionary: any SystemDictionaryAuthorizing
+        using dictionary: any AuthoritativeDictionaryAuthorizing
     ) async throws -> [AddWordOutcome] {
         let candidates = validatedCandidates(submission)
         guard !candidates.isEmpty else { throw WordImportError.emptySelection }
@@ -68,11 +68,9 @@ struct WordbookRepository {
             var metadata = submission.mergedMetadata(for: candidate)
             metadata["canonicalKey"] = candidate.normalizedKey
             metadata["originalKey"] = originalKey
-            metadata["dictionaryAvailable"] = "true"
-            metadata["originalDictionaryAvailable"] = "true"
 
             if let existing = try entry(locale: submission.locale, key: candidate.normalizedKey) {
-                apply(candidate, to: existing, isDictionaryAvailable: true)
+                apply(candidate, to: existing)
                 insertContext(
                     entry: existing, candidate: candidate, submission: submission,
                     metadata: metadata
@@ -84,9 +82,8 @@ struct WordbookRepository {
                     normalizedKey: candidate.normalizedKey,
                     headword: candidate.text,
                     originalText: candidate.metadata["originalWord"] ?? candidate.text,
-                    systemDictionaryAvailable: true
                 )
-                apply(candidate, to: entry, isDictionaryAvailable: true)
+                apply(candidate, to: entry)
                 modelContext.insert(entry)
                 insertContext(
                     entry: entry, candidate: candidate, submission: submission,
@@ -150,8 +147,7 @@ struct WordbookRepository {
         return try modelContext.fetch(descriptor).first
     }
 
-    private func apply(_ candidate: WordImportCandidatePayload, to entry: WordEntry, isDictionaryAvailable: Bool) {
-        entry.systemDictionaryAvailable = isDictionaryAvailable
+    private func apply(_ candidate: WordImportCandidatePayload, to entry: WordEntry) {
         entry.headword = candidate.text
         if let translation = candidate.userTranslation?.trimmingCharacters(in: .whitespacesAndNewlines), !translation.isEmpty {
             entry.userTranslation = translation

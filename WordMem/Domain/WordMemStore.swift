@@ -5,7 +5,8 @@ struct WordMemStore {
     static let appGroupSuiteName = "group.com.zhezhe.wordmem"
     private static let legacyResetCompletedKey = "wordmem.nativeStoreV3.resetCompleted"
     private static let resetVersionKey = "wordmem.destructiveResetVersion"
-    private static let currentResetVersion = 2
+    /// v3 removes the exploration schema that persisted dictionary availability.
+    private static let currentResetVersion = 3
 
     let storeURL: URL
     private let defaults: UserDefaults
@@ -66,15 +67,7 @@ struct WordMemStore {
     ) -> Bool {
         guard defaults.integer(forKey: resetVersionKey) < currentResetVersion else { return true }
 
-        // The first v3 reset pointed legacyStoreURL at the native store and
-        // missed SwiftData's default.store. Builds that completed that first
-        // pass may already hold new user data, so preserve their v3 store and
-        // only remove the missed legacy store. Fresh installs delete both.
-        let hadInitialV3Reset = defaults.bool(forKey: legacyResetCompletedKey)
-        var succeeded = true
-        if !hadInitialV3Reset {
-            succeeded = deleteDatabase(at: storeURL, removesSiblingStores: storeURL == defaultStoreURL)
-        }
+        var succeeded = deleteDatabase(at: storeURL, removesSiblingStores: storeURL == defaultStoreURL)
         if let legacyStoreURL {
             succeeded = succeeded && deleteDatabase(at: legacyStoreURL, removesSiblingStores: true)
         }

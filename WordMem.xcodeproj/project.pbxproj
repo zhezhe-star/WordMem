@@ -7,6 +7,19 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		WNK10 /* WordNetKit in Frameworks */ = {isa = PBXBuildFile; productRef = WNK11 /* WordNetKit */; };
+		WNK12 /* WordNetKitData in Frameworks */ = {isa = PBXBuildFile; productRef = WNK21 /* WordNetKitData */; };
+		WNK30 /* WordNetKit in Embed Frameworks */ = {isa = PBXBuildFile; productRef = WNK11 /* WordNetKit */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		EXT40 /* WordNetKit in Frameworks */ = {isa = PBXBuildFile; productRef = WNK11 /* WordNetKit */; };
+		TPR40 /* WordNetKit in Frameworks */ = {isa = PBXBuildFile; productRef = WNK11 /* WordNetKit */; };
+		DIC01 /* AuthoritativeDictionary.swift in Sources */ = {isa = PBXBuildFile; fileRef = DIC02 /* AuthoritativeDictionary.swift */; };
+		DIC03 /* AuthoritativeDictionary.swift in Sources */ = {isa = PBXBuildFile; fileRef = DIC02 /* AuthoritativeDictionary.swift */; };
+		DIC05 /* AuthoritativeDictionary.swift in Sources */ = {isa = PBXBuildFile; fileRef = DIC02 /* AuthoritativeDictionary.swift */; };
+		DIC07 /* WordNetDictionaryProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = DIC04 /* WordNetDictionaryProvider.swift */; };
+		DIC08 /* WordNetDictionaryProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = DIC04 /* WordNetDictionaryProvider.swift */; };
+		DIC09 /* WordNetDictionaryProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = DIC04 /* WordNetDictionaryProvider.swift */; };
+		ABT01 /* AttributionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABT02 /* AttributionView.swift */; };
+		ABT03 /* ThirdPartyNotices.txt in Resources */ = {isa = PBXBuildFile; fileRef = ABT04 /* ThirdPartyNotices.txt */; };
 		SHRD30 /* TextImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SHRD31 /* TextImportView.swift */; };
 		SHRD32 /* ImageImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SHRD33 /* ImageImportView.swift */; };
 		SHRD34 /* ImageImportSourceCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = SHRD35 /* ImageImportSourceCard.swift */; };
@@ -55,10 +68,6 @@
 		SUB12 /* WordImportSubmission.swift in Sources */ = {isa = PBXBuildFile; fileRef = SUB11 /* WordImportSubmission.swift */; };
 		SUB13 /* WordImportSubmission.swift in Sources */ = {isa = PBXBuildFile; fileRef = SUB11 /* WordImportSubmission.swift */; };
 		PRN01 /* EnglishPronunciationPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = PRN02 /* EnglishPronunciationPlayer.swift */; };
-		MEM30 /* SystemDictionaryLookupService.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM31 /* SystemDictionaryLookupService.swift */; };
-		MEM36 /* SystemDictionaryLookupService.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM31 /* SystemDictionaryLookupService.swift */; };
-		MEM37 /* SystemDictionaryLookupService.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM31 /* SystemDictionaryLookupService.swift */; };
-		MEM32 /* SystemDictionaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM33 /* SystemDictionaryView.swift */; };
 		STORE01 /* WordMemStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = STORE02 /* WordMemStore.swift */; };
 		OCR01 /* OCRTextSanitizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = OCR02 /* OCRTextSanitizer.swift */; };
 /* End PBXBuildFile section */
@@ -102,14 +111,16 @@
 		SUB11 /* WordImportSubmission.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordImportSubmission.swift; sourceTree = "<group>"; };
 		IMP06 /* VisionTextRecognitionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisionTextRecognitionService.swift; sourceTree = "<group>"; };
 		IMP08 /* WordImportViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordImportViews.swift; sourceTree = "<group>"; };
-		MEM31 /* SystemDictionaryLookupService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemDictionaryLookupService.swift; sourceTree = "<group>"; };
-		MEM33 /* SystemDictionaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemDictionaryView.swift; sourceTree = "<group>"; };
 		PRN02 /* EnglishPronunciationPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnglishPronunciationPlayer.swift; sourceTree = "<group>"; };
 		TEST04 /* WordMemTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WordMemTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		CAN01 /* CanonicalCleanResetTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAN02 /* CanonicalCleanResetTests.swift */; };
 		CAN02 /* CanonicalCleanResetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanonicalCleanResetTests.swift; sourceTree = "<group>"; };
 		STORE02 /* WordMemStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordMemStore.swift; sourceTree = "<group>"; };
 		OCR02 /* OCRTextSanitizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OCRTextSanitizer.swift; sourceTree = "<group>"; };
+		DIC02 /* AuthoritativeDictionary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthoritativeDictionary.swift; sourceTree = "<group>"; };
+		DIC04 /* WordNetDictionaryProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordNetDictionaryProvider.swift; sourceTree = "<group>"; };
+		ABT02 /* AttributionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttributionView.swift; sourceTree = "<group>"; };
+		ABT04 /* ThirdPartyNotices.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = ThirdPartyNotices.txt; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -117,6 +128,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				WNK10 /* WordNetKit in Frameworks */,
+				WNK12 /* WordNetKitData in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -131,6 +144,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				EXT40 /* WordNetKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -138,6 +152,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				TPR40 /* WordNetKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -195,7 +210,8 @@
 				CAL08 /* CalendarChallengeFlowViews.swift */,
 				MEM16 /* Domain */,
 				MEM17 /* Services */,
-				MEM33 /* SystemDictionaryView.swift */,
+				ABT02 /* AttributionView.swift */,
+				ABT04 /* ThirdPartyNotices.txt */,
 				APP16 /* WordData.swift */,
 				APP1A /* LocalStorageManager.swift */,
 				APP24 /* WordMem.entitlements */,
@@ -260,6 +276,7 @@
 				STORE02 /* WordMemStore.swift */,
 				IMP04 /* WordImportModels.swift */,
 				SUB11 /* WordImportSubmission.swift */,
+				DIC02 /* AuthoritativeDictionary.swift */,
 			);
 			path = Domain;
 			sourceTree = "<group>";
@@ -268,7 +285,7 @@
 			isa = PBXGroup;
 			children = (
 				MEM18 /* WordbookRepository.swift */,
-				MEM31 /* SystemDictionaryLookupService.swift */,
+				DIC04 /* WordNetDictionaryProvider.swift */,
 				PRN02 /* EnglishPronunciationPlayer.swift */,
 				IMP06 /* VisionTextRecognitionService.swift */,
 			);
@@ -292,11 +309,16 @@
 			buildPhases = (
 				APP0D /* Sources */,
 				APP07 /* Frameworks */,
+				WNK31 /* Embed Frameworks */,
 				APP0E /* Resources */,
 				EXT30 /* Embed App Extensions */,
 				TPR30 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
+			);
+			packageProductDependencies = (
+				WNK11 /* WordNetKit */,
+				WNK21 /* WordNetKitData */,
 			);
 			dependencies = (
 				EXT14 /* PBXTargetDependency */,
@@ -316,6 +338,9 @@
 			);
 			buildRules = (
 			);
+			packageProductDependencies = (
+				WNK11 /* WordNetKit */,
+			);
 			dependencies = (
 			);
 			name = WordMemShareExtension;
@@ -331,6 +356,9 @@
 				TPR16 /* Frameworks */,
 			);
 			buildRules = (
+			);
+			packageProductDependencies = (
+				WNK11 /* WordNetKit */,
 			);
 			dependencies = (
 			);
@@ -376,6 +404,30 @@
 		};
 /* End PBXTargetDependency section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		WNK20 /* XCRemoteSwiftPackageReference "WordNetKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/zhezhe-star/WordNetKit.git";
+			requirement = {
+				kind = revision;
+				revision = 5909f5b3033413de54891daa183900366047b68e;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		WNK11 /* WordNetKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = WNK20 /* XCRemoteSwiftPackageReference "WordNetKit" */;
+			productName = WordNetKit;
+		};
+		WNK21 /* WordNetKitData */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = WNK20 /* XCRemoteSwiftPackageReference "WordNetKit" */;
+			productName = WordNetKitData;
+		};
+/* End XCSwiftPackageProductDependency section */
+
 /* Begin PBXProject section */
 		APP0F /* Project object */ = {
 			isa = PBXProject;
@@ -408,6 +460,9 @@
 			);
 			mainGroup = APP08;
 			productRefGroup = APP0A /* Products */;
+			packageReferences = (
+				WNK20 /* XCRemoteSwiftPackageReference "WordNetKit" */,
+			);
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -425,12 +480,24 @@
 			buildActionMask = 2147483647;
 			files = (
 				APP20 /* Assets.xcassets in Resources */,
+				ABT03 /* ThirdPartyNotices.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		WNK31 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				WNK30 /* WordNetKit in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		EXT30 /* Embed App Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -475,6 +542,7 @@
 				MEM01 /* DictionaryModels.swift in Sources */,
 				MEM02 /* WordInputNormalizer.swift in Sources */,
 				MEM03 /* WordEntry.swift in Sources */,
+				DIC01 /* AuthoritativeDictionary.swift in Sources */,
 				IMP03 /* WordImportModels.swift in Sources */,
 				IMP05 /* VisionTextRecognitionService.swift in Sources */,
 				SUB10 /* WordImportSubmission.swift in Sources */,
@@ -483,8 +551,8 @@
 				SHRD32 /* ImageImportView.swift in Sources */,
 				SHRD34 /* ImageImportSourceCard.swift in Sources */,
 				MEM06 /* WordbookRepository.swift in Sources */,
-				MEM30 /* SystemDictionaryLookupService.swift in Sources */,
-				MEM32 /* SystemDictionaryView.swift in Sources */,
+				DIC07 /* WordNetDictionaryProvider.swift in Sources */,
+				ABT01 /* AttributionView.swift in Sources */,
 				PRN01 /* EnglishPronunciationPlayer.swift in Sources */,
 				APP15 /* WordData.swift in Sources */,
 			);
@@ -506,10 +574,11 @@
 				EXT05 /* ShareTextExtractor.swift in Sources */,
 				MEM39 /* DictionaryModels.swift in Sources */,
 				MEM41 /* WordEntry.swift in Sources */,
+				DIC03 /* AuthoritativeDictionary.swift in Sources */,
 				MEM35 /* WordInputNormalizer.swift in Sources */,
-				MEM37 /* SystemDictionaryLookupService.swift in Sources */,
 				SHRD14 /* ImportCandidateModels.swift in Sources */,
 				SUB12 /* WordImportSubmission.swift in Sources */,
+				DIC08 /* WordNetDictionaryProvider.swift in Sources */,
 				EXT07 /* WordData.swift in Sources */,
 				EXT08 /* LocalStorageManager.swift in Sources */,
 			);
@@ -525,12 +594,13 @@
 				SHRD12 /* ImportCandidateModels.swift in Sources */,
 				MEM38 /* DictionaryModels.swift in Sources */,
 				MEM40 /* WordEntry.swift in Sources */,
+				DIC05 /* AuthoritativeDictionary.swift in Sources */,
 				MEM34 /* WordInputNormalizer.swift in Sources */,
-				MEM36 /* SystemDictionaryLookupService.swift in Sources */,
 				SHRD22 /* ImportFlowLayout.swift in Sources */,
 				SHRD25 /* ImportContextViews.swift in Sources */,
 				SHRD28 /* ImportSelectionViews.swift in Sources */,
 				SUB13 /* WordImportSubmission.swift in Sources */,
+				DIC09 /* WordNetDictionaryProvider.swift in Sources */,
 				TPR09 /* WordData.swift in Sources */,
 				TPR10 /* LocalStorageManager.swift in Sources */,
 			);

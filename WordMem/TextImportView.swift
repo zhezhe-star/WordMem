@@ -3,7 +3,7 @@ import SwiftData
 import SwiftUI
 
 struct TextImportView: View {
-    let dictionary: any SystemDictionaryAuthorizing
+    let dictionary: any AuthoritativeDictionaryAuthorizing
     let completion: (WordImportSummary) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -17,7 +17,7 @@ struct TextImportView: View {
 
 #if DEBUG
     init(
-        dictionary: any SystemDictionaryAuthorizing,
+        dictionary: any AuthoritativeDictionaryAuthorizing,
         completion: @escaping (WordImportSummary) -> Void,
         previewState: ImportPreviewState = ImportPreviewState()
     ) {
@@ -186,12 +186,12 @@ struct TextImportView: View {
 
 #if DEBUG
 #Preview("文本导入 · 空状态") {
-    TextImportView(dictionary: UIKitSystemDictionaryAuthorizer()) { _ in }
+    TextImportView(dictionary: WordNetKitAuthoritativeDictionaryProvider.shared) { _ in }
 }
 
 #Preview("文本导入 · 正常候选") {
     TextImportView(
-        dictionary: UIKitSystemDictionaryAuthorizer(),
+        dictionary: WordNetKitAuthoritativeDictionaryProvider.shared,
         completion: { _ in },
         previewState: ImportPreviewState(
             sourceText: ImportPreviewFixtures.text(count: 8),
@@ -203,7 +203,7 @@ struct TextImportView: View {
 
 #Preview("文本导入 · 55 个候选") {
     TextImportView(
-        dictionary: UIKitSystemDictionaryAuthorizer(),
+        dictionary: WordNetKitAuthoritativeDictionaryProvider.shared,
         completion: { _ in },
         previewState: ImportPreviewState(
             sourceText: ImportPreviewFixtures.text(count: 55),

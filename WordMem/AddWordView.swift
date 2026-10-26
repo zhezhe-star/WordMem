@@ -2,7 +2,7 @@ import SwiftData
 import SwiftUI
 
 struct AddWordView: View {
-    let dictionary: any SystemDictionaryAuthorizing
+    let dictionary: any AuthoritativeDictionaryAuthorizing
     let completion: (AddWordOutcome) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -20,7 +20,7 @@ struct AddWordView: View {
 
 #if DEBUG
     init(
-        dictionary: any SystemDictionaryAuthorizing,
+        dictionary: any AuthoritativeDictionaryAuthorizing,
         completion: @escaping (AddWordOutcome) -> Void,
         previewState: ImportPreviewState = ImportPreviewState()
     ) {
@@ -61,7 +61,7 @@ struct AddWordView: View {
                         ImportStepHeader(
                             currentStep: currentStep,
                             title: "添加一个单词",
-                            subtitle: "单词保存后，可随时在系统词典中查看释义和发音。"
+                            subtitle: "保存后可直接在列表中查看权威释义。"
                         )
 
                         inputCard

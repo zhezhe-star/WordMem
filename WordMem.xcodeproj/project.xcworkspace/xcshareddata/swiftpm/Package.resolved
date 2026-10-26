@@ -1,0 +1,14 @@
+{
+  "originHash" : "cb0977d6b8fc6816ac3e22f259d1e42753953501f78fe791c5395070d6fa7d2b",
+  "pins" : [
+    {
+      "identity" : "wordnetkit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/zhezhe-star/WordNetKit.git",
+      "state" : {
+        "revision" : "5909f5b3033413de54891daa183900366047b68e"
+      }
+    }
+  ],
+  "version" : 3
+}
