@@ -32,7 +32,7 @@ enum WordImportSource: String, Codable, CaseIterable, Hashable, Sendable {
 }
 
 struct WordImportSubmission: Codable, Equatable, Identifiable, Sendable {
-    static let currentSchemaVersion = 3
+    static let currentSchemaVersion = 4
 
     var payloadID: UUID
     var schemaVersion: Int
@@ -113,9 +113,9 @@ struct WordImportCandidatePayload: Codable, Equatable, Hashable, Identifiable, S
     var payloadID: UUID
     var text: String
     var normalizedKey: String
-    var userTranslation: String?
-    var userExample: String?
-    var userNote: String?
+    var translation: String?
+    var example: String?
+    var note: String?
     var metadata: [String: String]
 
     var id: UUID { payloadID }
@@ -124,17 +124,17 @@ struct WordImportCandidatePayload: Codable, Equatable, Hashable, Identifiable, S
         payloadID: UUID = UUID(),
         text: String,
         normalizedKey: String,
-        userTranslation: String? = nil,
-        userExample: String? = nil,
-        userNote: String? = nil,
+        translation: String? = nil,
+        example: String? = nil,
+        note: String? = nil,
         metadata: [String: String] = [:]
     ) {
         self.payloadID = payloadID
         self.text = text
         self.normalizedKey = normalizedKey
-        self.userTranslation = userTranslation
-        self.userExample = userExample
-        self.userNote = userNote
+        self.translation = translation
+        self.example = example
+        self.note = note
         self.metadata = metadata
     }
 
@@ -142,9 +142,9 @@ struct WordImportCandidatePayload: Codable, Equatable, Hashable, Identifiable, S
         case payloadID = "payload_id"
         case text
         case normalizedKey = "normalized_key"
-        case userTranslation = "user_translation"
-        case userExample = "user_example"
-        case userNote = "user_note"
+        case translation = "translation"
+        case example = "example"
+        case note = "note"
         case metadata
     }
 
@@ -153,9 +153,9 @@ struct WordImportCandidatePayload: Codable, Equatable, Hashable, Identifiable, S
         payloadID = try container.decodeIfPresent(UUID.self, forKey: .payloadID) ?? UUID()
         text = try container.decode(String.self, forKey: .text)
         normalizedKey = try container.decodeIfPresent(String.self, forKey: .normalizedKey) ?? text
-        userTranslation = try container.decodeIfPresent(String.self, forKey: .userTranslation)
-        userExample = try container.decodeIfPresent(String.self, forKey: .userExample)
-        userNote = try container.decodeIfPresent(String.self, forKey: .userNote)
+        translation = try container.decodeIfPresent(String.self, forKey: .translation)
+        example = try container.decodeIfPresent(String.self, forKey: .example)
+        note = try container.decodeIfPresent(String.self, forKey: .note)
         metadata = try container.decodeIfPresent([String: String].self, forKey: .metadata) ?? [:]
     }
 }
@@ -199,14 +199,14 @@ struct TranslationProviderSubmissionBuilder {
 
             if let advisedChip = advisedChips.first(where: { $0.id == chipText }) {
                 var payload = ImportCandidatePipeline.payload(from: advisedChip)
-                payload.userTranslation = trimmedMeaning.isEmpty ? nil : trimmedMeaning
+                payload.translation = trimmedMeaning.isEmpty ? nil : trimmedMeaning
                 return payload
             }
 
             return WordImportCandidatePayload(
                 text: chipText,
                 normalizedKey: chipText.lowercased(),
-                userTranslation: trimmedMeaning.isEmpty ? nil : trimmedMeaning,
+                translation: trimmedMeaning.isEmpty ? nil : trimmedMeaning,
                 metadata: ["sourceOrder": String(offset)]
             )
         }

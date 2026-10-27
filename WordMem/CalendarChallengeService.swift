@@ -15,14 +15,14 @@ struct CalendarWord: Identifiable, Equatable {
 
 extension WordEntry {
     var calendarWord: CalendarWord? {
-        let translation = userTranslation.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !translation.isEmpty else { return nil }
+        let trimmedTranslation = translation.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedTranslation.isEmpty else { return nil }
 
         return CalendarWord(
             id: id,
             word: headword,
-            translation: translation,
-            exampleSentence: userExample,
+            translation: trimmedTranslation,
+            exampleSentence: example,
             createdAt: createdAt
         )
     }

@@ -7,7 +7,7 @@ import SwiftUI
 import UIKit
 
 struct ImageImportView: View {
-    let dictionary: any AuthoritativeDictionaryAuthorizing
+    let dictionary: any SystemDictionaryAuthorizing
     let completion: (WordImportSummary) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -30,7 +30,7 @@ struct ImageImportView: View {
 
 #if DEBUG
     init(
-        dictionary: any AuthoritativeDictionaryAuthorizing,
+        dictionary: any SystemDictionaryAuthorizing,
         completion: @escaping (WordImportSummary) -> Void,
         previewState: ImportPreviewState = ImportPreviewState()
     ) {
@@ -323,12 +323,12 @@ struct ImageImportView: View {
 
 #if DEBUG
 #Preview("图片导入 · 空状态") {
-    ImageImportView(dictionary: WordNetKitAuthoritativeDictionaryProvider.shared) { _ in }
+    ImageImportView(dictionary: UIKitSystemDictionaryAuthorizer()) { _ in }
 }
 
 #Preview("图片导入 · 正常候选") {
     ImageImportView(
-        dictionary: WordNetKitAuthoritativeDictionaryProvider.shared,
+        dictionary: UIKitSystemDictionaryAuthorizer(),
         completion: { _ in },
         previewState: ImportPreviewState(
             recognizedText: "Beautiful mountain views appear after the morning rain.",
@@ -341,7 +341,7 @@ struct ImageImportView: View {
 
 #Preview("图片导入 · 55 个候选") {
     ImageImportView(
-        dictionary: WordNetKitAuthoritativeDictionaryProvider.shared,
+        dictionary: UIKitSystemDictionaryAuthorizer(),
         completion: { _ in },
         previewState: ImportPreviewState(
             recognizedText: String(repeating: "Beautiful mountain views appear after rain. ", count: 8),

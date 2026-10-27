@@ -2,7 +2,7 @@ import SwiftData
 import SwiftUI
 
 struct AddWordView: View {
-    let dictionary: any AuthoritativeDictionaryAuthorizing
+    let dictionary: any SystemDictionaryAuthorizing
     let completion: (AddWordOutcome) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -13,14 +13,14 @@ struct AddWordView: View {
     @State private var advisorToken = UUID()
     @State private var isSaving = false
     @State private var errorMessage: String?
-    @State private var userTranslation = ""
-    @State private var userExample = ""
-    @State private var userNote = ""
+    @State private var translation = ""
+    @State private var example = ""
+    @State private var note = ""
     @FocusState private var isInputFocused: Bool
 
 #if DEBUG
     init(
-        dictionary: any AuthoritativeDictionaryAuthorizing,
+        dictionary: any SystemDictionaryAuthorizing,
         completion: @escaping (AddWordOutcome) -> Void,
         previewState: ImportPreviewState = ImportPreviewState()
     ) {
@@ -151,9 +151,9 @@ struct AddWordView: View {
             Text("用户字段（可选）")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
-            TextField("我的翻译", text: $userTranslation)
-            TextField("我的例句", text: $userExample)
-            TextField("我的笔记", text: $userNote)
+            TextField("我的翻译", text: $translation)
+            TextField("我的例句", text: $example)
+            TextField("我的笔记", text: $note)
         }
         .padding(16)
         .background(.regularMaterial, in: .rect(cornerRadius: 22))
@@ -220,9 +220,9 @@ struct AddWordView: View {
             do {
                 var candidates = ImportCandidatePipeline.payloads(from: selection.selectedChips)
                 if var candidate = candidates.first {
-                    candidate.userTranslation = emptyAsNil(userTranslation)
-                    candidate.userExample = emptyAsNil(userExample)
-                    candidate.userNote = emptyAsNil(userNote)
+                    candidate.translation = emptyAsNil(translation)
+                    candidate.example = emptyAsNil(example)
+                    candidate.note = emptyAsNil(note)
                     candidates[0] = candidate
                 }
                 let submission = WordImportSubmission(

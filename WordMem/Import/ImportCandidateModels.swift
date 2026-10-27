@@ -121,18 +121,16 @@ protocol ImportWordSpellingSuggesting: Sendable {
     func correction(for word: String) async -> String?
 }
 
-typealias ImportWordAvailabilityChecking = AuthoritativeDictionaryAuthorizing
-
 /// Shared async advisor used by every sentence-splitting import surface.
 struct ImportWordAdvisor: Sendable {
     private let lemmaProvider: any ImportWordLemmaProviding
     private let spellingSuggester: any ImportWordSpellingSuggesting
-    private let availability: any ImportWordAvailabilityChecking
+    private let availability: any SystemDictionaryAuthorizing
 
     init(
         lemmaProvider: any ImportWordLemmaProviding,
         spellingSuggester: any ImportWordSpellingSuggesting,
-        availability: any ImportWordAvailabilityChecking
+        availability: any SystemDictionaryAuthorizing
     ) {
         self.lemmaProvider = lemmaProvider
         self.spellingSuggester = spellingSuggester
@@ -143,7 +141,7 @@ struct ImportWordAdvisor: Sendable {
         ImportWordAdvisor(
             lemmaProvider: NaturalLanguageWordLemmaProvider(),
             spellingSuggester: UITextCheckerSpellingSuggester(),
-            availability: WordNetKitAuthoritativeDictionaryProvider.shared
+            availability: UIKitSystemDictionaryAuthorizer()
         )
     }
 

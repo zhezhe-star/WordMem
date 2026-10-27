@@ -23,7 +23,7 @@ final class CanonicalCleanResetTests: XCTestCase {
     }
 
     private func makeContext() throws -> ModelContext {
-        let store = WordMemStore(storeURL: directory.appendingPathComponent("v3.store"), defaults: defaults)
+        let store = WordMemStore(storeURL: directory.appendingPathComponent("v4.store"), defaults: defaults)
         let container = try store.makeContainer()
         let context = ModelContext(container)
         context.autosaveEnabled = false
@@ -52,10 +52,10 @@ final class CanonicalCleanResetTests: XCTestCase {
         XCTAssertEqual(try context.fetch(FetchDescriptor<WordEntry>()).count, 2)
     }
 
-    func testAdvisorCanonicalKeysSurviveAndRevalidateAgainstAuthoritativeDictionary() async throws {
+    func testAdvisorCanonicalKeysSurviveAndRevalidateAgainstSystemDictionary() async throws {
         let context = try makeContext()
         let repository = WordbookRepository(modelContext: context)
-        let dictionary = FixedAuthoritativeDictionary(available: ["give", "receive"])
+        let dictionary = FixedSystemDictionary(available: ["give", "receive"])
 
         let gave = WordImportCandidatePayload(
             payloadID: UUID(), text: "gave", normalizedKey: "give",
@@ -84,7 +84,7 @@ final class CanonicalCleanResetTests: XCTestCase {
     func testUnavailableFinalAndRestoredCandidatesAreSkippedWithoutRecomputingAdvisorKey() async throws {
         let context = try makeContext()
         let repository = WordbookRepository(modelContext: context)
-        let dictionary = FixedAuthoritativeDictionary(available: [])
+        let dictionary = FixedSystemDictionary(available: [])
 
         let unavailable = WordImportCandidatePayload(
             payloadID: UUID(), text: "blurble", normalizedKey: "definitelyadvisorkey"
@@ -104,7 +104,7 @@ final class CanonicalCleanResetTests: XCTestCase {
     func testSameCanonicalKeyAddsThenDeduplicatesWithStableReplay() async throws {
         let context = try makeContext()
         let repository = WordbookRepository(modelContext: context)
-        let dictionary = FixedAuthoritativeDictionary(available: ["give"])
+        let dictionary = FixedSystemDictionary(available: ["give"])
         let payloadID = UUID()
 
         let first = WordImportSubmission(
@@ -136,7 +136,7 @@ final class CanonicalCleanResetTests: XCTestCase {
         )
         _ = try await repository.importSubmission(
             WordImportSubmission(source: .text, sourceText: "solid rock", candidates: [phrase]),
-            using: FixedAuthoritativeDictionary(available: [])
+            using: FixedSystemDictionary(available: [])
         )
         XCTAssertEqual(try context.fetch(FetchDescriptor<WordImportContext>()).count, 1)
 
@@ -155,7 +155,7 @@ final class CanonicalCleanResetTests: XCTestCase {
         )
         let submission = WordImportSubmission(source: .text, sourceText: "solid rock", candidates: [phrase])
         let outcomes = try await repository.importSubmission(
-            submission, using: FixedAuthoritativeDictionary(available: [])
+            submission, using: FixedSystemDictionary(available: [])
         )
         XCTAssertTrue(outcomes.isEmpty)
         XCTAssertTrue(try context.fetch(FetchDescriptor<WordEntry>()).isEmpty)
@@ -172,7 +172,7 @@ final class CanonicalCleanResetTests: XCTestCase {
         defaults.set(Data("queue".utf8), forKey: "pending_word_import_submissions.v1")
 
         _ = WordMemStore(
-            storeURL: directory.appendingPathComponent("v3.store"),
+            storeURL: directory.appendingPathComponent("v4.store"),
             defaults: defaults,
             legacyStoreURL: historical,
             legacyQueueDirectory: queueDirectory
@@ -181,14 +181,14 @@ final class CanonicalCleanResetTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: queueDirectory.path))
         XCTAssertNil(defaults.data(forKey: "saved_words"))
         XCTAssertNil(defaults.data(forKey: "pending_word_import_submissions.v1"))
-        XCTAssertEqual(defaults.integer(forKey: "wordmem.destructiveResetVersion"), 3)
+        XCTAssertEqual(defaults.integer(forKey: "wordmem.destructiveResetVersion"), 4)
         XCTAssertFalse(defaults.bool(forKey: "wordmem.nativeStoreV3.resetCompleted"))
     }
 
     func testSchemaResetDeletesStoresCompletedByPreviousReset() throws {
         let store = directory.appendingPathComponent("v2-schema.store")
         try Data("schema v2".utf8).write(to: store)
-        defaults.set(2, forKey: "wordmem.destructiveResetVersion")
+        defaults.set(3, forKey: "wordmem.destructiveResetVersion")
 
         _ = WordMemStore(
             storeURL: store,
@@ -198,7 +198,7 @@ final class CanonicalCleanResetTests: XCTestCase {
         )
 
         XCTAssertFalse(FileManager.default.fileExists(atPath: store.path))
-        XCTAssertEqual(defaults.integer(forKey: "wordmem.destructiveResetVersion"), 3)
+        XCTAssertEqual(defaults.integer(forKey: "wordmem.destructiveResetVersion"), 4)
     }
 
     func testCustomStoreResetDoesNotDeleteProductionDefaultStore() throws {
@@ -222,44 +222,41 @@ final class CanonicalCleanResetTests: XCTestCase {
             .filter { !$0.isEmpty && !$0.hasPrefix("$") })
         let expected: Set<String> = [
             "id", "localeIdentifier", "normalizedKey", "headword", "originalText",
-            "userTranslation", "userExample", "userNote",
+            "translation", "example", "note",
             "createdAt", "updatedAt",
         ]
         XCTAssertEqual(names, expected)
     }
 
-    func testAuthoritativeProviderReturnsStructuredWordNetEntry() async throws {
-        let provider = WordNetKitAuthoritativeDictionaryProvider()
+    func testImportStoresConfirmedTranslationAsLocalMetadata() async throws {
+        let context = try makeContext()
+        let repository = WordbookRepository(modelContext: context)
+        let payload = WordImportCandidatePayload(
+            payloadID: UUID(),
+            text: "give",
+            normalizedKey: "give",
+            translation: "给",
+            example: "Give me time.",
+            note: "Imported from translation card.",
+            metadata: ["originalWord": "give"]
+        )
 
-        let entry = try await provider.entry(forTerm: "dog")
+        let outcomes = try await repository.importSubmission(
+            WordImportSubmission(source: .defaultApp, sourceText: "give", candidates: [payload]),
+            using: FixedSystemDictionary(available: ["give"])
+        )
 
-        XCTAssertEqual(entry?.providerID, "org.globalwordnet.oewn")
-        XCTAssertEqual(entry?.providerRevision, "2025")
-        XCTAssertEqual(entry?.license, "CC-BY-4.0")
-        XCTAssertEqual(entry?.canonicalKey, "dog")
-        XCTAssertEqual(entry?.headword, "dog")
-        XCTAssertFalse(entry?.senses.isEmpty ?? true)
-        XCTAssertEqual(entry?.senses.first?.partOfSpeech, "noun")
-        XCTAssertFalse(entry?.senses.first?.definition.isEmpty ?? true)
-        XCTAssertFalse(entry?.pronunciations.isEmpty ?? true)
+        let entry = try XCTUnwrap(try context.fetch(FetchDescriptor<WordEntry>()).first)
+        XCTAssertEqual(outcomes.first?.isAdded, true)
+        XCTAssertEqual(entry.translation, "给")
+        XCTAssertEqual(entry.example, "Give me time.")
+        XCTAssertEqual(entry.note, "Imported from translation card.")
     }
 
-    func testAuthoritativeProviderHasDefinitionAndOmitsUnknownTerms() async throws {
-        let provider = WordNetKitAuthoritativeDictionaryProvider()
-
-        let available = await provider.hasDefinition(forTerm: "dog")
-        let unavailable = await provider.hasDefinition(forTerm: "wordmemnotaword")
-        let missing = try await provider.entry(forTerm: "wordmemnotaword")
-
-        XCTAssertTrue(available)
-        XCTAssertFalse(unavailable)
-        XCTAssertNil(missing)
-    }
-
-    func testCalendarUsesOnlyEntriesWithUserTranslation() throws {
+    func testCalendarUsesOnlyEntriesWithTranslation() throws {
         let context = try makeContext()
         context.insert(WordEntry(
-            normalizedKey: "give", headword: "give", originalText: "give", userTranslation: "给"
+            normalizedKey: "give", headword: "give", originalText: "give", translation: "给"
         ))
         context.insert(WordEntry(normalizedKey: "take", headword: "take", originalText: "take"))
         try context.save()
@@ -294,6 +291,10 @@ final class CanonicalCleanResetTests: XCTestCase {
         XCTAssertEqual(legacy.lastPathComponent, "default.store")
         XCTAssertEqual(legacy.deletingLastPathComponent().lastPathComponent, "Application Support")
         XCTAssertNotEqual(legacy, WordMemStore.defaultStoreURL)
+    }
+
+    func testNativeStoreFilenameMatchesCurrentSchemaEpoch() {
+        XCTAssertEqual(WordMemStore.defaultStoreURL.lastPathComponent, "wordmem-v4.store")
     }
 
     func testOCRSanitizerRemovesStatusBarAndSymbolOnlyLines() {
@@ -332,22 +333,11 @@ final class CanonicalCleanResetTests: XCTestCase {
     }
 }
 
-private struct FixedAuthoritativeDictionary: AuthoritativeDictionaryAuthorizing {
+private struct FixedSystemDictionary: SystemDictionaryAuthorizing {
     let available: Set<String>
 
     func hasDefinition(forTerm term: String) async -> Bool {
         available.contains(term)
     }
 
-    func entry(forTerm term: String) async throws -> AuthoritativeDictionaryEntry? {
-        available.contains(term) ? AuthoritativeDictionaryEntry(
-            providerID: "test",
-            providerRevision: "1",
-            license: "test",
-            canonicalKey: term,
-            headword: term,
-            pronunciations: [],
-            senses: []
-        ) : nil
-    }
 }
