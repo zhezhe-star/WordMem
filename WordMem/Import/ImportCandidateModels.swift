@@ -121,7 +121,7 @@ protocol ImportWordSpellingSuggesting: Sendable {
     func correction(for word: String) async -> String?
 }
 
-typealias ImportWordAvailabilityChecking = SystemDictionaryAuthorizing
+typealias ImportWordAvailabilityChecking = AuthoritativeDictionaryAuthorizing
 
 /// Shared async advisor used by every sentence-splitting import surface.
 struct ImportWordAdvisor: Sendable {
@@ -143,7 +143,7 @@ struct ImportWordAdvisor: Sendable {
         ImportWordAdvisor(
             lemmaProvider: NaturalLanguageWordLemmaProvider(),
             spellingSuggester: UITextCheckerSpellingSuggester(),
-            availability: UIKitSystemDictionaryAuthorizer()
+            availability: WordNetKitAuthoritativeDictionaryProvider.shared
         )
     }
 
@@ -320,8 +320,6 @@ extension ImportCandidatePipeline {
             if advice.isLemmaNormalized, let lemma = advice.lemma, !lemma.isEmpty {
                 metadata["lemma"] = lemma
             }
-            metadata["dictionaryAvailable"] = advice.isDictionaryAvailable ? "true" : "false"
-            metadata["originalDictionaryAvailable"] = advice.isOriginalDictionaryAvailable ? "true" : "false"
             if advice.isOriginalRestored {
                 metadata["originalSpellingRestored"] = "true"
             }

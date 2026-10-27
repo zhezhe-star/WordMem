@@ -52,10 +52,10 @@ final class CanonicalCleanResetTests: XCTestCase {
         XCTAssertEqual(try context.fetch(FetchDescriptor<WordEntry>()).count, 2)
     }
 
-    func testAdvisorCanonicalKeysSurviveAndRevalidateAgainstSystemDictionary() async throws {
+    func testAdvisorCanonicalKeysSurviveAndRevalidateAgainstAuthoritativeDictionary() async throws {
         let context = try makeContext()
         let repository = WordbookRepository(modelContext: context)
-        let dictionary = FixedSystemDictionaryAuthorizer(available: ["give", "receive"])
+        let dictionary = FixedAuthoritativeDictionary(available: ["give", "receive"])
 
         let gave = WordImportCandidatePayload(
             payloadID: UUID(), text: "gave", normalizedKey: "give",
@@ -84,7 +84,7 @@ final class CanonicalCleanResetTests: XCTestCase {
     func testUnavailableFinalAndRestoredCandidatesAreSkippedWithoutRecomputingAdvisorKey() async throws {
         let context = try makeContext()
         let repository = WordbookRepository(modelContext: context)
-        let dictionary = FixedSystemDictionaryAuthorizer(available: [])
+        let dictionary = FixedAuthoritativeDictionary(available: [])
 
         let unavailable = WordImportCandidatePayload(
             payloadID: UUID(), text: "blurble", normalizedKey: "definitelyadvisorkey"
@@ -104,7 +104,7 @@ final class CanonicalCleanResetTests: XCTestCase {
     func testSameCanonicalKeyAddsThenDeduplicatesWithStableReplay() async throws {
         let context = try makeContext()
         let repository = WordbookRepository(modelContext: context)
-        let dictionary = FixedSystemDictionaryAuthorizer(available: ["give"])
+        let dictionary = FixedAuthoritativeDictionary(available: ["give"])
         let payloadID = UUID()
 
         let first = WordImportSubmission(
@@ -136,7 +136,7 @@ final class CanonicalCleanResetTests: XCTestCase {
         )
         _ = try await repository.importSubmission(
             WordImportSubmission(source: .text, sourceText: "solid rock", candidates: [phrase]),
-            using: FixedSystemDictionaryAuthorizer(available: [])
+            using: FixedAuthoritativeDictionary(available: [])
         )
         XCTAssertEqual(try context.fetch(FetchDescriptor<WordImportContext>()).count, 1)
 
@@ -155,7 +155,7 @@ final class CanonicalCleanResetTests: XCTestCase {
         )
         let submission = WordImportSubmission(source: .text, sourceText: "solid rock", candidates: [phrase])
         let outcomes = try await repository.importSubmission(
-            submission, using: FixedSystemDictionaryAuthorizer(available: [])
+            submission, using: FixedAuthoritativeDictionary(available: [])
         )
         XCTAssertTrue(outcomes.isEmpty)
         XCTAssertTrue(try context.fetch(FetchDescriptor<WordEntry>()).isEmpty)
@@ -181,8 +181,24 @@ final class CanonicalCleanResetTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: queueDirectory.path))
         XCTAssertNil(defaults.data(forKey: "saved_words"))
         XCTAssertNil(defaults.data(forKey: "pending_word_import_submissions.v1"))
-        XCTAssertEqual(defaults.integer(forKey: "wordmem.destructiveResetVersion"), 2)
+        XCTAssertEqual(defaults.integer(forKey: "wordmem.destructiveResetVersion"), 3)
         XCTAssertFalse(defaults.bool(forKey: "wordmem.nativeStoreV3.resetCompleted"))
+    }
+
+    func testSchemaResetDeletesStoresCompletedByPreviousReset() throws {
+        let store = directory.appendingPathComponent("v2-schema.store")
+        try Data("schema v2".utf8).write(to: store)
+        defaults.set(2, forKey: "wordmem.destructiveResetVersion")
+
+        _ = WordMemStore(
+            storeURL: store,
+            defaults: defaults,
+            legacyStoreURL: nil,
+            legacyQueueDirectory: nil
+        )
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: store.path))
+        XCTAssertEqual(defaults.integer(forKey: "wordmem.destructiveResetVersion"), 3)
     }
 
     func testCustomStoreResetDoesNotDeleteProductionDefaultStore() throws {
@@ -206,10 +222,38 @@ final class CanonicalCleanResetTests: XCTestCase {
             .filter { !$0.isEmpty && !$0.hasPrefix("$") })
         let expected: Set<String> = [
             "id", "localeIdentifier", "normalizedKey", "headword", "originalText",
-            "systemDictionaryAvailable", "userTranslation", "userExample", "userNote",
+            "userTranslation", "userExample", "userNote",
             "createdAt", "updatedAt",
         ]
         XCTAssertEqual(names, expected)
+    }
+
+    func testAuthoritativeProviderReturnsStructuredWordNetEntry() async throws {
+        let provider = WordNetKitAuthoritativeDictionaryProvider()
+
+        let entry = try await provider.entry(forTerm: "dog")
+
+        XCTAssertEqual(entry?.providerID, "org.globalwordnet.oewn")
+        XCTAssertEqual(entry?.providerRevision, "2025")
+        XCTAssertEqual(entry?.license, "CC-BY-4.0")
+        XCTAssertEqual(entry?.canonicalKey, "dog")
+        XCTAssertEqual(entry?.headword, "dog")
+        XCTAssertFalse(entry?.senses.isEmpty ?? true)
+        XCTAssertEqual(entry?.senses.first?.partOfSpeech, "noun")
+        XCTAssertFalse(entry?.senses.first?.definition.isEmpty ?? true)
+        XCTAssertFalse(entry?.pronunciations.isEmpty ?? true)
+    }
+
+    func testAuthoritativeProviderHasDefinitionAndOmitsUnknownTerms() async throws {
+        let provider = WordNetKitAuthoritativeDictionaryProvider()
+
+        let available = await provider.hasDefinition(forTerm: "dog")
+        let unavailable = await provider.hasDefinition(forTerm: "wordmemnotaword")
+        let missing = try await provider.entry(forTerm: "wordmemnotaword")
+
+        XCTAssertTrue(available)
+        XCTAssertFalse(unavailable)
+        XCTAssertNil(missing)
     }
 
     func testCalendarUsesOnlyEntriesWithUserTranslation() throws {
@@ -229,6 +273,20 @@ final class CanonicalCleanResetTests: XCTestCase {
         let chip = ImportCandidateChip(id: "give", text: "give", sourceOrder: 0)
         let selection = ImportChipSelection(chips: [chip])
         XCTAssertEqual(selection.selectedCount, 0)
+    }
+
+    func testCandidatePayloadOmitsDerivedDictionaryAvailability() {
+        let advice = ImportWordAdvice(
+            originalText: "gave", originalKey: "gave", context: nil, lemma: "give",
+            spellingCorrection: nil, finalText: "give", finalKey: "give",
+            isDictionaryAvailable: true, isOriginalDictionaryAvailable: true
+        )
+        let chip = ImportCandidateChip(id: "give", text: "give", sourceOrder: 0, advice: advice)
+
+        let payload = ImportCandidatePipeline.payload(from: chip)
+
+        XCTAssertNil(payload.metadata["dictionaryAvailable"])
+        XCTAssertNil(payload.metadata["originalDictionaryAvailable"])
     }
 
     func testLegacySwiftDataStorePathIsSeparatedFromNativeV3Store() {
@@ -274,10 +332,22 @@ final class CanonicalCleanResetTests: XCTestCase {
     }
 }
 
-private struct FixedSystemDictionaryAuthorizer: SystemDictionaryAuthorizing {
+private struct FixedAuthoritativeDictionary: AuthoritativeDictionaryAuthorizing {
     let available: Set<String>
 
     func hasDefinition(forTerm term: String) async -> Bool {
         available.contains(term)
+    }
+
+    func entry(forTerm term: String) async throws -> AuthoritativeDictionaryEntry? {
+        available.contains(term) ? AuthoritativeDictionaryEntry(
+            providerID: "test",
+            providerRevision: "1",
+            license: "test",
+            canonicalKey: term,
+            headword: term,
+            pronunciations: [],
+            senses: []
+        ) : nil
     }
 }
