@@ -11,3 +11,9 @@ struct WordIdentity: Equatable, Hashable, Sendable {
         self.key = key
     }
 }
+
+/// Public seam over the only dictionary source allowed in WordMem: Apple's
+/// system dictionary availability check. It never returns dictionary content.
+protocol SystemDictionaryAuthorizing: Sendable {
+    func hasDefinition(forTerm term: String) async -> Bool
+}

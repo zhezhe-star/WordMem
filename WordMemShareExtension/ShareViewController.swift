@@ -276,9 +276,9 @@ private struct ShareCardView: View {
         let normalizedExample = exampleText.trimmingCharacters(in: .whitespacesAndNewlines)
 
         var candidate = ImportCandidatePipeline.payload(from: selectedChip)
-        candidate.userTranslation = normalizedMeaning
-        candidate.userExample = normalizedExample.isEmpty ? nil : normalizedExample
-        candidate.userNote = normalizedNote.isEmpty ? nil : normalizedNote
+        candidate.translation = normalizedMeaning
+        candidate.example = normalizedExample.isEmpty ? nil : normalizedExample
+        candidate.note = normalizedNote.isEmpty ? nil : normalizedNote
 
         let submission = WordImportSubmission(
             source: .shareExtension,

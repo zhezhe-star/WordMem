@@ -6,7 +6,8 @@ struct WordMemStore {
     private static let legacyResetCompletedKey = "wordmem.nativeStoreV3.resetCompleted"
     private static let resetVersionKey = "wordmem.destructiveResetVersion"
     /// v3 removes the exploration schema that persisted dictionary availability.
-    private static let currentResetVersion = 3
+    /// v4 renames local metadata fields after removing public dictionary support.
+    private static let currentResetVersion = 4
 
     let storeURL: URL
     private let defaults: UserDefaults
@@ -16,7 +17,7 @@ struct WordMemStore {
     static var defaultStoreURL: URL {
         let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         return support.appendingPathComponent("WordMem", isDirectory: true)
-            .appendingPathComponent("wordmem-v3.store")
+            .appendingPathComponent("wordmem-v4.store")
     }
 
     static var legacySwiftDataStoreURL: URL {

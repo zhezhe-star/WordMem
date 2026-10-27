@@ -10,9 +10,9 @@ final class WordEntry {
     var normalizedKey: String
     var headword: String
     var originalText: String
-    var userTranslation: String
-    var userExample: String?
-    var userNote: String?
+    var translation: String
+    var example: String?
+    var note: String?
     var createdAt: Date
     var updatedAt: Date
 
@@ -22,9 +22,9 @@ final class WordEntry {
         normalizedKey: String,
         headword: String,
         originalText: String,
-        userTranslation: String = "",
-        userExample: String? = nil,
-        userNote: String? = nil,
+        translation: String = "",
+        example: String? = nil,
+        note: String? = nil,
         createdAt: Date = .now,
         updatedAt: Date = .now
     ) {
@@ -33,9 +33,9 @@ final class WordEntry {
         self.normalizedKey = normalizedKey
         self.headword = headword
         self.originalText = originalText
-        self.userTranslation = userTranslation
-        self.userExample = userExample
-        self.userNote = userNote
+        self.translation = translation
+        self.example = example
+        self.note = note
         self.createdAt = createdAt
         self.updatedAt = updatedAt
     }

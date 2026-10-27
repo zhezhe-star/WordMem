@@ -36,7 +36,7 @@ struct WordbookRepository {
 
     func importSubmission(
         _ submission: WordImportSubmission,
-        using dictionary: any AuthoritativeDictionaryAuthorizing
+        using dictionary: any SystemDictionaryAuthorizing
     ) async throws -> [AddWordOutcome] {
         let candidates = validatedCandidates(submission)
         guard !candidates.isEmpty else { throw WordImportError.emptySelection }
@@ -149,14 +149,14 @@ struct WordbookRepository {
 
     private func apply(_ candidate: WordImportCandidatePayload, to entry: WordEntry) {
         entry.headword = candidate.text
-        if let translation = candidate.userTranslation?.trimmingCharacters(in: .whitespacesAndNewlines), !translation.isEmpty {
-            entry.userTranslation = translation
+        if let translation = candidate.translation?.trimmingCharacters(in: .whitespacesAndNewlines), !translation.isEmpty {
+            entry.translation = translation
         }
-        if let example = candidate.userExample?.trimmingCharacters(in: .whitespacesAndNewlines), !example.isEmpty {
-            entry.userExample = example
+        if let example = candidate.example?.trimmingCharacters(in: .whitespacesAndNewlines), !example.isEmpty {
+            entry.example = example
         }
-        if let note = candidate.userNote?.trimmingCharacters(in: .whitespacesAndNewlines), !note.isEmpty {
-            entry.userNote = note
+        if let note = candidate.note?.trimmingCharacters(in: .whitespacesAndNewlines), !note.isEmpty {
+            entry.note = note
         }
         entry.updatedAt = .now
     }
