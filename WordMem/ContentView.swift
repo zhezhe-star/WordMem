@@ -11,22 +11,6 @@ private enum DictionaryAvailability {
     case unavailable
 }
 
-struct AddWordFeedback: Identifiable, Equatable {
-    let id = UUID()
-    let isAdded: Bool
-    let message: String
-    let entryID: UUID
-
-    @MainActor
-    init(_ outcome: AddWordOutcome) {
-        isAdded = outcome.isAdded
-        message = outcome.isAdded ? "已添加 \(outcome.entry.headword)" : "已在单词本 \(outcome.entry.headword)"
-        entryID = outcome.entry.id
-    }
-
-    static func == (lhs: AddWordFeedback, rhs: AddWordFeedback) -> Bool { lhs.id == rhs.id }
-}
-
 @MainActor
 final class WordImportMaintenanceCoordinator {
     private var isRunning = false
@@ -88,7 +72,6 @@ struct WordbookView: View {
     @Query(sort: \WordEntry.updatedAt, order: .reverse) private var words: [WordEntry]
     @State private var route: [WordMemRoute] = []
     @State private var activeImportSheet: WordImportSheet?
-    @State private var feedback: AddWordFeedback?
     @State private var alertMessage: String?
     @State private var queueAttentionMessage: String?
     @State private var maintenance = WordImportMaintenanceCoordinator()
@@ -111,7 +94,7 @@ struct WordbookView: View {
                             }
                         }
                     } label: {
-                        Label("添加单词", systemImage: "plus")
+                        Label("导入单词", systemImage: "plus")
                     }
                     .accessibilityIdentifier("addWordButton")
                 }
@@ -126,11 +109,6 @@ struct WordbookView: View {
             }
             .sheet(item: $activeImportSheet) { sheet in
                 switch sheet {
-                case .manual:
-                    AddWordView(dictionary: dictionary) { outcome in
-                        feedback = AddWordFeedback(outcome)
-                    }
-                    .presentationDetents([.medium, .large])
                 case .image:
                     ImageImportView(dictionary: dictionary) { summary in
                         alertMessage = summary.message
@@ -158,18 +136,6 @@ struct WordbookView: View {
             } message: {
                 Text(queueAttentionMessage ?? "")
             }
-            .overlay(alignment: .bottom) {
-                if let feedback {
-                    AddWordFeedbackView(feedback: feedback) {
-                        withAnimation(.snappy) { self.feedback = nil }
-                    }
-                    .padding(.bottom, 18)
-                    .task {
-                        try? await Task.sleep(for: .seconds(4))
-                        withAnimation(.snappy) { self.feedback = nil }
-                    }
-                }
-            }
             .task {
                 queueAttentionMessage = await maintenance.processPendingSubmissions(in: modelContext)
             }
@@ -182,7 +148,7 @@ struct WordbookView: View {
         } description: {
             Text("挑选系统词典收录的英文单词；翻译保存在本地元数据里。")
         } actions: {
-            Button("添加第一个单词") { activeImportSheet = .manual }
+            Button("导入第一个单词") { activeImportSheet = .text }
                 .buttonStyle(.borderedProminent)
         }
     }
@@ -207,23 +173,6 @@ struct WordbookView: View {
             modelContext.rollback()
             alertMessage = "删除失败，请重试。"
         }
-    }
-}
-
-private struct AddWordFeedbackView: View {
-    let feedback: AddWordFeedback
-    let dismiss: () -> Void
-
-    var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: feedback.isAdded ? "checkmark.circle.fill" : "checkmark.circle")
-                .foregroundStyle(.green)
-            Text(feedback.message)
-            Button("好", action: dismiss)
-        }
-        .padding(12)
-        .background(.regularMaterial, in: .capsule)
-        .accessibilityElement(children: .combine)
     }
 }
 

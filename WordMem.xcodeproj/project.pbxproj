@@ -23,7 +23,6 @@
 		APP03 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP04 /* ContentView.swift */; };
 		APP15 /* WordData.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP16 /* WordData.swift */; };
 		APP20 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = APP21 /* Assets.xcassets */; };
-		APP22 /* AddWordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP23 /* AddWordView.swift */; };
 		EXT01 /* WordMemShareExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = EXT02 /* WordMemShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		EXT03 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = EXT04 /* ShareViewController.swift */; };
 		EXT05 /* ShareTextExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = EXT06 /* ShareTextExtractor.swift */; };
@@ -77,7 +76,6 @@
 		APP06 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		APP16 /* WordData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordData.swift; sourceTree = "<group>"; };
 		APP21 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		APP23 /* AddWordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddWordView.swift; sourceTree = "<group>"; };
 		APP1A /* LocalStorageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalStorageManager.swift; sourceTree = "<group>"; };
 		APP24 /* WordMem.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = WordMem.entitlements; sourceTree = "<group>"; };
 		CAL02 /* CalendarChallengeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarChallengeService.swift; sourceTree = "<group>"; };
@@ -184,7 +182,6 @@
 			children = (
 				APP02 /* WordMemApp.swift */,
 				APP04 /* ContentView.swift */,
-				APP23 /* AddWordView.swift */,
 				SHRD13 /* Import */,
 				IMP08 /* WordImportViews.swift */,
 				SHRD31 /* TextImportView.swift */,
@@ -463,7 +460,6 @@
 				APP01 /* WordMemApp.swift in Sources */,
 				STORE01 /* WordMemStore.swift in Sources */,
 				APP03 /* ContentView.swift in Sources */,
-				APP22 /* AddWordView.swift in Sources */,
 				SHRD10 /* ImportCandidateModels.swift in Sources */,
 				OCR01 /* OCRTextSanitizer.swift in Sources */,
 				SHRD20 /* ImportFlowLayout.swift in Sources */,

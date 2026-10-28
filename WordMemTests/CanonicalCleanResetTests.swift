@@ -94,7 +94,7 @@ final class CanonicalCleanResetTests: XCTestCase {
             metadata: ["originalWord": "orig", "originalKey": "restoredadvisorkey"]
         )
         let submission = WordImportSubmission(
-            source: .manual, sourceText: "blurble", candidates: [unavailable, restored]
+            source: .text, sourceText: "blurble", candidates: [unavailable, restored]
         )
         let outcomes = try await repository.importSubmission(submission, using: dictionary)
         XCTAssertTrue(outcomes.isEmpty)
@@ -284,6 +284,11 @@ final class CanonicalCleanResetTests: XCTestCase {
 
         XCTAssertNil(payload.metadata["dictionaryAvailable"])
         XCTAssertNil(payload.metadata["originalDictionaryAvailable"])
+    }
+
+    func testImportSheetMergesManualAddIntoTextImport() {
+        XCTAssertEqual(WordImportSheet.allCases, [.image, .text])
+        XCTAssertEqual(WordImportSheet.text.title, "文本导入")
     }
 
     func testLegacySwiftDataStorePathIsSeparatedFromNativeV3Store() {

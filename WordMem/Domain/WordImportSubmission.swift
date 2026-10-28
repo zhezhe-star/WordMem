@@ -1,7 +1,6 @@
 import Foundation
 
 enum WordImportSource: String, Codable, CaseIterable, Hashable, Sendable {
-    case manual
     case image
     case text
     case defaultApp = "default_app"
@@ -10,7 +9,6 @@ enum WordImportSource: String, Codable, CaseIterable, Hashable, Sendable {
 
     var displayName: String {
         switch self {
-        case .manual: "手动添加"
         case .image: "图片识别"
         case .text: "文本选择"
         case .defaultApp: "应用导入"
@@ -21,7 +19,6 @@ enum WordImportSource: String, Codable, CaseIterable, Hashable, Sendable {
 
     var systemImage: String {
         switch self {
-        case .manual: "square.and.pencil"
         case .image: "photo.on.rectangle"
         case .text: "text.quote"
         case .defaultApp: "app.badge.fill"
