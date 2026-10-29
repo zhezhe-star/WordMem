@@ -5,6 +5,7 @@ import SwiftData
 import SwiftUI
 
 import UIKit
+import Translation
 
 struct ImageImportView: View {
     let dictionary: any SystemDictionaryAuthorizing
@@ -24,6 +25,9 @@ struct ImageImportView: View {
     @State private var cameraAvailability: CameraAvailability = .notDetermined
     @State private var cameraFallbackMessage: String?
     @State private var errorMessage: String?
+    @State private var translationConfiguration: TranslationSession.Configuration?
+    @State private var translations: [String: String] = [:]
+    @State private var isTranslating = false
 
     private let recognitionService: any TextRecognitionService = VisionTextRecognitionService()
     private let processingCoordinator = WordImageProcessingCoordinator()
@@ -101,7 +105,9 @@ struct ImageImportView: View {
                 .scrollBounceBehavior(.basedOnSize)
 
                 ImportPrimaryCTA(
-                    title: isSaving ? "正在导入" : "导入 \(selectedWords.count) 个单词",
+                    title: isTranslating
+                        ? "正在翻译…"
+                        : (isSaving ? "正在导入" : "导入 \(selectedWords.count) 个单词"),
                     isLoading: isSaving,
                     action: importSelectedWords
                 )
@@ -109,7 +115,7 @@ struct ImageImportView: View {
                 .padding(.top, 10)
                 .padding(.bottom, 14)
                 .background(.bar)
-                .disabled(selectedWords.isEmpty || isRecognizing || isSaving)
+                .disabled(selectedWords.isEmpty || isRecognizing || isTranslating || isSaving)
             }
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
             .navigationTitle("图片导入")
@@ -131,6 +137,12 @@ struct ImageImportView: View {
             ) { _ in
                 cameraAvailability = CameraAvailability.current()
             }
+            .importCandidateTranslations(
+                chips: chips,
+                configuration: $translationConfiguration,
+                translations: $translations,
+                isTranslating: $isTranslating
+            )
             .alert(
                 "无法使用相机",
                 isPresented: .init(
@@ -170,6 +182,7 @@ struct ImageImportView: View {
             ImportCandidateChipGrid(
                 chips: chips,
                 selection: $selection,
+                meanings: translations,
                 onRestoreOriginal: restoreOriginal
             )
         }
@@ -181,6 +194,9 @@ struct ImageImportView: View {
         clearStaleResult()
         let token = processingCoordinator.begin()
         isRecognizing = true
+        isTranslating = false
+        translationConfiguration = nil
+        translations = [:]
         defer {
             if processingCoordinator.finish(token) {
                 isRecognizing = false
@@ -211,6 +227,9 @@ struct ImageImportView: View {
         } else {
             ownsProcessing = true
             activeToken = processingCoordinator.begin()
+            isTranslating = false
+            translationConfiguration = nil
+            translations = [:]
         }
         defer {
             if ownsProcessing, processingCoordinator.finish(activeToken) {
@@ -252,6 +271,8 @@ struct ImageImportView: View {
             recognizedText = text
             chips = advisedChips
             selection = ImportChipSelection(chips: advisedChips)
+            translationConfiguration = ImportCandidateTranslationModifier
+                .refreshedConfiguration(translationConfiguration)
 
         } catch {
             guard processingCoordinator.shouldCommit(activeToken) else { return }
@@ -259,6 +280,9 @@ struct ImageImportView: View {
             recognizedText = ""
             chips = []
             selection = ImportChipSelection(chips: [])
+            isTranslating = false
+            translationConfiguration = nil
+            translations = [:]
             errorMessage = (error as? WordImageImportError)?.errorDescription ?? "文字识别失败，请重试。"
         }
     }
@@ -267,6 +291,9 @@ struct ImageImportView: View {
         let restored = chip.restoringOriginal()
         chips = chips.map { $0.id == chip.id ? restored : $0 }
         selection = ImportChipSelection(chips: chips)
+        if let translation = translations[chip.id] {
+            translations[restored.id] = translation
+        }
     }
 
     private func clearStaleResult() {
@@ -302,7 +329,10 @@ struct ImageImportView: View {
                     sourceText: recognizedText,
                     recognizedText: recognizedText,
                     imageData: imageData,
-                    candidates: ImportCandidatePipeline.payloads(from: selection.selectedChips),
+                    candidates: ImportCandidatePipeline.payloads(
+                        from: selection.selectedChips,
+                        translations: translations
+                    ),
                     metadata: [
                         "channel": WordImportSource.image.rawValue,
                         "imageByteCount": "\(imageData.count)",

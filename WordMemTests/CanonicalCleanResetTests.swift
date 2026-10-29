@@ -272,6 +272,20 @@ final class CanonicalCleanResetTests: XCTestCase {
         XCTAssertEqual(selection.selectedCount, 0)
     }
 
+    func testImportPayloadsAttachCandidateTranslations() {
+        let give = ImportCandidateChip(id: "give", text: "give", sourceOrder: 0)
+        let take = ImportCandidateChip(id: "take", text: "take", sourceOrder: 1)
+
+        let payloads = ImportCandidatePipeline.payloads(
+            from: [give, take],
+            translations: ["give": "给", "take": "  "]
+        )
+
+        XCTAssertEqual(payloads.map(\.normalizedKey), ["give", "take"])
+        XCTAssertEqual(payloads.first?.translation, "给")
+        XCTAssertNil(payloads.last?.translation)
+    }
+
     func testDefaultTranslationSelectionStartsWithImportableWordsSelected() {
         let availableAdvice = ImportWordAdvice(
             originalText: "give", originalKey: "give", context: nil, lemma: nil,

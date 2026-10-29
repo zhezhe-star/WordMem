@@ -19,6 +19,7 @@
 		SHRD10 /* ImportCandidateModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = SHRD11 /* ImportCandidateModels.swift */; };
 		SHRD12 /* ImportCandidateModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = SHRD11 /* ImportCandidateModels.swift */; };
 		SHRD14 /* ImportCandidateModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = SHRD11 /* ImportCandidateModels.swift */; };
+		TRN01 /* ImportCandidateTranslationModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = TRN02 /* ImportCandidateTranslationModifier.swift */; };
 		APP01 /* WordMemApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP02 /* WordMemApp.swift */; };
 		APP03 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP04 /* ContentView.swift */; };
 		APP15 /* WordData.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP16 /* WordData.swift */; };
@@ -70,6 +71,7 @@
 		SHRD24 /* ImportContextViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportContextViews.swift; sourceTree = "<group>"; };
 		SHRD27 /* ImportSelectionViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportSelectionViews.swift; sourceTree = "<group>"; };
 		SHRD11 /* ImportCandidateModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportCandidateModels.swift; sourceTree = "<group>"; };
+		TRN02 /* ImportCandidateTranslationModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportCandidateTranslationModifier.swift; sourceTree = "<group>"; };
 		APP02 /* WordMemApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordMemApp.swift; sourceTree = "<group>"; };
 		APP04 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		APP05 /* WordMem.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WordMem.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -244,6 +246,7 @@
 				SHRD21 /* ImportFlowLayout.swift */,
 				SHRD24 /* ImportContextViews.swift */,
 				SHRD27 /* ImportSelectionViews.swift */,
+				TRN02 /* ImportCandidateTranslationModifier.swift */,
 			);
 			path = Import;
 			sourceTree = "<group>";
@@ -465,6 +468,7 @@
 				SHRD20 /* ImportFlowLayout.swift in Sources */,
 				SHRD23 /* ImportContextViews.swift in Sources */,
 				SHRD26 /* ImportSelectionViews.swift in Sources */,
+				TRN01 /* ImportCandidateTranslationModifier.swift in Sources */,
 				CAL01 /* CalendarChallengeService.swift in Sources */,
 				CAL03 /* CalendarChallengeViews.swift in Sources */,
 				CAL07 /* CalendarChallengeFlowViews.swift in Sources */,

@@ -1,6 +1,7 @@
 import SwiftData
 
 import SwiftUI
+import Translation
 
 struct TextImportView: View {
     let dictionary: any SystemDictionaryAuthorizing
@@ -14,6 +15,9 @@ struct TextImportView: View {
     @State private var isSaving = false
     @State private var errorMessage: String?
     @State private var advisorToken = UUID()
+    @State private var translationConfiguration: TranslationSession.Configuration?
+    @State private var translations: [String: String] = [:]
+    @State private var isTranslating = false
 
 #if DEBUG
     init(
@@ -80,7 +84,9 @@ struct TextImportView: View {
                 .scrollBounceBehavior(.basedOnSize)
 
                 ImportPrimaryCTA(
-                    title: isSaving ? "正在导入" : "导入 \(selectedWords.count) 个单词",
+                    title: isTranslating
+                        ? "正在翻译…"
+                        : (isSaving ? "正在导入" : "导入 \(selectedWords.count) 个单词"),
                     isLoading: isSaving,
                     action: importSelectedWords
                 )
@@ -88,7 +94,7 @@ struct TextImportView: View {
                 .padding(.top, 10)
                 .padding(.bottom, 14)
                 .background(.bar)
-                .disabled(selectedWords.isEmpty || isSaving)
+                .disabled(selectedWords.isEmpty || isTranslating || isSaving)
             }
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
             .navigationTitle("文本导入")
@@ -102,6 +108,12 @@ struct TextImportView: View {
             .onChange(of: sourceText, initial: true) {
                 refreshCandidates()
             }
+            .importCandidateTranslations(
+                chips: chips,
+                configuration: $translationConfiguration,
+                translations: $translations,
+                isTranslating: $isTranslating
+            )
         }
     }
 
@@ -127,6 +139,7 @@ struct TextImportView: View {
             ImportCandidateChipGrid(
                 chips: chips,
                 selection: $selection,
+                meanings: translations,
                 onRestoreOriginal: restoreOriginal
             )
         }
@@ -146,6 +159,8 @@ struct TextImportView: View {
             guard advisorToken == token else { return }
             chips = refreshedChips
             selection.updateChips(refreshedChips)
+            translationConfiguration = ImportCandidateTranslationModifier
+                .refreshedConfiguration(translationConfiguration)
         }
     }
 
@@ -153,6 +168,9 @@ struct TextImportView: View {
         let restored = chip.restoringOriginal()
         chips = chips.map { $0.id == chip.id ? restored : $0 }
         selection.updateChips(chips)
+        if let translation = translations[chip.id] {
+            translations[restored.id] = translation
+        }
     }
 
     private func importSelectedWords() {
@@ -168,7 +186,10 @@ struct TextImportView: View {
                 let submission = WordImportSubmission(
                     source: .text,
                     sourceText: sourceText,
-                    candidates: ImportCandidatePipeline.payloads(from: selection.selectedChips),
+                    candidates: ImportCandidatePipeline.payloads(
+                        from: selection.selectedChips,
+                        translations: translations
+                    ),
                     metadata: ["channel": WordImportSource.text.rawValue]
                 )
                 let outcomes = try await repository.importSubmission(

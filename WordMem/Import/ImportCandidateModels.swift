@@ -332,6 +332,22 @@ extension ImportCandidatePipeline {
         )
     }
 
+    static func payloads(
+        from chips: [ImportCandidateChip],
+        translations: [String: String]
+    ) -> [WordImportCandidatePayload] {
+        chips.map { chip in
+            var payload = payload(from: chip)
+            if let translation = translations[chip.id]?
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+                !translation.isEmpty
+            {
+                payload.translation = translation
+            }
+            return payload
+        }
+    }
+
     static func payloads(from chips: [ImportCandidateChip]) -> [WordImportCandidatePayload] {
         chips.map(payload(from:))
     }
