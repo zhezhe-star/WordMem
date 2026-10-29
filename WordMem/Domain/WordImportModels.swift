@@ -16,7 +16,7 @@ final class WordImportContext {
     @Relationship var entry: WordEntry?
 
     var source: WordImportSource {
-        get { WordImportSource(rawValue: sourceRawValue) ?? .manual }
+        get { WordImportSource(rawValue: sourceRawValue) ?? .text }
         set { sourceRawValue = newValue.rawValue }
     }
 

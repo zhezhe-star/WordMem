@@ -3,7 +3,6 @@ import SwiftUI
 import UIKit
 
 enum WordImportSheet: String, CaseIterable, Identifiable {
-    case manual
     case image
     case text
 
@@ -11,7 +10,6 @@ enum WordImportSheet: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .manual: "手动添加"
         case .image: "图片导入"
         case .text: "文本导入"
         }
@@ -19,7 +17,6 @@ enum WordImportSheet: String, CaseIterable, Identifiable {
 
     var systemImage: String {
         switch self {
-        case .manual: "square.and.pencil"
         case .image: "photo.on.rectangle"
         case .text: "text.quote"
         }

@@ -94,7 +94,7 @@ final class CanonicalCleanResetTests: XCTestCase {
             metadata: ["originalWord": "orig", "originalKey": "restoredadvisorkey"]
         )
         let submission = WordImportSubmission(
-            source: .manual, sourceText: "blurble", candidates: [unavailable, restored]
+            source: .text, sourceText: "blurble", candidates: [unavailable, restored]
         )
         let outcomes = try await repository.importSubmission(submission, using: dictionary)
         XCTAssertTrue(outcomes.isEmpty)
@@ -272,6 +272,29 @@ final class CanonicalCleanResetTests: XCTestCase {
         XCTAssertEqual(selection.selectedCount, 0)
     }
 
+    func testDefaultTranslationSelectionStartsWithImportableWordsSelected() {
+        let availableAdvice = ImportWordAdvice(
+            originalText: "give", originalKey: "give", context: nil, lemma: nil,
+            spellingCorrection: nil, finalText: "give", finalKey: "give",
+            isDictionaryAvailable: true, isOriginalDictionaryAvailable: true
+        )
+        let unavailableAdvice = ImportWordAdvice(
+            originalText: "blurble", originalKey: "blurble", context: nil, lemma: nil,
+            spellingCorrection: nil, finalText: "blurble", finalKey: "blurble",
+            isDictionaryAvailable: false, isOriginalDictionaryAvailable: false
+        )
+        let chips = [
+            ImportCandidateChip(id: "give", text: "give", sourceOrder: 0, advice: availableAdvice),
+            ImportCandidateChip(id: "blurble", text: "blurble", sourceOrder: 1, advice: unavailableAdvice),
+        ]
+
+        let selection = TranslationProviderSelection.initial(for: chips)
+
+        XCTAssertTrue(selection.isSelected("give"))
+        XCTAssertFalse(selection.isSelected("blurble"))
+        XCTAssertEqual(selection.selectedCount, 1)
+    }
+
     func testCandidatePayloadOmitsDerivedDictionaryAvailability() {
         let advice = ImportWordAdvice(
             originalText: "gave", originalKey: "gave", context: nil, lemma: "give",
@@ -284,6 +307,11 @@ final class CanonicalCleanResetTests: XCTestCase {
 
         XCTAssertNil(payload.metadata["dictionaryAvailable"])
         XCTAssertNil(payload.metadata["originalDictionaryAvailable"])
+    }
+
+    func testImportSheetMergesManualAddIntoTextImport() {
+        XCTAssertEqual(WordImportSheet.allCases, [.image, .text])
+        XCTAssertEqual(WordImportSheet.text.title, "文本导入")
     }
 
     func testLegacySwiftDataStorePathIsSeparatedFromNativeV3Store() {
