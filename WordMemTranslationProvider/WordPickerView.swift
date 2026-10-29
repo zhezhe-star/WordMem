@@ -221,7 +221,7 @@ struct WordPickerView: View {
             let preparedChips = await ImportCandidatePipeline.translationChips(from: sourceText)
             guard advisorToken == token else { return }
             advisorChips = preparedChips
-            selection = ImportChipSelection(chips: preparedChips)
+            selection = TranslationProviderSelection.initial(for: preparedChips)
             guard !preparedChips.isEmpty else {
                 isPreparingChips = false
                 return

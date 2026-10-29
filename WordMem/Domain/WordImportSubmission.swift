@@ -220,6 +220,14 @@ struct TranslationProviderSubmissionBuilder {
     }
 }
 
+enum TranslationProviderSelection {
+    static func initial(for chips: [ImportCandidateChip]) -> ImportChipSelection {
+        var selection = ImportChipSelection(chips: chips)
+        chips.filter(\.isImportable).forEach { selection.select($0.id) }
+        return selection
+    }
+}
+
 struct TranslationProviderSaveState: Equatable {
     private enum Phase: Equatable { case idle, saving, succeeded }
     private var phase = Phase.idle
