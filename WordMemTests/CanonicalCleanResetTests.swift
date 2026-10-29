@@ -286,6 +286,20 @@ final class CanonicalCleanResetTests: XCTestCase {
         XCTAssertNil(payloads.last?.translation)
     }
 
+    func testIdentityNeutralSuggestionIsNotReportedAsSpellingCorrection() {
+        let advice = ImportWordAdvice(
+            originalText: "can’t", originalKey: "cant", context: nil, lemma: nil,
+            spellingCorrection: "cant", finalText: "cant", finalKey: "cant",
+            isDictionaryAvailable: true, isOriginalDictionaryAvailable: true
+        )
+        let chip = ImportCandidateChip(id: "cant", text: "cant", sourceOrder: 0, advice: advice)
+        let payload = ImportCandidatePipeline.payload(from: chip)
+
+        XCTAssertFalse(advice.isSpellingCorrected)
+        XCTAssertNil(chip.spellingBadgeText)
+        XCTAssertNil(payload.metadata["spellingCorrection"])
+    }
+
     func testDefaultTranslationSelectionStartsWithImportableWordsSelected() {
         let availableAdvice = ImportWordAdvice(
             originalText: "give", originalKey: "give", context: nil, lemma: nil,

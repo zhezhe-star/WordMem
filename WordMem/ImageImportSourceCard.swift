@@ -3,7 +3,6 @@ import SwiftUI
 import UIKit
 
 struct ImageImportSourceCard: View {
-    let recognizedText: String
     let capturedImage: UIImage?
     let currentStep: ImportStep
     let isRecognizing: Bool
@@ -13,12 +12,19 @@ struct ImageImportSourceCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            ImportContextCard(
-                title: "图片原文",
-                text: recognizedText.isEmpty ? "识别后在这里显示原文。" : recognizedText,
-                thumbnail: capturedImage
-            ) {
-                accessory
+            Group {
+                if let capturedImage {
+                    imagePreview(capturedImage)
+                } else {
+                    emptyPreview
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(16)
+            .background(.regularMaterial, in: .rect(cornerRadius: 22))
+            .overlay {
+                RoundedRectangle(cornerRadius: 22)
+                    .strokeBorder(.white.opacity(0.16), lineWidth: 0.5)
             }
 
             if isRecognizing {
@@ -27,12 +33,34 @@ struct ImageImportSourceCard: View {
         }
     }
 
-    @ViewBuilder
-    private var accessory: some View {
-        if currentStep == .content {
+    private func imagePreview(_ image: UIImage) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFit()
+                .frame(maxWidth: .infinity, maxHeight: 340)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .accessibilityLabel("所选原始图片")
+
+            if currentStep == .content {
+                sourceActions
+            } else {
+                reselectionActions
+            }
+        }
+    }
+
+    private var emptyPreview: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Label("原始图片", systemImage: "photo")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            Text("选择或拍摄一张图片，WordMem 会在本机识别英文候选词。")
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(.secondary)
+
             sourceActions
-        } else {
-            reselectionActions
         }
     }
 

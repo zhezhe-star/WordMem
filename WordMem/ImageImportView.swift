@@ -77,11 +77,10 @@ struct ImageImportView: View {
                         ImportStepHeader(
                             currentStep: currentStep,
                             title: "图片导入",
-                            subtitle: hasImage ? "确认原文后，挑选要记的单词。" : "选择图片，本机识别英文后挑选单词。"
+                            subtitle: hasImage ? "确认原图后，挑选要记的单词。" : "选择图片，本机识别英文后挑选单词。"
                         )
 
                         ImageImportSourceCard(
-                            recognizedText: recognizedText,
                             capturedImage: capturedImage,
                             currentStep: currentStep,
                             isRecognizing: isRecognizing,
