@@ -105,11 +105,7 @@ struct ImportWordAdvice: Equatable, Hashable, Sendable {
     }
 
     var isSpellingCorrected: Bool {
-        guard let spellingCorrection else { return false }
-        return spellingCorrection.compare(
-            originalText,
-            options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive]
-        ) != .orderedSame
+        spellingCorrection != nil && finalKey != originalKey
     }
 }
 
@@ -157,7 +153,16 @@ struct ImportWordAdvisor: Sendable {
                 .replacingOccurrences(of: "'", with: "")
             guard !originalKey.isEmpty else { continue }
 
-            let correction = await spellingSuggester.correction(for: candidate.text)
+            let suggestedCorrection = await spellingSuggester.correction(for: candidate.text)
+            let suggestedCorrectionKey = suggestedCorrection.map {
+                WordInputNormalizer.normalizedKey(from: $0)
+                    .replacingOccurrences(of: "'", with: "")
+            } ?? ""
+            let correction = suggestedCorrection.flatMap { suggestion in
+                !suggestedCorrectionKey.isEmpty && suggestedCorrectionKey != originalKey
+                    ? suggestion
+                    : nil
+            }
             let lemmaSource = correction ?? candidate.text
             let lemma = await lemmaProvider.lemma(for: lemmaSource, context: context)
             let finalText = lemma ?? lemmaSource
@@ -330,6 +335,22 @@ extension ImportCandidatePipeline {
             normalizedKey: chip.id,
             metadata: metadata
         )
+    }
+
+    static func payloads(
+        from chips: [ImportCandidateChip],
+        translations: [String: String]
+    ) -> [WordImportCandidatePayload] {
+        chips.map { chip in
+            var payload = payload(from: chip)
+            if let translation = translations[chip.id]?
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+                !translation.isEmpty
+            {
+                payload.translation = translation
+            }
+            return payload
+        }
     }
 
     static func payloads(from chips: [ImportCandidateChip]) -> [WordImportCandidatePayload] {
