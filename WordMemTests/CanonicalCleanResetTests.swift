@@ -222,7 +222,7 @@ final class CanonicalCleanResetTests: XCTestCase {
             .filter { !$0.isEmpty && !$0.hasPrefix("$") })
         let expected: Set<String> = [
             "id", "localeIdentifier", "normalizedKey", "headword", "originalText",
-            "translation", "example", "note",
+            "translation", "example", "note", "phonetic",
             "createdAt", "updatedAt",
         ]
         XCTAssertEqual(names, expected)
@@ -285,6 +285,21 @@ final class CanonicalCleanResetTests: XCTestCase {
         let words = try context.fetch(FetchDescriptor<WordEntry>()).compactMap(\.calendarWord)
         XCTAssertEqual(words.map(\.word), ["give"])
         XCTAssertEqual(words.first?.translation, "给")
+    }
+
+    func testOptionalPhoneticIsLocalWordMetadata() throws {
+        let context = try makeContext()
+        context.insert(WordEntry(
+            normalizedKey: "give",
+            headword: "give",
+            originalText: "give",
+            translation: "给",
+            phonetic: "ɡɪv"
+        ))
+        try context.save()
+
+        let entry = try XCTUnwrap(try context.fetch(FetchDescriptor<WordEntry>()).first)
+        XCTAssertEqual(entry.phonetic, "ɡɪv")
     }
 
     func testCandidateSelectionDefaultsToNone() {

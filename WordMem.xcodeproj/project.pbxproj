@@ -21,6 +21,7 @@
 		SHRD14 /* ImportCandidateModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = SHRD11 /* ImportCandidateModels.swift */; };
 		TRN01 /* ImportCandidateTranslationModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = TRN02 /* ImportCandidateTranslationModifier.swift */; };
 		FRM01 /* OCRTextFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FRM02 /* OCRTextFormatter.swift */; };
+		WPV01 /* WordPresentationViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = WPV02 /* WordPresentationViews.swift */; };
 		APP01 /* WordMemApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP02 /* WordMemApp.swift */; };
 		APP03 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP04 /* ContentView.swift */; };
 		APP15 /* WordData.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP16 /* WordData.swift */; };
@@ -74,6 +75,7 @@
 		SHRD11 /* ImportCandidateModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportCandidateModels.swift; sourceTree = "<group>"; };
 		TRN02 /* ImportCandidateTranslationModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportCandidateTranslationModifier.swift; sourceTree = "<group>"; };
 		FRM02 /* OCRTextFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OCRTextFormatter.swift; sourceTree = "<group>"; };
+		WPV02 /* WordPresentationViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordPresentationViews.swift; sourceTree = "<group>"; };
 		APP02 /* WordMemApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordMemApp.swift; sourceTree = "<group>"; };
 		APP04 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		APP05 /* WordMem.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WordMem.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -186,6 +188,7 @@
 			children = (
 				APP02 /* WordMemApp.swift */,
 				APP04 /* ContentView.swift */,
+				WPV02 /* WordPresentationViews.swift */,
 				SHRD13 /* Import */,
 				IMP08 /* WordImportViews.swift */,
 				SHRD31 /* TextImportView.swift */,
@@ -466,6 +469,7 @@
 				APP01 /* WordMemApp.swift in Sources */,
 				STORE01 /* WordMemStore.swift in Sources */,
 				APP03 /* ContentView.swift in Sources */,
+				WPV01 /* WordPresentationViews.swift in Sources */,
 				SHRD10 /* ImportCandidateModels.swift in Sources */,
 				OCR01 /* OCRTextSanitizer.swift in Sources */,
 				SHRD20 /* ImportFlowLayout.swift in Sources */,
