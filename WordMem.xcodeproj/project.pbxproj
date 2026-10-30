@@ -22,6 +22,7 @@
 		TRN01 /* ImportCandidateTranslationModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = TRN02 /* ImportCandidateTranslationModifier.swift */; };
 		FRM01 /* OCRTextFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FRM02 /* OCRTextFormatter.swift */; };
 		WPV01 /* WordPresentationViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = WPV02 /* WordPresentationViews.swift */; };
+		WPV03 /* WordPresentationViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = WPV02 /* WordPresentationViews.swift */; };
 		APP01 /* WordMemApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP02 /* WordMemApp.swift */; };
 		APP03 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP04 /* ContentView.swift */; };
 		APP15 /* WordData.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP16 /* WordData.swift */; };
@@ -538,6 +539,7 @@
 				SHRD22 /* ImportFlowLayout.swift in Sources */,
 				SHRD25 /* ImportContextViews.swift in Sources */,
 				SHRD28 /* ImportSelectionViews.swift in Sources */,
+				WPV03 /* WordPresentationViews.swift in Sources */,
 				SUB13 /* WordImportSubmission.swift in Sources */,
 				TPR09 /* WordData.swift in Sources */,
 				TPR10 /* LocalStorageManager.swift in Sources */,

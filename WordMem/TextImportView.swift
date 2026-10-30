@@ -148,6 +148,7 @@ struct TextImportView: View {
                 chips: chips,
                 selection: $selection,
                 meanings: translations,
+                isTranslating: isTranslating,
                 onRestoreOriginal: restoreOriginal
             )
         }

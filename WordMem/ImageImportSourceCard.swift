@@ -3,6 +3,7 @@ import SwiftUI
 import UIKit
 
 struct ImageImportSourceCard: View {
+    let sourceText: String
     let capturedImage: UIImage?
     let currentStep: ImportStep
     let isRecognizing: Bool
@@ -12,19 +13,17 @@ struct ImageImportSourceCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Group {
-                if let capturedImage {
-                    imagePreview(capturedImage)
-                } else {
-                    emptyPreview
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(16)
-            .background(.regularMaterial, in: .rect(cornerRadius: 22))
-            .overlay {
-                RoundedRectangle(cornerRadius: 22)
-                    .strokeBorder(.white.opacity(0.16), lineWidth: 0.5)
+            if let capturedImage {
+                imagePreview(sourceText, capturedImage)
+            } else {
+                emptyPreview
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(16)
+                    .background(.regularMaterial, in: .rect(cornerRadius: 22))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 22)
+                            .strokeBorder(.white.opacity(0.16), lineWidth: 0.5)
+                    }
             }
 
             if isRecognizing {
@@ -33,13 +32,17 @@ struct ImageImportSourceCard: View {
         }
     }
 
-    private func imagePreview(_ image: UIImage) -> some View {
+    private func imagePreview(_ sourceText: String, _ image: UIImage) -> some View {
         VStack(alignment: .leading, spacing: 14) {
+            ImportSourceTextCard(title: "图片原文", text: sourceText) {
+                EmptyView()
+            }
+
             Image(uiImage: image)
                 .resizable()
                 .scaledToFit()
-                .frame(maxWidth: .infinity, maxHeight: 340)
-                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .frame(maxWidth: .infinity, maxHeight: 240)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
                 .accessibilityLabel("所选原始图片")
 
             if currentStep == .content {
@@ -84,7 +87,7 @@ struct ImageImportSourceCard: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)
-            .tint(.blue)
+            .tint(WordMemDesign.accent)
             .disabled(isRecognizing || isSaving)
         }
     }
@@ -109,7 +112,7 @@ struct ImageImportSourceCard: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)
-            .tint(.blue)
+            .tint(WordMemDesign.accent)
             .disabled(isRecognizing || isSaving)
         }
     }

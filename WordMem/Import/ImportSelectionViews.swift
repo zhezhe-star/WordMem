@@ -5,6 +5,7 @@ struct ImportCandidateChipGrid: View {
   let chips: [ImportCandidateChip]
   @Binding var selection: ImportChipSelection
   var meanings: [String: String] = [:]
+  var isTranslating = false
   var onRestoreOriginal: ((ImportCandidateChip) -> Void)? = nil
   @State private var sections: [ImportCandidateSection] = []
 
@@ -26,17 +27,21 @@ struct ImportCandidateChipGrid: View {
     VStack(alignment: .leading, spacing: 10) {
       if let title = section.title {
         Text(title)
-          .font(.caption.weight(.semibold))
+          .font(.footnote.weight(.semibold))
           .foregroundStyle(.secondary)
           .accessibilityAddTraits(.isHeader)
       }
 
-      FlowLayout(spacing: 9) {
+      LazyVGrid(
+        columns: [GridItem(.adaptive(minimum: 168), spacing: WordMemDesign.cardSpacing)],
+        spacing: WordMemDesign.cardSpacing
+      ) {
         ForEach(section.chips) { chip in
           ImportCandidateChipButton(
             chip: chip,
             isSelected: selection.isSelected(chip.id),
             meaning: meanings[chip.id],
+            isTranslating: isTranslating,
             onRestoreOriginal: onRestoreOriginal
           ) {
             selection.toggle(chip.id)
@@ -51,34 +56,30 @@ private struct ImportCandidateChipButton: View {
   let chip: ImportCandidateChip
   let isSelected: Bool
   let meaning: String?
+  let isTranslating: Bool
   let onRestoreOriginal: ((ImportCandidateChip) -> Void)?
   let action: () -> Void
 
-  private var detailText: String? {
-    guard let meaning, !meaning.isEmpty else { return nil }
-    return meaning
-  }
-
   private var labelColor: Color {
-    isSelected ? .blue : .primary
+    isSelected ? WordMemDesign.accent : .primary
   }
 
   private var detailColor: AnyShapeStyle {
-    isSelected ? AnyShapeStyle(Color.blue.opacity(0.82)) : AnyShapeStyle(.secondary)
+    isSelected ? AnyShapeStyle(WordMemDesign.accent.opacity(0.86)) : AnyShapeStyle(.secondary)
   }
 
   private var backgroundShape: AnyShapeStyle {
     isSelected
-      ? AnyShapeStyle(Color.blue.opacity(0.13))
-      : AnyShapeStyle(Color(.secondarySystemBackground))
+      ? AnyShapeStyle(WordMemDesign.accent.opacity(0.12))
+      : AnyShapeStyle(Color(.secondarySystemGroupedBackground))
   }
 
   private var strokeColor: Color {
-    isSelected ? .blue.opacity(0.5) : Color(uiColor: .separator).opacity(0.5)
+    isSelected ? WordMemDesign.accent.opacity(0.48) : Color(uiColor: .separator).opacity(0.32)
   }
 
   private var iconColor: AnyShapeStyle {
-    isSelected ? AnyShapeStyle(Color.blue) : AnyShapeStyle(.tertiary)
+    isSelected ? AnyShapeStyle(WordMemDesign.accent) : AnyShapeStyle(.tertiary)
   }
 
   var body: some View {
@@ -103,7 +104,7 @@ private struct ImportCandidateChipButton: View {
           }
         } label: {
           Text("还原原拼写")
-            .font(.caption2.weight(.semibold))
+            .font(.caption.weight(.semibold))
             .padding(.horizontal, 8)
             .padding(.vertical, 6)
             .background(Color.orange.opacity(0.13), in: .capsule)
@@ -117,43 +118,54 @@ private struct ImportCandidateChipButton: View {
   }
 
   private var chipLabel: some View {
-    HStack(spacing: 6) {
-      Text(chip.text)
-        .font(.callout.weight(isSelected ? .semibold : .regular))
-        .lineLimit(1)
+    HStack(alignment: .center, spacing: 10) {
+      Capsule()
+        .fill(isSelected ? WordMemDesign.accent : Color(uiColor: .separator).opacity(0.4))
+        .frame(width: 3, height: 38)
 
-      if let detailText {
-        Text(detailText)
-          .font(.caption2)
-          .foregroundStyle(detailColor)
+      VStack(alignment: .leading, spacing: 5) {
+        Text(chip.text)
+          .font(.callout.weight(isSelected ? .semibold : .medium))
+          .foregroundStyle(labelColor)
           .lineLimit(1)
-      }
 
-      if let lemmaText = chip.lemmaBadgeText {
-        adviceBadge(lemmaText, color: .indigo)
-      }
+        Text(translationText)
+          .font(.caption)
+          .foregroundStyle(detailColor)
+          .lineLimit(2)
 
-      if let spellingText = chip.spellingBadgeText {
-        adviceBadge(spellingText, color: .orange)
-      }
-
-      if let availabilityText = chip.availabilityBadgeText {
-        adviceBadge(availabilityText, color: .red)
+        if chip.lemmaBadgeText != nil || chip.spellingBadgeText != nil || chip.availabilityBadgeText != nil {
+          HStack(spacing: 5) {
+            if let lemmaText = chip.lemmaBadgeText {
+              adviceBadge(lemmaText, color: .indigo)
+            }
+            if let spellingText = chip.spellingBadgeText {
+              adviceBadge(spellingText, color: .orange)
+            }
+            if let availabilityText = chip.availabilityBadgeText {
+              adviceBadge(availabilityText, color: .red)
+            }
+          }
+        }
       }
 
       Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
         .font(.footnote)
         .foregroundStyle(iconColor)
     }
-    .padding(.horizontal, 14)
-    .padding(.vertical, 11)
-    .foregroundStyle(labelColor)
-    .background(backgroundShape, in: .capsule)
+    .padding(12)
+    .background(backgroundShape, in: .rect(cornerRadius: 14))
     .overlay {
-      Capsule()
-        .strokeBorder(strokeColor, lineWidth: 1)
+      RoundedRectangle(cornerRadius: 14)
+        .strokeBorder(strokeColor, lineWidth: isSelected ? 1.2 : 0.8)
     }
-    .contentShape(.capsule)
+    .frame(maxWidth: .infinity, minHeight: WordMemDesign.minimumTouchTarget, alignment: .leading)
+    .contentShape(.rect(cornerRadius: 14))
+  }
+
+  private var translationText: String {
+    if let meaning, !meaning.isEmpty { return meaning }
+    return isTranslating ? "翻译中…" : "暂无翻译"
   }
 
   private var accessibilityLabel: String {
@@ -229,7 +241,7 @@ struct ImportPrimaryCTA: View {
       .padding(.vertical, 15)
     }
     .buttonStyle(.borderedProminent)
-    .tint(.blue)
+    .tint(WordMemDesign.accent)
     .disabled(isLoading)
     .accessibilityElement(children: .ignore)
     .accessibilityLabel(title)

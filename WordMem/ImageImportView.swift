@@ -82,6 +82,7 @@ struct ImageImportView: View {
                         )
 
                         ImageImportSourceCard(
+                            sourceText: recognizedText,
                             capturedImage: capturedImage,
                             currentStep: currentStep,
                             isRecognizing: isRecognizing,
@@ -185,6 +186,7 @@ struct ImageImportView: View {
                 chips: chips,
                 selection: $selection,
                 meanings: translations,
+                isTranslating: isTranslating,
                 onRestoreOriginal: restoreOriginal
             )
         }
