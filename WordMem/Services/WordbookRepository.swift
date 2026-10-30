@@ -25,13 +25,16 @@ enum WordImportError: Error, Equatable {
 struct WordbookRepository {
     private let modelContext: ModelContext
     private let saveAction: @MainActor (ModelContext) throws -> Void
+    private let phoneticProvider: any EnglishPhoneticProviding
 
     init(
         modelContext: ModelContext,
-        save saveAction: (@MainActor (ModelContext) throws -> Void)? = nil
+        save saveAction: (@MainActor (ModelContext) throws -> Void)? = nil,
+        phoneticProvider: any EnglishPhoneticProviding = CMUDictionaryPhoneticProvider.shared
     ) {
         self.modelContext = modelContext
         self.saveAction = saveAction ?? { try $0.save() }
+        self.phoneticProvider = phoneticProvider
     }
 
     func importSubmission(
@@ -64,6 +67,7 @@ struct WordbookRepository {
                 ? true
                 : await dictionary.hasDefinition(forTerm: originalKey)
             guard originalAvailable else { continue }
+            let phonetic = await phoneticProvider.phonetic(for: candidate.normalizedKey)
 
             var metadata = submission.mergedMetadata(for: candidate)
             metadata["canonicalKey"] = candidate.normalizedKey
@@ -71,6 +75,9 @@ struct WordbookRepository {
 
             if let existing = try entry(locale: submission.locale, key: candidate.normalizedKey) {
                 apply(candidate, to: existing)
+                if existing.phonetic?.isEmpty != false {
+                    existing.phonetic = phonetic
+                }
                 insertContext(
                     entry: existing, candidate: candidate, submission: submission,
                     metadata: metadata
@@ -82,6 +89,7 @@ struct WordbookRepository {
                     normalizedKey: candidate.normalizedKey,
                     headword: candidate.text,
                     originalText: candidate.metadata["originalWord"] ?? candidate.text,
+                    phonetic: phonetic,
                 )
                 apply(candidate, to: entry)
                 modelContext.insert(entry)

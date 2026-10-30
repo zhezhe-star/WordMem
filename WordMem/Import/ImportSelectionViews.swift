@@ -32,10 +32,7 @@ struct ImportCandidateChipGrid: View {
           .accessibilityAddTraits(.isHeader)
       }
 
-      LazyVGrid(
-        columns: [GridItem(.adaptive(minimum: 168), spacing: WordMemDesign.cardSpacing)],
-        spacing: WordMemDesign.cardSpacing
-      ) {
+      LazyVStack(spacing: WordMemDesign.cardSpacing) {
         ForEach(section.chips) { chip in
           ImportCandidateChipButton(
             chip: chip,
@@ -127,12 +124,12 @@ private struct ImportCandidateChipButton: View {
         Text(chip.text)
           .font(.callout.weight(isSelected ? .semibold : .medium))
           .foregroundStyle(labelColor)
-          .lineLimit(1)
+          .fixedSize(horizontal: false, vertical: true)
 
         Text(translationText)
           .font(.caption)
           .foregroundStyle(detailColor)
-          .lineLimit(2)
+          .fixedSize(horizontal: false, vertical: true)
 
         if chip.lemmaBadgeText != nil || chip.spellingBadgeText != nil || chip.availabilityBadgeText != nil {
           HStack(spacing: 5) {
@@ -183,7 +180,6 @@ private struct ImportCandidateChipButton: View {
       .padding(.horizontal, 6)
       .padding(.vertical, 3)
       .background(color.opacity(0.11), in: .capsule)
-      .lineLimit(1)
   }
 }
 

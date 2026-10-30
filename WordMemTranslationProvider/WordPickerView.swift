@@ -89,6 +89,11 @@ struct WordPickerView: View {
         HStack {
             Button("取消", action: onCancel)
                 .font(.body.weight(.semibold))
+                .frame(
+                    minWidth: WordMemDesign.minimumTouchTarget,
+                    minHeight: WordMemDesign.minimumTouchTarget,
+                    alignment: .leading
+                )
 
             Spacer()
 
@@ -221,7 +226,7 @@ struct WordPickerView: View {
             let preparedChips = await ImportCandidatePipeline.translationChips(from: sourceText)
             guard advisorToken == token else { return }
             advisorChips = preparedChips
-            selection = TranslationProviderSelection.initial(for: preparedChips)
+            selection = ImportChipSelection(chips: preparedChips)
             guard !preparedChips.isEmpty else {
                 isPreparingChips = false
                 return
@@ -274,10 +279,15 @@ struct WordPickerView: View {
             let result = saveCoordinator.save(
                 submission,
                 storage: storage,
-                onSaved: onSave
+                onSaved: {}
             )
 
-            if case .completed(let error) = result {
+            if case .completed(nil) = result {
+                await Task.yield()
+                onSave()
+                return
+            }
+            if case .completed(let error?) = result {
                 persistenceError = error
             }
             isPreparingSave = false

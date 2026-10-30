@@ -216,10 +216,12 @@ struct WordEntryDetailView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
-                InfoMetaCard(title: "词条元数据") {
-                    metaRow("输入原词", entry.originalText)
-                    metaRow("规范词键", entry.normalizedKey)
-                    metaRow("语言", entry.localeIdentifier)
+                if entry.originalText.localizedCaseInsensitiveCompare(entry.headword) != .orderedSame {
+                    InfoMetaCard(title: "输入原词") {
+                        Text(entry.originalText)
+                            .font(.body)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
                 }
 
                 if let example = entry.example, !example.isEmpty {
@@ -291,18 +293,6 @@ struct WordEntryDetailView: View {
         .onDisappear { pronunciation.cancel() }
     }
 
-    private func metaRow(_ label: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(label)
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.tertiary)
-
-            Text(value)
-                .font(.footnote.monospaced())
-                .foregroundStyle(.secondary)
-                .textSelection(.enabled)
-        }
-    }
 }
 
 struct SourceEvidenceCard: View {

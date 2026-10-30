@@ -336,7 +336,7 @@ final class CanonicalCleanResetTests: XCTestCase {
         XCTAssertNil(payload.metadata["spellingCorrection"])
     }
 
-    func testDefaultTranslationSelectionStartsWithImportableWordsSelected() {
+    func testDefaultTranslationSelectionStartsWithNoWordsSelected() {
         let availableAdvice = ImportWordAdvice(
             originalText: "give", originalKey: "give", context: nil, lemma: nil,
             spellingCorrection: nil, finalText: "give", finalKey: "give",
@@ -352,11 +352,23 @@ final class CanonicalCleanResetTests: XCTestCase {
             ImportCandidateChip(id: "blurble", text: "blurble", sourceOrder: 1, advice: unavailableAdvice),
         ]
 
-        let selection = TranslationProviderSelection.initial(for: chips)
+        let selection = ImportChipSelection(chips: chips)
 
-        XCTAssertTrue(selection.isSelected("give"))
+        XCTAssertFalse(selection.isSelected("give"))
         XCTAssertFalse(selection.isSelected("blurble"))
-        XCTAssertEqual(selection.selectedCount, 1)
+        XCTAssertEqual(selection.selectedCount, 0)
+    }
+
+    func testCMUDictionaryPhoneticProviderMapsCommonWords() async {
+        let provider = CMUDictionaryPhoneticProvider.shared
+
+        let give = await provider.phonetic(for: "give")
+        let receive = await provider.phonetic(for: "RECEIVE")
+        let missing = await provider.phonetic(for: "definitelynotaword")
+
+        XCTAssertEqual(give, "ɡɪv")
+        XCTAssertEqual(receive, "rʌsiv")
+        XCTAssertNil(missing)
     }
 
     func testCandidatePayloadOmitsDerivedDictionaryAvailability() {

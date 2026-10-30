@@ -27,6 +27,8 @@
 		APP03 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP04 /* ContentView.swift */; };
 		APP15 /* WordData.swift in Sources */ = {isa = PBXBuildFile; fileRef = APP16 /* WordData.swift */; };
 		APP20 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = APP21 /* Assets.xcassets */; };
+		PHN01 /* EnglishPhoneticProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = PHN02 /* EnglishPhoneticProvider.swift */; };
+		PHN03 /* cmudict-0.7b in Resources */ = {isa = PBXBuildFile; fileRef = PHN04 /* cmudict-0.7b */; };
 		EXT01 /* WordMemShareExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = EXT02 /* WordMemShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		EXT03 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = EXT04 /* ShareViewController.swift */; };
 		EXT05 /* ShareTextExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = EXT06 /* ShareTextExtractor.swift */; };
@@ -110,6 +112,8 @@
 		MEM31 /* SystemDictionaryLookupService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemDictionaryLookupService.swift; sourceTree = "<group>"; };
 		MEM33 /* SystemDictionaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemDictionaryView.swift; sourceTree = "<group>"; };
 		PRN02 /* EnglishPronunciationPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnglishPronunciationPlayer.swift; sourceTree = "<group>"; };
+		PHN02 /* EnglishPhoneticProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnglishPhoneticProvider.swift; sourceTree = "<group>"; };
+		PHN04 /* cmudict-0.7b */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "Resources/cmudict-0.7b"; sourceTree = "<group>"; };
 		TEST04 /* WordMemTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WordMemTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		CAN01 /* CanonicalCleanResetTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAN02 /* CanonicalCleanResetTests.swift */; };
 		CAN02 /* CanonicalCleanResetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanonicalCleanResetTests.swift; sourceTree = "<group>"; };
@@ -204,6 +208,7 @@
 				APP16 /* WordData.swift */,
 				APP1A /* LocalStorageManager.swift */,
 				APP24 /* WordMem.entitlements */,
+				PHN04 /* cmudict-0.7b */,
 				APP21 /* Assets.xcassets */,
 				APP06 /* Info.plist */,
 			);
@@ -277,6 +282,7 @@
 				MEM18 /* WordbookRepository.swift */,
 				MEM31 /* SystemDictionaryLookupService.swift */,
 				PRN02 /* EnglishPronunciationPlayer.swift */,
+				PHN02 /* EnglishPhoneticProvider.swift */,
 				IMP06 /* VisionTextRecognitionService.swift */,
 			);
 			path = Services;
@@ -432,6 +438,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				APP20 /* Assets.xcassets in Resources */,
+				PHN03 /* cmudict-0.7b in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -495,6 +502,7 @@
 				MEM30 /* SystemDictionaryLookupService.swift in Sources */,
 				MEM32 /* SystemDictionaryView.swift in Sources */,
 				PRN01 /* EnglishPronunciationPlayer.swift in Sources */,
+				PHN01 /* EnglishPhoneticProvider.swift in Sources */,
 				APP15 /* WordData.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
