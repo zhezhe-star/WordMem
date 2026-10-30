@@ -21,7 +21,7 @@ actor CMUDictionaryPhoneticProvider: EnglishPhoneticProviding {
             pronunciations = Self.loadPronunciations(from: bundle)
         }
         guard let pronunciations, !word.isEmpty else { return nil }
-        return pronunciations[word]
+        return pronunciations[Self.normalizationKey(word)]
     }
 
     private static func loadPronunciations(from bundle: Bundle) -> [String: String]? {
@@ -45,6 +45,7 @@ actor CMUDictionaryPhoneticProvider: EnglishPhoneticProviding {
 
             let key = normalizationKey(rawWord)
             guard !key.isEmpty else { continue }
+            guard results[key] == nil else { continue }
             results[key] = phonemes.compactMap(ipa).joined()
         }
         return results.isEmpty ? nil : results
@@ -65,12 +66,12 @@ actor CMUDictionaryPhoneticProvider: EnglishPhoneticProviding {
         return switch base {
         case "AA": "ɑ"
         case "AE": "æ"
-        case "AH": base == "AH0" ? "ə" : "ʌ"
+        case "AH": phoneme == "AH0" ? "ə" : "ʌ"
         case "AO": "ɔ"
         case "AW": "aʊ"
         case "AY": "aɪ"
         case "EH": "ɛ"
-        case "ER": base == "ER0" ? "ɚ" : "ɝ"
+        case "ER": phoneme == "ER0" ? "ɚ" : "ɝ"
         case "EY": "eɪ"
         case "IH": "ɪ"
         case "IY": "i"

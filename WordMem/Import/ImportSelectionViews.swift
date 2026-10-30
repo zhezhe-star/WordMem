@@ -111,6 +111,13 @@ private struct ImportCandidateChipButton: View {
         .accessibilityLabel("还原原拼写 \(chip.advice?.originalText ?? chip.text)")
       }
       .padding(.vertical, 3)
+    } else {
+      chipLabel
+        .opacity(0.66)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityHint("系统词典未收录，不能导入")
+        .accessibilityAddTraits(.isStaticText)
     }
   }
 

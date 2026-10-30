@@ -364,10 +364,12 @@ final class CanonicalCleanResetTests: XCTestCase {
 
         let give = await provider.phonetic(for: "give")
         let receive = await provider.phonetic(for: "RECEIVE")
+        let lowercaseReceive = await provider.phonetic(for: "receive")
         let missing = await provider.phonetic(for: "definitelynotaword")
 
         XCTAssertEqual(give, "ɡɪv")
-        XCTAssertEqual(receive, "rʌsiv")
+        XCTAssertEqual(receive, "rəsiv")
+        XCTAssertEqual(lowercaseReceive, receive)
         XCTAssertNil(missing)
     }
 
