@@ -387,6 +387,37 @@ final class CanonicalCleanResetTests: XCTestCase {
         XCTAssertFalse(rawTokens.isEmpty)
         XCTAssertNotEqual(rawTokens, cleanTokens)
     }
+
+    func testOCRFormatterCreatesReadableParagraphs() {
+        let raw = """
+        12:32
+        5GA
+        Tailscale SSH: investigation and
+        remediation update.
+        Published October 26th, 2026.
+        We investigated the security             incident,
+        identified what was found, what we have done about
+        it, and what customers need to know.
+        https://tailscale.com/blog/ssh
+        ---
+        What we've found
+        """
+
+        let formatted = OCRTextFormatter.formattedText(from: raw)
+
+        XCTAssertEqual(
+            formatted,
+            """
+            Tailscale SSH: investigation and remediation update.
+
+            Published October 26th, 2026.
+
+            We investigated the security incident, identified what was found, what we have done about it, and what customers need to know.
+
+            What we've found
+            """
+        )
+    }
 }
 
 private struct FixedSystemDictionary: SystemDictionaryAuthorizing {

@@ -255,7 +255,7 @@ struct ImageImportView: View {
             let lines = try await recognitionService.recognizeText(in: preparedData)
             guard processingCoordinator.shouldCommit(activeToken) else { return }
             let rawText = lines.joined(separator: "\n")
-            let text = OCRTextSanitizer.sanitizedText(from: rawText)
+            let text = OCRTextFormatter.formattedText(from: rawText)
             guard !text.isEmpty else { throw WordImageImportError.noRecognizedText }
 
             let refreshedCandidates = EnglishWordCandidateSplitter.candidates(from: text)
