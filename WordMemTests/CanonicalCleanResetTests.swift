@@ -222,7 +222,7 @@ final class CanonicalCleanResetTests: XCTestCase {
             .filter { !$0.isEmpty && !$0.hasPrefix("$") })
         let expected: Set<String> = [
             "id", "localeIdentifier", "normalizedKey", "headword", "originalText",
-            "translation", "example", "note",
+            "translation", "example", "note", "phonetic",
             "createdAt", "updatedAt",
         ]
         XCTAssertEqual(names, expected)
@@ -253,6 +253,27 @@ final class CanonicalCleanResetTests: XCTestCase {
         XCTAssertEqual(entry.note, "Imported from translation card.")
     }
 
+    func testPhraseTranslationMetadataReachesImportContext() async throws {
+        let context = try makeContext()
+        let repository = WordbookRepository(modelContext: context)
+        let candidate = WordImportCandidatePayload(
+            text: "give",
+            normalizedKey: "give",
+            translation: "给"
+        )
+        let submission = WordImportSubmission(
+            source: .image,
+            sourceText: "Give me time.",
+            candidates: [candidate],
+            metadata: ["phraseTranslation": "给我一点时间。"]
+        )
+
+        _ = try await repository.importSubmission(submission, using: FixedSystemDictionary(available: ["give"]))
+
+        let importContext = try XCTUnwrap(try context.fetch(FetchDescriptor<WordImportContext>()).first)
+        XCTAssertEqual(importContext.metadata["phraseTranslation"], "给我一点时间。")
+    }
+
     func testCalendarUsesOnlyEntriesWithTranslation() throws {
         let context = try makeContext()
         context.insert(WordEntry(
@@ -264,6 +285,21 @@ final class CanonicalCleanResetTests: XCTestCase {
         let words = try context.fetch(FetchDescriptor<WordEntry>()).compactMap(\.calendarWord)
         XCTAssertEqual(words.map(\.word), ["give"])
         XCTAssertEqual(words.first?.translation, "给")
+    }
+
+    func testOptionalPhoneticIsLocalWordMetadata() throws {
+        let context = try makeContext()
+        context.insert(WordEntry(
+            normalizedKey: "give",
+            headword: "give",
+            originalText: "give",
+            translation: "给",
+            phonetic: "ɡɪv"
+        ))
+        try context.save()
+
+        let entry = try XCTUnwrap(try context.fetch(FetchDescriptor<WordEntry>()).first)
+        XCTAssertEqual(entry.phonetic, "ɡɪv")
     }
 
     func testCandidateSelectionDefaultsToNone() {
@@ -386,6 +422,37 @@ final class CanonicalCleanResetTests: XCTestCase {
         ).map(\.normalizedKey)
         XCTAssertFalse(rawTokens.isEmpty)
         XCTAssertNotEqual(rawTokens, cleanTokens)
+    }
+
+    func testOCRFormatterCreatesReadableParagraphs() {
+        let raw = """
+        12:32
+        5GA
+        Tailscale SSH: investigation and
+        remediation update.
+        Published October 26th, 2026.
+        We investigated the security             incident,
+        identified what was found, what we have done about
+        it, and what customers need to know.
+        https://tailscale.com/blog/ssh
+        ---
+        What we've found
+        """
+
+        let formatted = OCRTextFormatter.formattedText(from: raw)
+
+        XCTAssertEqual(
+            formatted,
+            """
+            Tailscale SSH: investigation and remediation update.
+
+            Published October 26th, 2026.
+
+            We investigated the security incident, identified what was found, what we have done about it, and what customers need to know.
+
+            What we've found
+            """
+        )
     }
 }
 

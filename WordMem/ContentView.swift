@@ -157,12 +157,22 @@ struct WordbookView: View {
         List {
             ForEach(words) { word in
                 NavigationLink(value: WordMemRoute.detail(word.id)) {
-                    WordRowView(entry: word)
+                    WordListCard(entry: word)
                 }
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(
+                        top: 6,
+                        leading: WordMemDesign.margin,
+                        bottom: 6,
+                        trailing: WordMemDesign.margin
+                    ))
             }
-            .onDelete(perform: deleteWords)
+                .onDelete(perform: deleteWords)
         }
-        .listStyle(.insetGrouped)
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .background(Color(.systemGroupedBackground))
     }
 
     private func deleteWords(at offsets: IndexSet) {
@@ -173,27 +183,6 @@ struct WordbookView: View {
             modelContext.rollback()
             alertMessage = "删除失败，请重试。"
         }
-    }
-}
-
-private struct WordRowView: View {
-    let entry: WordEntry
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(entry.headword)
-                    .font(.headline)
-            }
-
-            Text(entry.translation.isEmpty ? "本地翻译待补充" : entry.translation)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .lineLimit(2)
-
-        }
-        .padding(.vertical, 2)
-        .accessibilityElement(children: .combine)
     }
 }
 
@@ -211,46 +200,60 @@ struct WordEntryDetailView: View {
     }
 
     var body: some View {
-        List {
-            Section {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(entry.headword)
-                        .font(.largeTitle.bold())
-                    Text("规范词键：\(entry.normalizedKey)")
-                        .font(.caption.monospaced())
-                        .foregroundStyle(.secondary)
-                    Text("语言：\(entry.localeIdentifier)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                if entry.originalText.localizedCaseInsensitiveCompare(entry.headword) != .orderedSame {
-                    LabeledContent("输入", value: entry.originalText)
-                }
-                LabeledContent("本地翻译", value: entry.translation.isEmpty ? "待补充" : entry.translation)
-                if let example = entry.example, !example.isEmpty {
-                    LabeledContent("本地例句", value: example)
-                }
-                if let note = entry.note, !note.isEmpty {
-                    LabeledContent("本地笔记", value: note)
-                }
-            }
-
-            Section("词典详情") {
-                Button {
-                    isSystemDictionaryPresented = true
-                } label: {
-                    HStack {
-                        Label("在 Apple 词典中查看", systemImage: "character.book.closed")
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .foregroundStyle(.tertiary)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                WordDetailHeader(entry: entry, isSpeaking: pronunciation.isSpeaking) {
+                    if pronunciation.isSpeaking {
+                        pronunciation.cancel()
+                    } else {
+                        _ = pronunciation.play(entry.headword)
                     }
                 }
-                .accessibilityIdentifier("systemDictionaryCard")
-                .accessibilityLabel("在 Apple 系统词典中查看 \(entry.normalizedKey)")
 
-                VStack(alignment: .leading, spacing: 0) {
+                InfoMetaCard(title: "中文释义") {
+                    Text(entry.translation.isEmpty ? "暂无本地翻译" : entry.translation)
+                        .font(.title3.weight(.semibold))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                InfoMetaCard(title: "词条元数据") {
+                    metaRow("输入原词", entry.originalText)
+                    metaRow("规范词键", entry.normalizedKey)
+                    metaRow("语言", entry.localeIdentifier)
+                }
+
+                if let example = entry.example, !example.isEmpty {
+                    InfoMetaCard(title: "例句") {
+                        Text(example)
+                            .font(.body)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+
+                if let note = entry.note, !note.isEmpty {
+                    InfoMetaCard(title: "笔记") {
+                        Text(note)
+                            .font(.body)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+
+                InfoMetaCard(title: "词典详情") {
+                    Button {
+                        isSystemDictionaryPresented = true
+                    } label: {
+                        HStack {
+                            Label("在 Apple 词典中查看", systemImage: "character.book.closed")
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .foregroundStyle(.tertiary)
+                        }
+                        .frame(minHeight: WordMemDesign.minimumTouchTarget)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("systemDictionaryCard")
+                    .accessibilityLabel("在 Apple 系统词典中查看 \(entry.normalizedKey)")
+
                     switch dictionaryAvailability {
                     case .checking:
                         Text("正在检查 Apple 本地词典收录状态。")
@@ -260,18 +263,22 @@ struct WordEntryDetailView: View {
                         Text("Apple 本地词典未收录该词。")
                     }
                 }
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
 
-            if !contexts.isEmpty {
-                Section("导入背景") {
-                    ForEach(contexts) { context in
-                        WordImportContextView(context: context)
+                if !contexts.isEmpty {
+                    InfoMetaCard(title: "导入背景") {
+                        VStack(alignment: .leading, spacing: 16) {
+                            ForEach(contexts) { context in
+                                SourceEvidenceCard(context: context)
+                            }
+                        }
                     }
                 }
             }
+                .padding(.horizontal, WordMemDesign.margin)
+                .padding(.top, 8)
+                .padding(.bottom, 24)
         }
+            .background(Color(.systemGroupedBackground))
         .navigationTitle("单词详情")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $isSystemDictionaryPresented) {
@@ -283,42 +290,83 @@ struct WordEntryDetailView: View {
         }
         .onDisappear { pronunciation.cancel() }
     }
+
+    private func metaRow(_ label: String, _ value: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.tertiary)
+
+            Text(value)
+                .font(.footnote.monospaced())
+                .foregroundStyle(.secondary)
+                .textSelection(.enabled)
+        }
+    }
 }
 
-private struct WordImportContextView: View {
+struct SourceEvidenceCard: View {
     let context: WordImportContext
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 8) {
                 Label(context.source.displayName, systemImage: context.source.systemImage)
                     .font(.caption.weight(.semibold))
+
                 Spacer()
+
                 Text(context.createdAt, format: .dateTime.month().day().hour().minute())
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.tertiary)
             }
 
-            if let sourceText = context.sourceText, !sourceText.isEmpty {
+            if let sourceText = displaySourceText {
                 Text(sourceText)
-                    .font(.subheadline)
-                    .lineLimit(4)
+                    .font(.body)
+                    .lineLimit(8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            if let phraseTranslation = context.metadata["phraseTranslation"], !phraseTranslation.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("整段翻译")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+
+                    Text(phraseTranslation)
+                        .font(.subheadline)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .padding(12)
+                .background(Color(.tertiarySystemGroupedBackground), in: .rect(cornerRadius: 12))
             }
 
             if let selected = context.selectedCandidate {
                 Text("选择：\(selected)")
-                    .font(.caption)
+                    .font(.caption.weight(.medium))
                     .foregroundStyle(.secondary)
             }
 
-            if let imageData = context.imageData, !imageData.isEmpty, let image = UIImage(data: imageData) {
+            if let imageData = context.imageData,
+               !imageData.isEmpty,
+               let image = UIImage(data: imageData)
+            {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFit()
-                    .frame(maxHeight: 160)
-                    .clipShape(.rect(cornerRadius: 10))
+                    .frame(maxWidth: .infinity, maxHeight: 300)
+                    .clipShape(.rect(cornerRadius: 14))
+                    .accessibilityLabel("导入来源图片")
             }
         }
-        .padding(.vertical, 3)
+        .padding(WordMemDesign.cardPadding)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: WordMemDesign.cardRadius))
+    }
+
+    private var displaySourceText: String? {
+        let text = context.sourceText ?? context.recognizedText
+        return text?.isEmpty == false ? text : nil
     }
 }

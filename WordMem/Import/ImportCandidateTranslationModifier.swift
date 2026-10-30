@@ -3,9 +3,13 @@ import Translation
 
 /// Prepares one shared system-translation result for every imported candidate.
 struct ImportCandidateTranslationModifier: ViewModifier {
+    static let phraseIdentifier = "__wordmem.phrase__"
+
     let chips: [ImportCandidateChip]
+    let sourceText: String?
     @Binding var configuration: TranslationSession.Configuration?
     @Binding var translations: [String: String]
+    @Binding var phraseTranslation: String?
     @Binding var isTranslating: Bool
 
     static func refreshedConfiguration(
@@ -28,17 +32,29 @@ struct ImportCandidateTranslationModifier: ViewModifier {
 
     private func translateChips(with session: TranslationSession) async {
         let pendingChips = chips.filter { translations[$0.id]?.isEmpty != false }
-        guard !pendingChips.isEmpty else {
+        let trimmedSource = sourceText?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let needsPhrase = trimmedSource?.isEmpty == false
+            && phraseTranslation?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false
+
+        guard !pendingChips.isEmpty || needsPhrase else {
             isTranslating = false
             configuration = nil
             return
         }
 
         isTranslating = true
-        let requests = pendingChips.map { chip in
+        var requests = pendingChips.map { chip in
             TranslationSession.Request(
                 sourceText: chip.text,
                 clientIdentifier: chip.id
+            )
+        }
+        if needsPhrase, let trimmedSource {
+            requests.append(
+                TranslationSession.Request(
+                    sourceText: trimmedSource,
+                    clientIdentifier: Self.phraseIdentifier
+                )
             )
         }
 
@@ -48,7 +64,11 @@ struct ImportCandidateTranslationModifier: ViewModifier {
                       !identifier.isEmpty,
                       !response.targetText.isEmpty
                 else { continue }
-                translations[identifier] = response.targetText
+                if identifier == Self.phraseIdentifier {
+                    phraseTranslation = response.targetText
+                } else {
+                    translations[identifier] = response.targetText
+                }
             }
         } catch {
             // A failed optional enrichment must not block dictionary-backed import.
@@ -62,15 +82,19 @@ struct ImportCandidateTranslationModifier: ViewModifier {
 extension View {
     func importCandidateTranslations(
         chips: [ImportCandidateChip],
+        sourceText: String?,
         configuration: Binding<TranslationSession.Configuration?>,
         translations: Binding<[String: String]>,
+        phraseTranslation: Binding<String?>,
         isTranslating: Binding<Bool>
     ) -> some View {
         modifier(
             ImportCandidateTranslationModifier(
                 chips: chips,
+                sourceText: sourceText,
                 configuration: configuration,
                 translations: translations,
+                phraseTranslation: phraseTranslation,
                 isTranslating: isTranslating
             )
         )

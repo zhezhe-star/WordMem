@@ -161,6 +161,92 @@ struct ImportContextCard<Accessory: View>: View {
     }
 }
 
+struct ImportSourceTextCard<Accessory: View>: View {
+    let title: String
+    let text: String
+    @ViewBuilder var accessory: () -> Accessory
+
+    @State private var expansion: ImportContextExpansion
+
+    init(
+        title: String,
+        text: String,
+        @ViewBuilder accessory: @escaping () -> Accessory
+    ) {
+        self.title = title
+        self.text = text
+        self.accessory = accessory
+        _expansion = State(initialValue: ImportContextExpansion(text: text))
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label(title, systemImage: "text.alignleft")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            Text(text.isEmpty ? "内容准备好后显示原文。" : text)
+                .font(.body.weight(.medium))
+                .lineLimit(expansion.lineLimit)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            accessory()
+
+            if expansion.isExpandable {
+                Button {
+                    withAnimation(.snappy) { expansion.toggle() }
+                } label: {
+                    Label(
+                        expansion.isExpanded ? "收起原文" : "显示全部",
+                        systemImage: expansion.isExpanded ? "chevron.up" : "chevron.down"
+                    )
+                    .font(.footnote.weight(.semibold))
+                }
+                .buttonStyle(.plain)
+                .tint(WordMemDesign.accent)
+            }
+        }
+        .padding(WordMemDesign.cardPadding)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: WordMemDesign.cardRadius))
+        .accessibilityElement(children: .combine)
+    }
+}
+
+struct ImportPhraseTranslationCard: View {
+    let translation: String?
+    let isTranslating: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("整段翻译", systemImage: "text.badge.checkmark")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            if isTranslating {
+                HStack(spacing: 10) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("正在翻译原文…")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+            } else if let translation, !translation.isEmpty {
+                Text(translation)
+                    .font(.body.weight(.medium))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                Text("整段翻译暂不可用")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(16)
+        .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: WordMemDesign.cardRadius))
+        .accessibilityElement(children: .combine)
+    }
+}
+
 struct ImportSourceEditorCard: View {
     let title: String
     let placeholder: String

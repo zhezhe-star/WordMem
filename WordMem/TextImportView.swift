@@ -17,6 +17,7 @@ struct TextImportView: View {
     @State private var advisorToken = UUID()
     @State private var translationConfiguration: TranslationSession.Configuration?
     @State private var translations: [String: String] = [:]
+    @State private var phraseTranslation: String?
     @State private var isTranslating = false
 
 #if DEBUG
@@ -67,6 +68,13 @@ struct TextImportView: View {
                             text: $sourceText
                         )
 
+                        if !sourceText.isEmpty {
+                            ImportPhraseTranslationCard(
+                                translation: phraseTranslation,
+                                isTranslating: isTranslating && phraseTranslation == nil
+                            )
+                        }
+
                         if chips.isEmpty {
                             emptyState
                         } else {
@@ -110,8 +118,10 @@ struct TextImportView: View {
             }
             .importCandidateTranslations(
                 chips: chips,
+                sourceText: sourceText,
                 configuration: $translationConfiguration,
                 translations: $translations,
+                phraseTranslation: $phraseTranslation,
                 isTranslating: $isTranslating
             )
         }
@@ -140,6 +150,7 @@ struct TextImportView: View {
                 chips: chips,
                 selection: $selection,
                 meanings: translations,
+                isTranslating: isTranslating,
                 onRestoreOriginal: restoreOriginal
             )
         }
@@ -148,6 +159,7 @@ struct TextImportView: View {
     private func refreshCandidates() {
         let token = UUID()
         advisorToken = token
+        phraseTranslation = nil
         let context = sourceText
 
         Task {
@@ -190,7 +202,7 @@ struct TextImportView: View {
                         from: selection.selectedChips,
                         translations: translations
                     ),
-                    metadata: ["channel": WordImportSource.text.rawValue]
+                    metadata: phraseTranslationMetadata
                 )
                 let outcomes = try await repository.importSubmission(
                     submission,
@@ -202,6 +214,14 @@ struct TextImportView: View {
                 errorMessage = "批量导入失败，请重试。"
             }
         }
+    }
+
+    private var phraseTranslationMetadata: [String: String] {
+        var metadata = ["channel": WordImportSource.text.rawValue]
+        if let phraseTranslation, !phraseTranslation.isEmpty {
+            metadata["phraseTranslation"] = phraseTranslation
+        }
+        return metadata
     }
 }
 

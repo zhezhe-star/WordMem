@@ -13,6 +13,7 @@ final class WordEntry {
     var translation: String
     var example: String?
     var note: String?
+    var phonetic: String?
     var createdAt: Date
     var updatedAt: Date
 
@@ -25,6 +26,7 @@ final class WordEntry {
         translation: String = "",
         example: String? = nil,
         note: String? = nil,
+        phonetic: String? = nil,
         createdAt: Date = .now,
         updatedAt: Date = .now
     ) {
@@ -36,6 +38,7 @@ final class WordEntry {
         self.translation = translation
         self.example = example
         self.note = note
+        self.phonetic = phonetic
         self.createdAt = createdAt
         self.updatedAt = updatedAt
     }
