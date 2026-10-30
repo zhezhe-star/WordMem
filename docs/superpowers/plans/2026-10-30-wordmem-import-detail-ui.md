@@ -1,6 +1,6 @@
 # WordMem Import & Detail UX Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Rebuild import review, word detail, and word list presentation around readable source context, phrase translation, pronunciation, phonetic metadata, and consistent iOS cards.
 
@@ -33,10 +33,10 @@
 **Interfaces:**
 - Produces: `OCRTextFormatter.formattedText(from:) -> String`
 
-- [ ] Write failing tests proving clock/status/symbol noise removal, line merging, punctuation cleanup, and paragraph retention.
-- [ ] Implement deterministic OCR formatting using the existing sanitizer output.
-- [ ] Use formatted text for image import UI, candidate context, and submission source text.
-- [ ] Run the focused test suite and commit.
+- [x] Write failing tests proving clock/status/symbol noise removal, line merging, punctuation cleanup, and paragraph retention.
+- [x] Implement deterministic OCR formatting using the existing sanitizer output.
+- [x] Use formatted text for image import UI, candidate context, and submission source text.
+- [x] Run the focused test suite and commit.
 
 ### Task 2: Phrase translation and persistence
 
@@ -51,11 +51,11 @@
 - Produces: `ImportCandidateTranslationModifier.phraseIdentifier`
 - Produces: submission metadata key `phraseTranslation`
 
-- [ ] Add a failing repository test proving submission metadata reaches import context metadata.
-- [ ] Extend the shared translation modifier to translate source text in the same batch as candidate chips.
-- [ ] Pass phrase translation into submission metadata from text and image imports.
-- [ ] Show phrase translation state in import review UI.
-- [ ] Run focused and full tests, then commit.
+- [x] Add a failing repository test proving submission metadata reaches import context metadata.
+- [x] Extend the shared translation modifier to translate source text in the same batch as candidate chips.
+- [x] Pass phrase translation into submission metadata from text and image imports.
+- [x] Show phrase translation state in import review UI.
+- [x] Run focused and full tests, then commit.
 
 ### Task 3: Detail metadata and pronunciation
 
@@ -67,11 +67,11 @@
 **Interfaces:**
 - Produces: optional `WordEntry.phonetic: String?`
 
-- [ ] Add a failing test proving optional phonetic metadata persists.
-- [ ] Add optional phonetic without fabricating values.
-- [ ] Add a 44pt pronunciation button driven by `EnglishPronunciationPlayer`.
-- [ ] Add a generic `EN` language badge; no flags.
-- [ ] Run focused/full tests, then commit.
+- [x] Add a failing test proving optional phonetic metadata persists.
+- [x] Add optional phonetic without fabricating values.
+- [x] Add a 44pt pronunciation button driven by `EnglishPronunciationPlayer`.
+- [x] Add a generic `EN` language badge; no flags.
+- [x] Run focused/full tests, then commit.
 
 ### Task 4: Shared presentation cards
 
@@ -83,10 +83,10 @@
 **Interfaces:**
 - Produces: `LanguageBadge`, `WordListCard`, `WordDetailHeader`, `InfoMetaCard`, `SourceEvidenceCard`
 
-- [ ] Implement reusable list/detail/context cards with shared spacing, radius, typography, and accessibility.
-- [ ] Replace the plain list row and detail form layout with the confirmed three-tier structure.
-- [ ] Render import context as formatted source text first and image second.
-- [ ] Compile for simulator and commit.
+- [x] Implement reusable list/detail/context cards with shared spacing, radius, typography, and accessibility.
+- [x] Replace the plain list row and detail form layout with the confirmed three-tier structure.
+- [x] Render import context as formatted source text first and image second.
+- [x] Compile for simulator and commit.
 
 ### Task 5: Import review UI
 
@@ -101,14 +101,14 @@
 - Produces: `ImportPhraseTranslationCard`
 - Produces: refreshed candidate card grid
 
-- [ ] Reorder import review into source text, phrase translation, candidate words.
-- [ ] Give candidate cards stable word/translation/badge hierarchy and 44pt targets.
-- [ ] Preserve restore-original behavior and selection state.
-- [ ] Run full tests twice and Release build, then commit.
+- [x] Reorder import review into source text, phrase translation, candidate words.
+- [x] Give candidate cards stable word/translation/badge hierarchy and 44pt targets.
+- [x] Preserve restore-original behavior and selection state.
+- [x] Run full tests twice and Release build, then commit.
 
 ### Task 6: Release verification
 
-- [ ] Run full test suite twice on simulator `987CB4F0-4DB9-478B-99AF-AF2E45C0B4A0`.
-- [ ] Run unsigned Release simulator build.
-- [ ] Verify no `🇺🇸` / `🇬🇧` / manual import residue.
-- [ ] Summarize exact verification evidence.
+- [x] Run full test suite twice on simulator `987CB4F0-4DB9-478B-99AF-AF2E45C0B4A0`.
+- [x] Run unsigned Release simulator build.
+- [x] Verify no `🇺🇸` / `🇬🇧` / manual import residue.
+- [x] Summarize exact verification evidence.
