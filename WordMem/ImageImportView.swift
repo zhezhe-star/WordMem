@@ -27,6 +27,7 @@ struct ImageImportView: View {
     @State private var errorMessage: String?
     @State private var translationConfiguration: TranslationSession.Configuration?
     @State private var translations: [String: String] = [:]
+    @State private var phraseTranslation: String?
     @State private var isTranslating = false
 
     private let recognitionService: any TextRecognitionService = VisionTextRecognitionService()
@@ -138,8 +139,10 @@ struct ImageImportView: View {
             }
             .importCandidateTranslations(
                 chips: chips,
+                sourceText: recognizedText,
                 configuration: $translationConfiguration,
                 translations: $translations,
+                phraseTranslation: $phraseTranslation,
                 isTranslating: $isTranslating
             )
             .alert(
@@ -196,6 +199,7 @@ struct ImageImportView: View {
         isTranslating = false
         translationConfiguration = nil
         translations = [:]
+        phraseTranslation = nil
         defer {
             if processingCoordinator.finish(token) {
                 isRecognizing = false
@@ -229,6 +233,7 @@ struct ImageImportView: View {
             isTranslating = false
             translationConfiguration = nil
             translations = [:]
+            phraseTranslation = nil
         }
         defer {
             if ownsProcessing, processingCoordinator.finish(activeToken) {
@@ -282,6 +287,7 @@ struct ImageImportView: View {
             isTranslating = false
             translationConfiguration = nil
             translations = [:]
+            phraseTranslation = nil
             errorMessage = (error as? WordImageImportError)?.errorDescription ?? "文字识别失败，请重试。"
         }
     }
@@ -300,6 +306,10 @@ struct ImageImportView: View {
         chips = []
         selection = ImportChipSelection(chips: [])
         errorMessage = nil
+        isTranslating = false
+        translationConfiguration = nil
+        translations = [:]
+        phraseTranslation = nil
     }
 
     private func presentCameraIfAvailable() {
@@ -332,10 +342,7 @@ struct ImageImportView: View {
                         from: selection.selectedChips,
                         translations: translations
                     ),
-                    metadata: [
-                        "channel": WordImportSource.image.rawValue,
-                        "imageByteCount": "\(imageData.count)",
-                    ]
+                    metadata: phraseTranslationMetadata
                 )
                 let outcomes = try await repository.importSubmission(
                     submission,
@@ -347,6 +354,17 @@ struct ImageImportView: View {
                 errorMessage = "批量导入失败，请重试。"
             }
         }
+    }
+
+    private var phraseTranslationMetadata: [String: String] {
+        var metadata = [
+            "channel": WordImportSource.image.rawValue,
+            "imageByteCount": "\(imageData?.count ?? 0)",
+        ]
+        if let phraseTranslation, !phraseTranslation.isEmpty {
+            metadata["phraseTranslation"] = phraseTranslation
+        }
+        return metadata
     }
 }
 

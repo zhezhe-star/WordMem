@@ -253,6 +253,27 @@ final class CanonicalCleanResetTests: XCTestCase {
         XCTAssertEqual(entry.note, "Imported from translation card.")
     }
 
+    func testPhraseTranslationMetadataReachesImportContext() async throws {
+        let context = try makeContext()
+        let repository = WordbookRepository(modelContext: context)
+        let candidate = WordImportCandidatePayload(
+            text: "give",
+            normalizedKey: "give",
+            translation: "给"
+        )
+        let submission = WordImportSubmission(
+            source: .image,
+            sourceText: "Give me time.",
+            candidates: [candidate],
+            metadata: ["phraseTranslation": "给我一点时间。"]
+        )
+
+        _ = try await repository.importSubmission(submission, using: FixedSystemDictionary(available: ["give"]))
+
+        let importContext = try XCTUnwrap(try context.fetch(FetchDescriptor<WordImportContext>()).first)
+        XCTAssertEqual(importContext.metadata["phraseTranslation"], "给我一点时间。")
+    }
+
     func testCalendarUsesOnlyEntriesWithTranslation() throws {
         let context = try makeContext()
         context.insert(WordEntry(

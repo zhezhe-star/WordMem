@@ -161,6 +161,40 @@ struct ImportContextCard<Accessory: View>: View {
     }
 }
 
+struct ImportPhraseTranslationCard: View {
+    let translation: String?
+    let isTranslating: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("整段翻译", systemImage: "text.badge.checkmark")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            if isTranslating {
+                HStack(spacing: 10) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("正在翻译原文…")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+            } else if let translation, !translation.isEmpty {
+                Text(translation)
+                    .font(.body.weight(.medium))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                Text("整段翻译暂不可用")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(16)
+        .background(.regularMaterial, in: .rect(cornerRadius: 18))
+        .accessibilityElement(children: .combine)
+    }
+}
+
 struct ImportSourceEditorCard: View {
     let title: String
     let placeholder: String
