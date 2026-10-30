@@ -154,18 +154,24 @@ struct WordbookView: View {
     }
 
     private var wordList: some View {
-        ScrollView {
-            LazyVStack(spacing: WordMemDesign.cardSpacing) {
-                ForEach(words) { word in
-                    NavigationLink(value: WordMemRoute.detail(word.id)) {
-                        WordListCard(entry: word)
-                    }
-                    .buttonStyle(.plain)
+        List {
+            ForEach(words) { word in
+                NavigationLink(value: WordMemRoute.detail(word.id)) {
+                    WordListCard(entry: word)
                 }
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(
+                        top: 6,
+                        leading: WordMemDesign.margin,
+                        bottom: 6,
+                        trailing: WordMemDesign.margin
+                    ))
             }
-                .padding(.horizontal, WordMemDesign.margin)
-                .padding(.bottom, 24)
+                .onDelete(perform: deleteWords)
         }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
             .background(Color(.systemGroupedBackground))
     }
 

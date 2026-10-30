@@ -68,10 +68,12 @@ struct TextImportView: View {
                             text: $sourceText
                         )
 
-                        ImportPhraseTranslationCard(
-                            translation: phraseTranslation,
-                            isTranslating: isTranslating && phraseTranslation == nil
-                        )
+                        if !sourceText.isEmpty {
+                            ImportPhraseTranslationCard(
+                                translation: phraseTranslation,
+                                isTranslating: isTranslating && phraseTranslation == nil
+                            )
+                        }
 
                         if chips.isEmpty {
                             emptyState
@@ -157,6 +159,7 @@ struct TextImportView: View {
     private func refreshCandidates() {
         let token = UUID()
         advisorToken = token
+        phraseTranslation = nil
         let context = sourceText
 
         Task {

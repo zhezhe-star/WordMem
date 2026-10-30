@@ -91,6 +91,13 @@ struct ImageImportView: View {
                             presentCamera: presentCameraIfAvailable
                         )
 
+                        if capturedImage != nil {
+                            ImportPhraseTranslationCard(
+                                translation: phraseTranslation,
+                                isTranslating: isTranslating && phraseTranslation == nil
+                            )
+                        }
+
                         if !chips.isEmpty {
                             selectionContent
                         }
