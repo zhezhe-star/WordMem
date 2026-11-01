@@ -81,6 +81,8 @@ struct TextImportView: View {
 
                         if chips.isEmpty {
                             emptyState
+                        } else if offeredChips.isEmpty {
+                            ImportNoOfferedWordsView()
                         } else {
                             selectionContent
                         }

@@ -103,7 +103,11 @@ struct ImageImportView: View {
                         }
 
                         if !chips.isEmpty {
-                            selectionContent
+                            if offeredChips.isEmpty {
+                                ImportNoOfferedWordsView()
+                            } else {
+                                selectionContent
+                            }
                         }
 
                         if let errorMessage {

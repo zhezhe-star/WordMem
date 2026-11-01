@@ -72,6 +72,18 @@ struct ImportStepHeader: View {
     }
 }
 
+struct ImportNoOfferedWordsView: View {
+    var body: some View {
+        ContentUnavailableView(
+            "没有可导入单词",
+            systemImage: "character.book.closed",
+            description: Text("当前设备系统词典未启用英文词典，或这些词未被收录。已收录的词才会显示为可选。")
+        )
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 24)
+    }
+}
+
 struct ImportContextCard<Accessory: View>: View {
     let title: String
     let text: String
