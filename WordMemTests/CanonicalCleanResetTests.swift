@@ -336,6 +336,32 @@ final class CanonicalCleanResetTests: XCTestCase {
         XCTAssertNil(payload.metadata["spellingCorrection"])
     }
 
+    func testUnavailableCandidatesAreNotOfferedAndRestoreOptionsHideUnavailableBadge() {
+        let availableAdvice = ImportWordAdvice(
+            originalText: "give", originalKey: "give", context: nil, lemma: nil,
+            spellingCorrection: nil, finalText: "give", finalKey: "give",
+            isDictionaryAvailable: true, isOriginalDictionaryAvailable: true
+        )
+        let unavailableAdvice = ImportWordAdvice(
+            originalText: "blurble", originalKey: "blurble", context: nil, lemma: nil,
+            spellingCorrection: nil, finalText: "blurble", finalKey: "blurble",
+            isDictionaryAvailable: false, isOriginalDictionaryAvailable: false
+        )
+        let restorableAdvice = ImportWordAdvice(
+            originalText: "recieve", originalKey: "recieve", context: nil, lemma: "receive",
+            spellingCorrection: "receive", finalText: "receive", finalKey: "receive",
+            isDictionaryAvailable: false, isOriginalDictionaryAvailable: true
+        )
+        let available = ImportCandidateChip(id: "give", text: "give", sourceOrder: 0, advice: availableAdvice)
+        let unavailable = ImportCandidateChip(id: "blurble", text: "blurble", sourceOrder: 1, advice: unavailableAdvice)
+        let restorable = ImportCandidateChip(id: "receive", text: "receive", sourceOrder: 2, advice: restorableAdvice)
+
+        XCTAssertTrue(available.isOffered)
+        XCTAssertFalse(unavailable.isOffered)
+        XCTAssertTrue(restorable.isOffered)
+        XCTAssertNil(restorable.availabilityBadgeText)
+    }
+
     func testDefaultTranslationSelectionStartsWithNoWordsSelected() {
         let availableAdvice = ImportWordAdvice(
             originalText: "give", originalKey: "give", context: nil, lemma: nil,

@@ -41,6 +41,12 @@ struct ImportCandidateChip: Identifiable, Hashable, Sendable {
         advice?.canRestoreOriginal == true
     }
 
+    /// Dictionary-unavailable words are deliberately not offered at all.
+    /// A restored original is offered only when the original itself is available.
+    var isOffered: Bool {
+        isImportable || canRestoreOriginal
+    }
+
     func restoringOriginal() -> ImportCandidateChip {
         guard let advice, advice.canRestoreOriginal else { return self }
         let restoredAdvice = ImportWordAdvice(
@@ -76,7 +82,7 @@ struct ImportCandidateChip: Identifiable, Hashable, Sendable {
     }
 
     var availabilityBadgeText: String? {
-        guard let advice, !advice.isDictionaryAvailable else { return nil }
+        guard let advice, !advice.isDictionaryAvailable, !canRestoreOriginal else { return nil }
         return "词典不可用"
     }
 }

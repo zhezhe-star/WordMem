@@ -66,6 +66,10 @@ struct ImageImportView: View {
         chips.isEmpty ? .content : .selection
     }
 
+    private var offeredChips: [ImportCandidateChip] {
+        chips.filter(\.isOffered)
+    }
+
     private var hasImage: Bool {
         capturedImage != nil
     }
@@ -184,13 +188,13 @@ struct ImageImportView: View {
         VStack(alignment: .leading, spacing: 14) {
             ImportSelectionToolbar(
                 selectedCount: selection.selectedCount,
-                totalCount: chips.count,
+                totalCount: offeredChips.count,
                 onSelectAll: { selection.selectAll() },
                 onClear: { selection.clear() }
             )
 
             ImportCandidateChipGrid(
-                chips: chips,
+                chips: offeredChips,
                 selection: $selection,
                 meanings: translations,
                 isTranslating: isTranslating,

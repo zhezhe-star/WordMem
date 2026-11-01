@@ -9,6 +9,10 @@ struct ImportCandidateChipGrid: View {
   var onRestoreOriginal: ((ImportCandidateChip) -> Void)? = nil
   @State private var sections: [ImportCandidateSection] = []
 
+  private var offeredChips: [ImportCandidateChip] {
+    ImportCandidateChip.uniquelyIdentified(chips).filter(\.isOffered)
+  }
+
   var body: some View {
     VStack(alignment: .leading, spacing: 18) {
       ForEach(sections) { section in
@@ -16,9 +20,7 @@ struct ImportCandidateChipGrid: View {
       }
     }
     .onChange(of: chips, initial: true) {
-      sections = ImportCandidateOrganizer.sections(
-        from: ImportCandidateChip.uniquelyIdentified(chips)
-      )
+      sections = ImportCandidateOrganizer.sections(from: offeredChips)
     }
   }
 
@@ -111,30 +113,23 @@ private struct ImportCandidateChipButton: View {
         .accessibilityLabel("还原原拼写 \(chip.advice?.originalText ?? chip.text)")
       }
       .padding(.vertical, 3)
-    } else {
-      chipLabel
-        .opacity(0.66)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(accessibilityLabel)
-        .accessibilityHint("系统词典未收录，不能导入")
-        .accessibilityAddTraits(.isStaticText)
     }
   }
 
   private var chipLabel: some View {
-    HStack(alignment: .center, spacing: 10) {
+    HStack(alignment: .center, spacing: 12) {
       Capsule()
-        .fill(isSelected ? WordMemDesign.accent : Color(uiColor: .separator).opacity(0.4))
-        .frame(width: 3, height: 38)
+        .fill(isSelected ? WordMemDesign.accent : Color(uiColor: .separator).opacity(0.45))
+        .frame(width: 4, height: 52)
 
-      VStack(alignment: .leading, spacing: 5) {
+      VStack(alignment: .leading, spacing: 7) {
         Text(chip.text)
-          .font(.callout.weight(isSelected ? .semibold : .medium))
+          .font(.body.weight(isSelected ? .semibold : .medium))
           .foregroundStyle(labelColor)
           .fixedSize(horizontal: false, vertical: true)
 
         Text(translationText)
-          .font(.caption)
+          .font(.subheadline)
           .foregroundStyle(detailColor)
           .fixedSize(horizontal: false, vertical: true)
 
@@ -157,14 +152,14 @@ private struct ImportCandidateChipButton: View {
         .font(.footnote)
         .foregroundStyle(iconColor)
     }
-    .padding(12)
-    .background(backgroundShape, in: .rect(cornerRadius: 14))
+    .padding(WordMemDesign.cardPadding)
+    .background(backgroundShape, in: .rect(cornerRadius: WordMemDesign.cardRadius))
     .overlay {
-      RoundedRectangle(cornerRadius: 14)
+      RoundedRectangle(cornerRadius: WordMemDesign.cardRadius)
         .strokeBorder(strokeColor, lineWidth: isSelected ? 1.2 : 0.8)
     }
     .frame(maxWidth: .infinity, minHeight: WordMemDesign.minimumTouchTarget, alignment: .leading)
-    .contentShape(.rect(cornerRadius: 14))
+    .contentShape(.rect(cornerRadius: WordMemDesign.cardRadius))
   }
 
   private var translationText: String {
@@ -214,7 +209,7 @@ struct ImportSelectionToolbar: View {
         .disabled(selectedCount == 0)
     }
     .buttonStyle(.plain)
-    .tint(.blue)
+    .tint(WordMemDesign.accent)
     .accessibilityElement(children: .contain)
     .accessibilityLabel("候选词选择")
     .accessibilityValue("已选择 \(selectedCount) 个，共 \(totalCount) 个")

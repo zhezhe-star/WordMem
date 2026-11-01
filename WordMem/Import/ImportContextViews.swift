@@ -49,23 +49,23 @@ struct ImportStepHeader: View {
             Text("\(step.rawValue + 1)")
                 .font(.caption2.weight(.bold))
                 .frame(width: 21, height: 21)
-                .background(isCurrent ? Color.blue : Color(.tertiarySystemFill))
+                .background(isCurrent ? WordMemDesign.accent : Color(.tertiarySystemFill))
                 .foregroundStyle(isCurrent ? .white : .secondary)
                 .clipShape(Circle())
 
             Text(step.title)
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(isCurrent ? Color.blue : .secondary)
+                .foregroundStyle(isCurrent ? WordMemDesign.accent : .secondary)
         }
         .padding(.horizontal, 9)
         .padding(.vertical, 6)
-        .background(isCurrent ? Color.blue.opacity(0.11) : Color(.secondarySystemBackground))
+        .background(isCurrent ? WordMemDesign.accent.opacity(0.11) : Color(.secondarySystemBackground))
         .clipShape(Capsule())
     }
 
     private func connector(isActive: Bool) -> some View {
         Rectangle()
-            .fill(isActive ? Color.blue.opacity(0.55) : Color(.separator))
+            .fill(isActive ? WordMemDesign.accent.opacity(0.55) : Color(.separator))
             .frame(height: 1.5)
             .frame(maxWidth: .infinity)
             .accessibilityHidden(true)
@@ -141,7 +141,7 @@ struct ImportContextCard<Accessory: View>: View {
                     .font(.footnote.weight(.semibold))
                 }
                 .buttonStyle(.plain)
-                .tint(.blue)
+                .tint(WordMemDesign.accent)
                 .accessibilityLabel(expansion.isExpanded ? "收起原文" : "显示全部原文")
                 .accessibilityValue(expansion.isExpanded ? "已展开" : "已折叠")
                 .accessibilityAddTraits(.isButton)

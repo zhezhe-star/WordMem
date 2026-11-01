@@ -39,6 +39,10 @@ struct WordPickerView: View {
         TranslationWordTokenizer.pickerChips(from: sourceText)
     }
 
+    private var offeredChips: [ImportCandidateChip] {
+        advisorChips.filter(\.isOffered)
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             topBar
@@ -99,10 +103,10 @@ struct WordPickerView: View {
 
             Text("英文")
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.blue)
+                .foregroundStyle(WordMemDesign.accent)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
-                .background(Color.blue.opacity(0.11), in: .capsule)
+                .background(WordMemDesign.accent.opacity(0.11), in: .capsule)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
@@ -153,13 +157,13 @@ struct WordPickerView: View {
         VStack(alignment: .leading, spacing: 14) {
             ImportSelectionToolbar(
                 selectedCount: selection.selectedCount,
-                totalCount: advisorChips.count,
+                totalCount: offeredChips.count,
                 onSelectAll: { selection.selectAll() },
                 onClear: { selection.clear() }
             )
 
             ImportCandidateChipGrid(
-                chips: advisorChips,
+                chips: offeredChips,
                 selection: $selection,
                 meanings: meanings,
                 onRestoreOriginal: restoreOriginal
