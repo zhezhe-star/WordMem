@@ -76,6 +76,7 @@ struct WordbookView: View {
     @State private var alertMessage: String?
     @State private var queueAttentionMessage: String?
     @State private var maintenance = WordImportMaintenanceCoordinator()
+    @State private var importQueueSignal = WordImportQueueSignalCenter()
     @State private var dictionary = UIKitSystemDictionaryAuthorizer()
 
     var body: some View {
@@ -84,6 +85,13 @@ struct WordbookView: View {
                 if words.isEmpty { emptyState } else { wordList }
             }
             .navigationTitle("WordMem")
+            .onAppear {
+                importQueueSignal.observe {
+                    Task { @MainActor in
+                        await processPendingImports()
+                    }
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {

@@ -1,5 +1,84 @@
 import Foundation
 
+/// Cross-process signal used after a pending import is atomically appended.
+/// Darwin notifications are the iOS-supported local broadcast channel between
+/// an extension and its containing app. The app still scans the queue when it
+/// becomes active because iOS can suspend an app before a local notification
+/// is delivered.
+final class WordImportQueueSignalCenter {
+    static let notificationName = "com.zhezhe.wordmem.importQueue.appended"
+
+    private let center = CFNotificationCenterGetDarwinNotifyCenter()
+    private var handler: WordImportQueueSignalHandler?
+    private var observerPointer: UnsafeMutableRawPointer?
+
+    deinit {
+        removeObserver()
+    }
+
+    func observe(_ action: @escaping @Sendable () -> Void) {
+        removeObserver()
+        let handler = WordImportQueueSignalHandler(action: action)
+        self.handler = handler
+        observerPointer = Unmanaged.passRetained(handler).toOpaque()
+
+        CFNotificationCenterAddObserver(
+            center,
+            Unmanaged.passRetained(handler).toOpaque(),
+            { _, observer, _, _, _ in
+                guard let observer else { return }
+                let handler = Unmanaged<WordImportQueueSignalHandler>
+                    .fromOpaque(observer)
+                    .takeUnretainedValue()
+                DispatchQueue.main.async {
+                    handler.call()
+                }
+            },
+            Self.notificationName as CFString,
+            nil,
+            .deliverImmediately
+        )
+    }
+
+    func post() {
+        CFNotificationCenterPostNotification(
+            center,
+            CFNotificationName(Self.notificationName as CFString),
+            nil,
+            nil,
+            true
+        )
+    }
+
+    private func removeObserver() {
+        if let observerPointer {
+            CFNotificationCenterRemoveObserver(
+                center,
+                observerPointer,
+                CFNotificationName(Self.notificationName as CFString),
+                nil
+            )
+            Unmanaged<WordImportQueueSignalHandler>
+                .fromOpaque(observerPointer)
+                .release()
+            self.observerPointer = nil
+        }
+        self.handler = nil
+    }
+}
+
+private final class WordImportQueueSignalHandler: @unchecked Sendable {
+    private let action: @Sendable () -> Void
+
+    init(action: @escaping @Sendable () -> Void) {
+        self.action = action
+    }
+
+    func call() {
+        action()
+    }
+}
+
 enum WordImportSource: String, Codable, CaseIterable, Hashable, Sendable {
     case image
     case text

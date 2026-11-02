@@ -23,6 +23,7 @@ final class LocalStorageManager: ObservableObject {
     func appendSubmission(_ submission: WordImportSubmission) -> Bool {
         do {
             try WordImportSubmissionQueue.append(submission)
+            WordImportQueueSignalCenter().post()
             errorMessage = nil
             return true
         } catch {

@@ -308,6 +308,18 @@ final class CanonicalCleanResetTests: XCTestCase {
         XCTAssertEqual(selection.selectedCount, 0)
     }
 
+    func testImportQueueSignalDeliversToObserver() {
+        let signal = WordImportQueueSignalCenter()
+        let received = expectation(description: "Darwin import signal delivered")
+
+        signal.observe {
+            received.fulfill()
+        }
+        signal.post()
+
+        wait(for: [received], timeout: 2)
+    }
+
     func testImportPayloadsAttachCandidateTranslations() {
         let give = ImportCandidateChip(id: "give", text: "give", sourceOrder: 0)
         let take = ImportCandidateChip(id: "take", text: "take", sourceOrder: 1)
