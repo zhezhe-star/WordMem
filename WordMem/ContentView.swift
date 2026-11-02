@@ -68,6 +68,7 @@ struct ContentView: View {
 }
 
 struct WordbookView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \WordEntry.updatedAt, order: .reverse) private var words: [WordEntry]
     @State private var route: [WordMemRoute] = []
@@ -137,9 +138,17 @@ struct WordbookView: View {
                 Text(queueAttentionMessage ?? "")
             }
             .task {
-                queueAttentionMessage = await maintenance.processPendingSubmissions(in: modelContext)
+                await processPendingImports()
+            }
+            .onChange(of: scenePhase) { _, phase in
+                guard phase == .active else { return }
+                Task { await processPendingImports() }
             }
         }
+    }
+
+    private func processPendingImports() async {
+        queueAttentionMessage = await maintenance.processPendingSubmissions(in: modelContext)
     }
 
     private var emptyState: some View {
