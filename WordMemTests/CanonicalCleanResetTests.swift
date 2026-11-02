@@ -336,6 +336,32 @@ final class CanonicalCleanResetTests: XCTestCase {
         XCTAssertNil(payload.metadata["spellingCorrection"])
     }
 
+    func testLemmaCardKeepsSourceTokenAndShowsMeaningfulLemma() {
+        let advice = ImportWordAdvice(
+            originalText: "dumber", originalKey: "dumber", context: nil, lemma: "dumb",
+            spellingCorrection: nil, finalText: "dumb", finalKey: "dumb",
+            isDictionaryAvailable: true, isOriginalDictionaryAvailable: true
+        )
+        let chip = ImportCandidateChip(id: "dumb", text: "dumb", sourceOrder: 0, advice: advice)
+
+        XCTAssertEqual(chip.sourceBadgeText, "原文 dumber")
+        XCTAssertEqual(chip.lemmaBadgeText, "原形 dumb")
+        XCTAssertNil(chip.spellingBadgeText)
+    }
+
+    func testConfirmedSpellingDoesNotRepeatLemmaBadge() {
+        let advice = ImportWordAdvice(
+            originalText: "recieve", originalKey: "recieve", context: nil, lemma: "receive",
+            spellingCorrection: "receive", finalText: "receive", finalKey: "receive",
+            isDictionaryAvailable: true, isOriginalDictionaryAvailable: true
+        )
+        let chip = ImportCandidateChip(id: "receive", text: "receive", sourceOrder: 0, advice: advice)
+
+        XCTAssertEqual(chip.sourceBadgeText, "原文 recieve")
+        XCTAssertEqual(chip.spellingBadgeText, "拼写纠正 recieve → receive")
+        XCTAssertNil(chip.lemmaBadgeText)
+    }
+
     func testUnavailableCandidatesAreNotOfferedAndRestoreOptionsHideUnavailableBadge() {
         let availableAdvice = ImportWordAdvice(
             originalText: "give", originalKey: "give", context: nil, lemma: nil,

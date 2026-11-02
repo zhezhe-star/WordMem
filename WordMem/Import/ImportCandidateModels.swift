@@ -72,13 +72,18 @@ struct ImportCandidateChip: Identifiable, Hashable, Sendable {
     }
 
     var lemmaBadgeText: String? {
-        guard let advice, advice.isLemmaNormalized else { return nil }
+        guard let advice, advice.showsLemmaBadge else { return nil }
         return "原形 \(advice.finalText)"
+    }
+
+    var sourceBadgeText: String? {
+        guard let advice, advice.finalKey != advice.originalKey else { return nil }
+        return "原文 \(advice.originalText)"
     }
 
     var spellingBadgeText: String? {
         guard let advice, advice.isSpellingCorrected else { return nil }
-        return "拼写纠正 \(advice.originalText) → \(advice.finalText)"
+        return "拼写纠正 \(advice.originalText) → \(advice.spellingCorrection ?? advice.finalText)"
     }
 
     var availabilityBadgeText: String? {
@@ -112,6 +117,26 @@ struct ImportWordAdvice: Equatable, Hashable, Sendable {
 
     var isSpellingCorrected: Bool {
         spellingCorrection != nil && finalKey != originalKey
+    }
+
+    /// Spelling correction and lemmatization are separate steps. If lemma
+    /// lookup merely confirms the corrected spelling, repeating it would be
+    /// redundant; it remains visible when it adds another transformation.
+    var showsLemmaBadge: Bool {
+        guard isLemmaNormalized else { return false }
+
+        let correctedSource: String
+        if isSpellingCorrected, let spellingCorrection {
+            correctedSource = spellingCorrection
+        } else {
+            correctedSource = originalText
+        }
+
+        let correctedSourceKey = WordInputNormalizer.normalizedKey(from: correctedSource)
+            .replacingOccurrences(of: "'", with: "")
+        let lemmaKey = WordInputNormalizer.normalizedKey(from: finalText)
+            .replacingOccurrences(of: "'", with: "")
+        return lemmaKey != correctedSourceKey
     }
 }
 

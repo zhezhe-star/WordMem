@@ -199,6 +199,43 @@ struct WordEntryDetailView: View {
             .sorted { $0.createdAt > $1.createdAt }
     }
 
+    private var provenanceMetadata: [String: String]? {
+        contexts.first {
+            $0.selectedCandidate == entry.headword
+                && $0.metadata["canonicalKey"] == entry.normalizedKey
+        }?.metadata
+    }
+
+    private var importOriginalText: String {
+        let metadataOriginal = provenanceMetadata?["originalWord"] ?? ""
+        return metadataOriginal.isEmpty ? entry.originalText : metadataOriginal
+    }
+
+    private var spellingCorrection: String? {
+        guard let correction = provenanceMetadata?["spellingCorrection"],
+              !correction.isEmpty,
+              WordInputNormalizer.normalizedKey(from: correction)
+                  != WordInputNormalizer.normalizedKey(from: importOriginalText)
+        else { return nil }
+        return correction
+    }
+
+    private var normalizedLemma: String? {
+        guard let lemma = provenanceMetadata?["lemma"],
+              !lemma.isEmpty,
+              WordInputNormalizer.normalizedKey(from: lemma)
+                  != WordInputNormalizer.normalizedKey(from: entry.headword)
+        else { return nil }
+        return lemma
+    }
+
+    private var showsImportProvenance: Bool {
+        WordInputNormalizer.normalizedKey(from: importOriginalText)
+            != WordInputNormalizer.normalizedKey(from: entry.headword)
+            || spellingCorrection != nil
+            || normalizedLemma != nil
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
@@ -216,11 +253,34 @@ struct WordEntryDetailView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
-                if entry.originalText.localizedCaseInsensitiveCompare(entry.headword) != .orderedSame {
-                    InfoMetaCard(title: "输入原词") {
-                        Text(entry.originalText)
-                            .font(.body)
+                if showsImportProvenance {
+                    InfoMetaCard(title: "导入纠正") {
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                Text(importOriginalText)
+                                    .font(.callout)
+                                    .foregroundStyle(.secondary)
+
+                                Image(systemName: "arrow.right")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+
+                                Text(entry.headword)
+                                    .font(.body.weight(.semibold))
+                            }
                             .frame(maxWidth: .infinity, alignment: .leading)
+
+                            if let spellingCorrection {
+                                provenanceTag(
+                                    "拼写纠正 \(importOriginalText) → \(spellingCorrection)",
+                                    color: .orange
+                                )
+                            }
+
+                            if let normalizedLemma {
+                                provenanceTag("原形 \(normalizedLemma)", color: .indigo)
+                            }
+                        }
                     }
                 }
 
@@ -291,6 +351,15 @@ struct WordEntryDetailView: View {
                 .hasDefinition(forTerm: entry.normalizedKey) ? .available : .unavailable
         }
         .onDisappear { pronunciation.cancel() }
+    }
+
+    private func provenanceTag(_ text: String, color: Color) -> some View {
+        Text(text)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(color)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(color.opacity(0.11), in: .capsule)
     }
 
 }
