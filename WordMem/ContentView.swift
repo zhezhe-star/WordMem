@@ -25,13 +25,19 @@ final class WordImportMaintenanceCoordinator {
         self.dictionary = dictionary
     }
 
-    func processPendingSubmissions(in modelContext: ModelContext) async -> String? {
-        guard !isRunning else { return nil }
+    func processPendingSubmissions(in modelContext: ModelContext) async {
+        guard !isRunning else { return }
         isRunning = true
         defer { isRunning = false }
 
         do {
             let snapshot = try WordImportSubmissionQueue.snapshot()
+            if snapshot.hasAttention {
+                Self.logger.error(
+                    "Import queue isolated \(snapshot.malformedCount) malformed and \(snapshot.futureSchemaCount) future-schema records."
+                )
+            }
+
             let repository = WordbookRepository(modelContext: modelContext)
             var completedIDs: Set<UUID> = []
 
@@ -48,7 +54,7 @@ final class WordImportMaintenanceCoordinator {
                     Self.logger.error(
                         "Import queue item \(offset + 1) failed: \(error.localizedDescription, privacy: .public)"
                     )
-                    return "第 \(offset + 1) 条导入记录处理失败，已保留待重试。"
+                    continue
                 }
             }
             do {
@@ -57,14 +63,11 @@ final class WordImportMaintenanceCoordinator {
                 Self.logger.error(
                     "Import queue cleanup failed: \(error.localizedDescription, privacy: .public)"
                 )
-                return "导入记录已处理，但队列清理失败，稍后会自动检查。"
             }
-            return WordImportSubmissionQueue.attentionMessage(for: snapshot)
         } catch {
             Self.logger.error(
                 "Import queue snapshot failed: \(error.localizedDescription, privacy: .public)"
             )
-            return "读取导入队列失败，已保留记录待重试。"
         }
     }
 }
@@ -97,8 +100,6 @@ struct WordbookView: View {
     @State private var route: [WordMemRoute] = []
     @State private var activeImportSheet: WordImportSheet?
     @State private var alertMessage: String?
-    @State private var queueAttentionMessage: String?
-    @State private var lastQueueAttentionMessage: String?
     @State private var maintenance = WordImportMaintenanceCoordinator()
     @State private var importQueueSignal = WordImportQueueSignalCenter()
     @State private var dictionary = UIKitSystemDictionaryAuthorizer()
@@ -161,14 +162,6 @@ struct WordbookView: View {
             } message: {
                 Text(alertMessage ?? "")
             }
-            .alert("导入提示", isPresented: .init(
-                get: { queueAttentionMessage != nil },
-                set: { if !$0 { queueAttentionMessage = nil } }
-            )) {
-                Button("好", role: .cancel) {}
-            } message: {
-                Text(queueAttentionMessage ?? "")
-            }
             .task {
                 await processPendingImports()
             }
@@ -180,10 +173,7 @@ struct WordbookView: View {
     }
 
     private func processPendingImports() async {
-        let message = await maintenance.processPendingSubmissions(in: modelContext)
-        guard message != lastQueueAttentionMessage else { return }
-        lastQueueAttentionMessage = message
-        queueAttentionMessage = message
+        await maintenance.processPendingSubmissions(in: modelContext)
     }
 
     private var emptyState: some View {
