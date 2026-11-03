@@ -15,16 +15,7 @@ enum TranslationWordTokenizer {
     }
 
     static func pickerChips(from source: String) -> [String] {
-        var values: [String] = []
-        let phrase = normalizedPhrase(from: source)
-        if !phrase.isEmpty {
-            values.append(phrase)
-        }
-
-        for word in wordChips(from: source) where !values.contains(word) {
-            values.append(word)
-        }
-        return values
+        wordChips(from: source)
     }
 
     static func normalizedPhrase(from source: String) -> String {

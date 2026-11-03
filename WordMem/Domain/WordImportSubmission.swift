@@ -262,15 +262,14 @@ struct TranslationProviderSubmissionBuilder {
     let advisedChips: [ImportCandidateChip]
 
     var sourceChips: [String] {
-        let advised = advisedChips.map(\.text)
-        return advised.isEmpty ? TranslationWordTokenizer.pickerChips(from: sourceText) : advised
+        let advised = advisedChips.map(\.id)
+        return advised.isEmpty ? TranslationWordTokenizer.wordChips(from: sourceText) : advised
     }
 
     var selectedCandidates: [WordImportCandidatePayload] {
         sourceChips.enumerated().compactMap { offset, chipText in
             guard selectedChips.contains(chipText) else { return nil }
-            let phrase = TranslationWordTokenizer.normalizedPhrase(from: sourceText)
-            let meaning = meanings[chipText] ?? (chipText == phrase ? phraseTranslation : nil) ?? ""
+            let meaning = meanings[chipText] ?? ""
             let trimmedMeaning = meaning.trimmingCharacters(in: .whitespacesAndNewlines)
 
             if let advisedChip = advisedChips.first(where: { $0.id == chipText }) {
@@ -294,7 +293,10 @@ struct TranslationProviderSubmissionBuilder {
             sourceText: TranslationWordTokenizer.normalizedPhrase(from: sourceText),
             recognizedText: sourceText,
             candidates: selectedCandidates,
-            metadata: ["channel": "translation_provider"]
+            metadata: [
+                "channel": "translation_provider",
+                "phraseTranslation": phraseTranslation,
+            ]
         )
     }
 }

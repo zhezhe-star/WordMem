@@ -297,35 +297,19 @@ enum ImportCandidatePipeline {
         from source: String,
         advisor: ImportWordAdvisor = .live()
     ) async -> [ImportCandidateChip] {
-        let phrase = TranslationWordTokenizer.normalizedPhrase(from: source)
-        var chips: [ImportCandidateChip] = []
-        if !phrase.isEmpty {
-            // Phrase context intentionally bypasses the word-level dictionary
-            // gate; the advisor applies only to individual word candidates.
-            chips.append(
-                ImportCandidateChip(
-                    id: phrase,
-                    text: phrase,
-                    sourceOrder: 0,
-                    group: "整句"
-                )
-            )
-        }
-
         let candidates = EnglishWordCandidateSplitter.candidates(from: source)
         let advisedWords = await advisor.chips(from: candidates, context: source)
-        chips.append(
-            contentsOf: advisedWords.map {
+        return ImportCandidateChip.uniquelyIdentified(
+            advisedWords.map {
                 ImportCandidateChip(
                     id: $0.id,
                     text: $0.text,
-                    sourceOrder: $0.sourceOrder + 1,
+                    sourceOrder: $0.sourceOrder,
                     group: "单词",
                     advice: $0.advice
                 )
             }
         )
-        return ImportCandidateChip.uniquelyIdentified(chips)
     }
 }
 
@@ -357,8 +341,6 @@ extension ImportCandidatePipeline {
             if advice.isOriginalRestored {
                 metadata["originalSpellingRestored"] = "true"
             }
-        } else if chip.group == "整句" {
-            metadata["phraseContext"] = "true"
         }
 
         return WordImportCandidatePayload(

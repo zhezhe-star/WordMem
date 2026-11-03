@@ -22,21 +22,23 @@ struct WordPickerView: View {
     @State private var persistenceError: String?
     @State private var saveCoordinator = TranslationProviderSaveCoordinator()
     @State private var isPreparingSave = false
+    @State private var hasSavedSubmission = false
+    @State private var isWaitingForExtensionClose = false
 
     private var isPreparing: Bool {
         !isPhraseTranslationReady || isPreparingChips
     }
 
     private var isSaving: Bool {
-        saveCoordinator.isSaving || isPreparingSave
+        saveCoordinator.isSaving || isPreparingSave || isWaitingForExtensionClose
     }
 
     private var canSave: Bool {
-        selection.selectedCount > 0 && !isPreparing && !isSaving
+        selection.selectedCount > 0 && !isPreparing && !isSaving && !hasSavedSubmission
     }
 
     private var sourceTokens: [String] {
-        TranslationWordTokenizer.pickerChips(from: sourceText)
+        TranslationWordTokenizer.wordChips(from: sourceText)
     }
 
     private var offeredChips: [ImportCandidateChip] {
@@ -66,7 +68,9 @@ struct WordPickerView: View {
             .scrollBounceBehavior(.basedOnSize)
 
             ImportPrimaryCTA(
-                title: isSaving ? "正在保存…" : "保存 \(selection.selectedCount) 个",
+                title: hasSavedSubmission
+                    ? "已保存"
+                    : (isSaving ? "正在保存…" : "保存 \(selection.selectedCount) 个"),
                 isLoading: isSaving,
                 action: save
             )
@@ -91,8 +95,16 @@ struct WordPickerView: View {
 
     private var topBar: some View {
         HStack {
-            Button("取消", action: onCancel)
-                .font(.body.weight(.semibold))
+            Button(action: onCancel) {
+                Text("取消")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(WordMemDesign.accent)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(WordMemDesign.accent.opacity(0.11), in: .capsule)
+            }
+            .buttonStyle(.plain)
+            .tint(WordMemDesign.accent)
                 .frame(
                     minWidth: WordMemDesign.minimumTouchTarget,
                     minHeight: WordMemDesign.minimumTouchTarget,
@@ -172,22 +184,18 @@ struct WordPickerView: View {
     }
 
     private var selectionSummaryText: String {
-        let phrase = TranslationWordTokenizer.normalizedPhrase(from: sourceText)
         let wordCount = TranslationWordTokenizer.wordChips(from: sourceText).count
-        if phrase.isEmpty && wordCount == 0 {
+        if wordCount == 0 {
             return "这句话没有可保存的内容。"
         }
-        if wordCount == 0 {
-            return "已保留整句，可选择后保存到 WordMem。"
-        }
-        return "已保留整句，并拆出 \(wordCount) 个单词。"
+        return "已保留原句，并拆出 \(wordCount) 个可选单词。"
     }
 
     private var loadingContent: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 10) {
                 ProgressView()
-                Text("正在准备整句和单词…")
+                Text("正在准备单词…")
                     .font(.footnote.weight(.medium))
                     .foregroundStyle(.secondary)
             }
@@ -250,12 +258,6 @@ struct WordPickerView: View {
 
     private func translateChips(with session: TranslationSession) async {
         for chip in advisorChips where meanings[chip.id] == nil {
-            if chip.id == TranslationWordTokenizer.normalizedPhrase(from: sourceText),
-                !phraseTranslation.isEmpty
-            {
-                meanings[chip.id] = phraseTranslation
-                continue
-            }
             if let meaning = try? await session.translate(chip.text).targetText {
                 meanings[chip.id] = meaning
             }
@@ -288,13 +290,24 @@ struct WordPickerView: View {
 
             if case .completed(nil) = result {
                 await Task.yield()
+                hasSavedSubmission = true
+                isPreparingSave = false
+                isWaitingForExtensionClose = true
                 onSave()
+                scheduleCloseFallback()
                 return
             }
             if case .completed(let error?) = result {
                 persistenceError = error
             }
             isPreparingSave = false
+        }
+    }
+
+    private func scheduleCloseFallback() {
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(2))
+            isWaitingForExtensionClose = false
         }
     }
 

@@ -334,6 +334,51 @@ final class CanonicalCleanResetTests: XCTestCase {
         XCTAssertNil(payloads.last?.translation)
     }
 
+    func testTokenizerPickerChipsExcludeWholePhrase() {
+        let chips = TranslationWordTokenizer.pickerChips(from: "The dumper gave me a book.")
+
+        XCTAssertEqual(chips, ["The", "dumper", "gave", "me", "a", "book"])
+        XCTAssertFalse(chips.contains("The dumper gave me a book."))
+    }
+
+    func testTranslationProviderBuilderMatchesSelectedChipIDs() {
+        let advice = ImportWordAdvice(
+            originalText: "She", originalKey: "she", context: "She gave.",
+            lemma: "she", spellingCorrection: nil, finalText: "she", finalKey: "she",
+            isDictionaryAvailable: true, isOriginalDictionaryAvailable: true
+        )
+        let chip = ImportCandidateChip(id: "she", text: "She", sourceOrder: 0, advice: advice)
+        let builder = TranslationProviderSubmissionBuilder(
+            sourceText: "She gave.",
+            phraseTranslation: "她给了。",
+            selectedChips: ["she"],
+            meanings: ["she": "她"],
+            advisedChips: [chip]
+        )
+
+        let payload = try? XCTUnwrap(builder.selectedCandidates.first)
+
+        XCTAssertEqual(payload?.text, "She")
+        XCTAssertEqual(payload?.normalizedKey, "she")
+        XCTAssertEqual(payload?.translation, "她")
+        XCTAssertEqual(payload?.metadata["originalWord"], "She")
+    }
+
+    func testTranslationProviderSubmissionPreservesPhraseTranslationMetadata() {
+        let builder = TranslationProviderSubmissionBuilder(
+            sourceText: "She gave.",
+            phraseTranslation: "她给了。",
+            selectedChips: ["she"],
+            meanings: [:],
+            advisedChips: []
+        )
+
+        XCTAssertEqual(
+            builder.makeSubmission().metadata["phraseTranslation"],
+            "她给了。"
+        )
+    }
+
     func testIdentityNeutralSuggestionIsNotReportedAsSpellingCorrection() {
         let advice = ImportWordAdvice(
             originalText: "can’t", originalKey: "cant", context: nil, lemma: nil,

@@ -1,5 +1,6 @@
 import SwiftData
 import SwiftUI
+import OSLog
 
 enum WordMemRoute: Hashable {
     case detail(UUID)
@@ -15,6 +16,10 @@ private enum DictionaryAvailability {
 final class WordImportMaintenanceCoordinator {
     private var isRunning = false
     private let dictionary: any SystemDictionaryAuthorizing
+    private static let logger = Logger(
+        subsystem: "com.zhezhe.wordmem",
+        category: "import-queue"
+    )
 
     init(dictionary: any SystemDictionaryAuthorizing = UIKitSystemDictionaryAuthorizer()) {
         self.dictionary = dictionary
@@ -30,18 +35,36 @@ final class WordImportMaintenanceCoordinator {
             let repository = WordbookRepository(modelContext: modelContext)
             var completedIDs: Set<UUID> = []
 
-            for submission in snapshot.pending {
-                guard try !repository.hasCompletedImport(submission) else {
+            for (offset, submission) in snapshot.pending.enumerated() {
+                do {
+                    guard try !repository.hasCompletedImport(submission) else {
+                        completedIDs.insert(submission.payloadID)
+                        continue
+                    }
+                    _ = try await repository.importSubmission(submission, using: dictionary)
                     completedIDs.insert(submission.payloadID)
-                    continue
                 }
-                _ = try await repository.importSubmission(submission, using: dictionary)
-                completedIDs.insert(submission.payloadID)
+                catch {
+                    Self.logger.error(
+                        "Import queue item \(offset + 1) failed: \(error.localizedDescription, privacy: .public)"
+                    )
+                    return "第 \(offset + 1) 条导入记录处理失败，已保留待重试。"
+                }
             }
-            try WordImportSubmissionQueue.remove(completedIDs)
+            do {
+                try WordImportSubmissionQueue.remove(completedIDs)
+            } catch {
+                Self.logger.error(
+                    "Import queue cleanup failed: \(error.localizedDescription, privacy: .public)"
+                )
+                return "导入记录已处理，但队列清理失败，稍后会自动检查。"
+            }
             return WordImportSubmissionQueue.attentionMessage(for: snapshot)
         } catch {
-            return "有导入记录暂时无法处理，已保留待下次启动重试。"
+            Self.logger.error(
+                "Import queue snapshot failed: \(error.localizedDescription, privacy: .public)"
+            )
+            return "读取导入队列失败，已保留记录待重试。"
         }
     }
 }
@@ -75,6 +98,7 @@ struct WordbookView: View {
     @State private var activeImportSheet: WordImportSheet?
     @State private var alertMessage: String?
     @State private var queueAttentionMessage: String?
+    @State private var lastQueueAttentionMessage: String?
     @State private var maintenance = WordImportMaintenanceCoordinator()
     @State private var importQueueSignal = WordImportQueueSignalCenter()
     @State private var dictionary = UIKitSystemDictionaryAuthorizer()
@@ -156,7 +180,10 @@ struct WordbookView: View {
     }
 
     private func processPendingImports() async {
-        queueAttentionMessage = await maintenance.processPendingSubmissions(in: modelContext)
+        let message = await maintenance.processPendingSubmissions(in: modelContext)
+        guard message != lastQueueAttentionMessage else { return }
+        lastQueueAttentionMessage = message
+        queueAttentionMessage = message
     }
 
     private var emptyState: some View {
