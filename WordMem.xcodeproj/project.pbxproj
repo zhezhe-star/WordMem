@@ -68,6 +68,9 @@
 		OCR01 /* OCRTextSanitizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = OCR02 /* OCRTextSanitizer.swift */; };
 		DOC01 /* CanonicalDocumentModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = DOC03 /* CanonicalDocumentModels.swift */; };
 		DOC02 /* TextDocumentCanonicalizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = DOC04 /* TextDocumentCanonicalizer.swift */; };
+		VDR01 /* VisionDocumentSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = VDR03 /* VisionDocumentSnapshot.swift */; };
+		VDR02 /* VisionDocumentReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = VDR04 /* VisionDocumentReader.swift */; };
+		VDR05 /* VisionDocumentReaderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = VDR06 /* VisionDocumentReaderTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -125,6 +128,9 @@
 		OCR02 /* OCRTextSanitizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OCRTextSanitizer.swift; sourceTree = "<group>"; };
 		DOC03 /* CanonicalDocumentModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanonicalDocumentModels.swift; sourceTree = "<group>"; };
 		DOC04 /* TextDocumentCanonicalizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextDocumentCanonicalizer.swift; sourceTree = "<group>"; };
+		VDR03 /* VisionDocumentSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisionDocumentSnapshot.swift; sourceTree = "<group>"; };
+		VDR04 /* VisionDocumentReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisionDocumentReader.swift; sourceTree = "<group>"; };
+		VDR06 /* VisionDocumentReaderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisionDocumentReaderTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -275,6 +281,8 @@
 			children = (
 				DOC03 /* CanonicalDocumentModels.swift */,
 				DOC04 /* TextDocumentCanonicalizer.swift */,
+				VDR03 /* VisionDocumentSnapshot.swift */,
+				VDR04 /* VisionDocumentReader.swift */,
 			);
 			path = Document;
 			sourceTree = "<group>";
@@ -309,6 +317,7 @@
 			children = (
 				CAN02 /* CanonicalCleanResetTests.swift */,
 				CAN04 /* TextDocumentCanonicalizerTests.swift */,
+				VDR06 /* VisionDocumentReaderTests.swift */,
 			);
 			path = WordMemTests;
 			sourceTree = "<group>";
@@ -497,6 +506,8 @@
 				WPV01 /* WordPresentationViews.swift in Sources */,
 				DOC01 /* CanonicalDocumentModels.swift in Sources */,
 				DOC02 /* TextDocumentCanonicalizer.swift in Sources */,
+				VDR01 /* VisionDocumentSnapshot.swift in Sources */,
+				VDR02 /* VisionDocumentReader.swift in Sources */,
 				SHRD10 /* ImportCandidateModels.swift in Sources */,
 				OCR01 /* OCRTextSanitizer.swift in Sources */,
 				SHRD20 /* ImportFlowLayout.swift in Sources */,
@@ -532,6 +543,7 @@
 			files = (
 				CAN01 /* CanonicalCleanResetTests.swift in Sources */,
 				CAN03 /* TextDocumentCanonicalizerTests.swift in Sources */,
+				VDR05 /* VisionDocumentReaderTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
