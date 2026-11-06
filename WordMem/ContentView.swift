@@ -1,465 +1,470 @@
+import OSLog
 import SwiftData
 import SwiftUI
-import OSLog
 
 enum WordMemRoute: Hashable {
-    case detail(UUID)
+  case detail(UUID)
 }
 
 private enum DictionaryAvailability {
-    case checking
-    case available
-    case unavailable
+  case checking
+  case available
+  case unavailable
 }
 
 @MainActor
 final class WordImportMaintenanceCoordinator {
-    private var isRunning = false
-    private let dictionary: any SystemDictionaryAuthorizing
-    private static let logger = Logger(
-        subsystem: "com.zhezhe.wordmem",
-        category: "import-queue"
-    )
+  private var isRunning = false
+  private let dictionary: any SystemDictionaryAuthorizing
+  private static let logger = Logger(
+    subsystem: "com.zhezhe.wordmem",
+    category: "import-queue"
+  )
 
-    init(dictionary: any SystemDictionaryAuthorizing = UIKitSystemDictionaryAuthorizer()) {
-        self.dictionary = dictionary
-    }
+  init(dictionary: any SystemDictionaryAuthorizing = UIKitSystemDictionaryAuthorizer()) {
+    self.dictionary = dictionary
+  }
 
-    func processPendingSubmissions(in modelContext: ModelContext) async {
-        guard !isRunning else { return }
-        isRunning = true
-        defer { isRunning = false }
+  func processPendingSubmissions(in modelContext: ModelContext) async {
+    guard !isRunning else { return }
+    isRunning = true
+    defer { isRunning = false }
 
+    do {
+      let snapshot = try WordImportSubmissionQueue.snapshot()
+      if snapshot.hasAttention {
+        Self.logger.error(
+          "Import queue isolated \(snapshot.malformedCount) malformed and \(snapshot.futureSchemaCount) future-schema records."
+        )
+      }
+
+      let repository = WordbookRepository(modelContext: modelContext)
+      var completedIDs: Set<UUID> = []
+
+      for (offset, submission) in snapshot.pending.enumerated() {
         do {
-            let snapshot = try WordImportSubmissionQueue.snapshot()
-            if snapshot.hasAttention {
-                Self.logger.error(
-                    "Import queue isolated \(snapshot.malformedCount) malformed and \(snapshot.futureSchemaCount) future-schema records."
-                )
-            }
-
-            let repository = WordbookRepository(modelContext: modelContext)
-            var completedIDs: Set<UUID> = []
-
-            for (offset, submission) in snapshot.pending.enumerated() {
-                do {
-                    guard try !repository.hasCompletedImport(submission) else {
-                        completedIDs.insert(submission.payloadID)
-                        continue
-                    }
-                    _ = try await repository.importSubmission(submission, using: dictionary)
-                    completedIDs.insert(submission.payloadID)
-                }
-                catch {
-                    Self.logger.error(
-                        "Import queue item \(offset + 1) failed: \(error.localizedDescription, privacy: .public)"
-                    )
-                    continue
-                }
-            }
-            do {
-                try WordImportSubmissionQueue.remove(completedIDs)
-            } catch {
-                Self.logger.error(
-                    "Import queue cleanup failed: \(error.localizedDescription, privacy: .public)"
-                )
-            }
+          guard try !repository.hasCompletedImport(submission) else {
+            completedIDs.insert(submission.payloadID)
+            continue
+          }
+          _ = try await repository.importSubmission(submission, using: dictionary)
+          completedIDs.insert(submission.payloadID)
         } catch {
-            Self.logger.error(
-                "Import queue snapshot failed: \(error.localizedDescription, privacy: .public)"
-            )
+          Self.logger.error(
+            "Import queue item \(offset + 1) failed: \(error.localizedDescription, privacy: .public)"
+          )
+          continue
         }
+      }
+      do {
+        try WordImportSubmissionQueue.remove(completedIDs)
+      } catch {
+        Self.logger.error(
+          "Import queue cleanup failed: \(error.localizedDescription, privacy: .public)"
+        )
+      }
+    } catch {
+      Self.logger.error(
+        "Import queue snapshot failed: \(error.localizedDescription, privacy: .public)"
+      )
     }
+  }
 }
 
 struct ContentView: View {
-    @Query(sort: \WordEntry.createdAt) private var entries: [WordEntry]
-    @StateObject private var challengeService = CalendarChallengeService()
-    @State private var selectedTab = 0
+  @Query(sort: \WordEntry.createdAt) private var entries: [WordEntry]
+  @StateObject private var challengeService = CalendarChallengeService()
+  @State private var selectedTab = 0
 
-    var body: some View {
-        TabView(selection: $selectedTab) {
-            WordbookView()
-                .tabItem { Label("单词本", systemImage: "books.vertical") }
-                .tag(0)
+  var body: some View {
+    TabView(selection: $selectedTab) {
+      WordbookView()
+        .tabItem { Label("单词本", systemImage: "books.vertical") }
+        .tag(0)
 
-            CalendarHomeView(
-                words: entries.compactMap(\.calendarWord),
-                challengeService: challengeService
-            )
-            .tabItem { Label("日历", systemImage: "calendar") }
-            .tag(1)
-        }
+      CalendarHomeView(
+        words: entries.compactMap(\.calendarWord),
+        challengeService: challengeService
+      )
+      .tabItem { Label("日历", systemImage: "calendar") }
+      .tag(1)
     }
+  }
 }
 
 struct WordbookView: View {
-    @Environment(\.scenePhase) private var scenePhase
-    @Environment(\.modelContext) private var modelContext
-    @Query(sort: \WordEntry.updatedAt, order: .reverse) private var words: [WordEntry]
-    @State private var route: [WordMemRoute] = []
-    @State private var activeImportSheet: WordImportSheet?
-    @State private var alertMessage: String?
-    @State private var maintenance = WordImportMaintenanceCoordinator()
-    @State private var importQueueSignal = WordImportQueueSignalCenter()
-    @State private var dictionary = UIKitSystemDictionaryAuthorizer()
+  @Environment(\.scenePhase) private var scenePhase
+  @Environment(\.modelContext) private var modelContext
+  @Query(sort: \WordEntry.updatedAt, order: .reverse) private var words: [WordEntry]
+  @State private var route: [WordMemRoute] = []
+  @State private var activeImportSheet: WordImportSheet?
+  @State private var alertMessage: String?
+  @State private var maintenance = WordImportMaintenanceCoordinator()
+  @State private var importQueueSignal = WordImportQueueSignalCenter()
+  @State private var dictionary = UIKitSystemDictionaryAuthorizer()
 
-    var body: some View {
-        NavigationStack(path: $route) {
-            Group {
-                if words.isEmpty { emptyState } else { wordList }
-            }
-            .navigationTitle("WordMem")
-            .onAppear {
-                importQueueSignal.observe {
-                    Task { @MainActor in
-                        await processPendingImports()
-                    }
-                }
-            }
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        ForEach(WordImportSheet.allCases) { sheet in
-                            Button {
-                                activeImportSheet = sheet
-                            } label: {
-                                Label(sheet.title, systemImage: sheet.systemImage)
-                            }
-                        }
-                    } label: {
-                        Label("导入单词", systemImage: "plus")
-                    }
-                    .accessibilityIdentifier("addWordButton")
-                }
-            }
-            .navigationDestination(for: WordMemRoute.self) { routeValue in
-                switch routeValue {
-                case .detail(let id):
-                    if let word = words.first(where: { $0.id == id }) {
-                        WordEntryDetailView(entry: word)
-                    }
-                }
-            }
-            .sheet(item: $activeImportSheet) { sheet in
-                switch sheet {
-                case .image:
-                    ImageImportView(dictionary: dictionary) { summary in
-                        alertMessage = summary.message
-                    }
-                case .text:
-                    TextImportView(dictionary: dictionary) { summary in
-                        alertMessage = summary.message
-                    }
-                    .presentationDetents([.large])
-                }
-            }
-            .alert("WordMem", isPresented: .init(
-                get: { alertMessage != nil },
-                set: { if !$0 { alertMessage = nil } }
-            )) {
-                Button("好", role: .cancel) {}
-            } message: {
-                Text(alertMessage ?? "")
-            }
-            .task {
-                await processPendingImports()
-            }
-            .onChange(of: scenePhase) { _, phase in
-                guard phase == .active else { return }
-                Task { await processPendingImports() }
-            }
+  var body: some View {
+    NavigationStack(path: $route) {
+      Group {
+        if words.isEmpty { emptyState } else { wordList }
+      }
+      .navigationTitle("WordMem")
+      .onAppear {
+        importQueueSignal.observe {
+          Task { @MainActor in
+            await processPendingImports()
+          }
         }
-    }
-
-    private func processPendingImports() async {
-        await maintenance.processPendingSubmissions(in: modelContext)
-    }
-
-    private var emptyState: some View {
-        ContentUnavailableView {
-            Label("单词本还是空的", systemImage: "book.closed")
-        } description: {
-            Text("挑选系统词典收录的英文单词；翻译保存在本地元数据里。")
-        } actions: {
-            Button("导入第一个单词") { activeImportSheet = .text }
-                .buttonStyle(.borderedProminent)
-        }
-    }
-
-    private var wordList: some View {
-        List {
-            ForEach(words) { word in
-                NavigationLink(value: WordMemRoute.detail(word.id)) {
-                    WordListCard(entry: word)
-                }
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets(
-                        top: 6,
-                        leading: WordMemDesign.margin,
-                        bottom: 6,
-                        trailing: WordMemDesign.margin
-                    ))
+      }
+      .toolbar {
+        ToolbarItem(placement: .topBarTrailing) {
+          Menu {
+            ForEach(WordImportSheet.allCases) { sheet in
+              Button {
+                activeImportSheet = sheet
+              } label: {
+                Label(sheet.title, systemImage: sheet.systemImage)
+              }
             }
-                .onDelete(perform: deleteWords)
+          } label: {
+            Label("导入单词", systemImage: "plus")
+          }
+          .accessibilityIdentifier("addWordButton")
         }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .background(Color(.systemGroupedBackground))
+      }
+      .navigationDestination(for: WordMemRoute.self) { routeValue in
+        switch routeValue {
+        case .detail(let id):
+          if let word = words.first(where: { $0.id == id }) {
+            WordEntryDetailView(entry: word)
+          }
+        }
+      }
+      .sheet(item: $activeImportSheet) { sheet in
+        switch sheet {
+        case .image:
+          ImageImportView(dictionary: dictionary) { summary in
+            alertMessage = summary.message
+          }
+        case .text:
+          TextImportView(dictionary: dictionary) { summary in
+            alertMessage = summary.message
+          }
+          .presentationDetents([.medium, .large])
+        }
+      }
+      .alert(
+        "WordMem",
+        isPresented: .init(
+          get: { alertMessage != nil },
+          set: { if !$0 { alertMessage = nil } }
+        )
+      ) {
+        Button("好", role: .cancel) {}
+      } message: {
+        Text(alertMessage ?? "")
+      }
+      .task {
+        await processPendingImports()
+      }
+      .onChange(of: scenePhase) { _, phase in
+        guard phase == .active else { return }
+        Task { await processPendingImports() }
+      }
     }
+  }
 
-    private func deleteWords(at offsets: IndexSet) {
-        let selected = offsets.map { words[$0] }
-        do {
-            try WordbookRepository(modelContext: modelContext).delete(selected)
-        } catch {
-            modelContext.rollback()
-            alertMessage = "删除失败，请重试。"
-        }
+  private func processPendingImports() async {
+    await maintenance.processPendingSubmissions(in: modelContext)
+  }
+
+  private var emptyState: some View {
+    ContentUnavailableView {
+      Label("单词本还是空的", systemImage: "book.closed")
+    } description: {
+      Text("挑选系统词典收录的英文单词；翻译保存在本地元数据里。")
+    } actions: {
+      Button("导入第一个单词") { activeImportSheet = .text }
+        .buttonStyle(.borderedProminent)
     }
+  }
+
+  private var wordList: some View {
+    List {
+      ForEach(words) { word in
+        NavigationLink(value: WordMemRoute.detail(word.id)) {
+          WordListCard(entry: word)
+        }
+        .listRowSeparator(.hidden)
+        .listRowBackground(Color.clear)
+        .listRowInsets(
+          EdgeInsets(
+            top: 6,
+            leading: WordMemDesign.margin,
+            bottom: 6,
+            trailing: WordMemDesign.margin
+          ))
+      }
+      .onDelete(perform: deleteWords)
+    }
+    .listStyle(.plain)
+    .scrollContentBackground(.hidden)
+    .background(Color(.systemGroupedBackground))
+  }
+
+  private func deleteWords(at offsets: IndexSet) {
+    let selected = offsets.map { words[$0] }
+    do {
+      try WordbookRepository(modelContext: modelContext).delete(selected)
+    } catch {
+      modelContext.rollback()
+      alertMessage = "删除失败，请重试。"
+    }
+  }
 }
 
 struct WordEntryDetailView: View {
-    let entry: WordEntry
-    @Query private var importContexts: [WordImportContext]
-    @EnvironmentObject private var pronunciation: EnglishPronunciationPlayer
-    @State private var isSystemDictionaryPresented = false
-    @State private var dictionaryAvailability: DictionaryAvailability = .checking
+  let entry: WordEntry
+  @Query private var importContexts: [WordImportContext]
+  @EnvironmentObject private var pronunciation: EnglishPronunciationPlayer
+  @State private var isSystemDictionaryPresented = false
+  @State private var dictionaryAvailability: DictionaryAvailability = .checking
 
-    private var contexts: [WordImportContext] {
-        importContexts
-            .filter { $0.entry?.id == entry.id }
-            .sorted { $0.createdAt > $1.createdAt }
-    }
+  private var contexts: [WordImportContext] {
+    importContexts
+      .filter { $0.entry?.id == entry.id }
+      .sorted { $0.createdAt > $1.createdAt }
+  }
 
-    private var provenanceMetadata: [String: String]? {
-        contexts.first {
-            $0.selectedCandidate == entry.headword
-                && $0.metadata["canonicalKey"] == entry.normalizedKey
-        }?.metadata
-    }
+  private var provenanceMetadata: [String: String]? {
+    contexts.first {
+      $0.selectedCandidate == entry.headword
+        && $0.metadata["canonicalKey"] == entry.normalizedKey
+    }?.metadata
+  }
 
-    private var importOriginalText: String {
-        let metadataOriginal = provenanceMetadata?["originalWord"] ?? ""
-        return metadataOriginal.isEmpty ? entry.originalText : metadataOriginal
-    }
+  private var importOriginalText: String {
+    let metadataOriginal = provenanceMetadata?["originalWord"] ?? ""
+    return metadataOriginal.isEmpty ? entry.originalText : metadataOriginal
+  }
 
-    private var spellingCorrection: String? {
-        guard let correction = provenanceMetadata?["spellingCorrection"],
-              !correction.isEmpty,
-              WordInputNormalizer.normalizedKey(from: correction)
-                  != WordInputNormalizer.normalizedKey(from: importOriginalText)
-        else { return nil }
-        return correction
-    }
+  private var spellingCorrection: String? {
+    guard let correction = provenanceMetadata?["spellingCorrection"],
+      !correction.isEmpty,
+      WordInputNormalizer.normalizedKey(from: correction)
+        != WordInputNormalizer.normalizedKey(from: importOriginalText)
+    else { return nil }
+    return correction
+  }
 
-    private var normalizedLemma: String? {
-        guard let lemma = provenanceMetadata?["lemma"],
-              !lemma.isEmpty,
-              WordInputNormalizer.normalizedKey(from: lemma)
-                  != WordInputNormalizer.normalizedKey(from: entry.headword)
-        else { return nil }
-        return lemma
-    }
+  private var normalizedLemma: String? {
+    guard let lemma = provenanceMetadata?["lemma"],
+      !lemma.isEmpty,
+      WordInputNormalizer.normalizedKey(from: lemma)
+        != WordInputNormalizer.normalizedKey(from: entry.headword)
+    else { return nil }
+    return lemma
+  }
 
-    private var showsImportProvenance: Bool {
-        WordInputNormalizer.normalizedKey(from: importOriginalText)
-            != WordInputNormalizer.normalizedKey(from: entry.headword)
-            || spellingCorrection != nil
-            || normalizedLemma != nil
-    }
+  private var showsImportProvenance: Bool {
+    WordInputNormalizer.normalizedKey(from: importOriginalText)
+      != WordInputNormalizer.normalizedKey(from: entry.headword)
+      || spellingCorrection != nil
+      || normalizedLemma != nil
+  }
 
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                WordDetailHeader(entry: entry, isSpeaking: pronunciation.isSpeaking) {
-                    if pronunciation.isSpeaking {
-                        pronunciation.cancel()
-                    } else {
-                        _ = pronunciation.play(entry.headword)
-                    }
-                }
+  var body: some View {
+    ScrollView {
+      VStack(alignment: .leading, spacing: 16) {
+        WordDetailHeader(entry: entry, isSpeaking: pronunciation.isSpeaking) {
+          if pronunciation.isSpeaking {
+            pronunciation.cancel()
+          } else {
+            _ = pronunciation.play(entry.headword)
+          }
+        }
 
-                InfoMetaCard(title: "中文释义") {
-                    Text(entry.translation.isEmpty ? "暂无本地翻译" : entry.translation)
-                        .font(.title3.weight(.semibold))
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
+        InfoMetaCard(title: "中文释义") {
+          Text(entry.translation.isEmpty ? "暂无本地翻译" : entry.translation)
+            .font(.title3.weight(.semibold))
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
 
-                if showsImportProvenance {
-                    InfoMetaCard(title: "导入纠正") {
-                        VStack(alignment: .leading, spacing: 10) {
-                            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                                Text(importOriginalText)
-                                    .font(.callout)
-                                    .foregroundStyle(.secondary)
+        if showsImportProvenance {
+          InfoMetaCard(title: "导入纠正") {
+            VStack(alignment: .leading, spacing: 10) {
+              HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(importOriginalText)
+                  .font(.callout)
+                  .foregroundStyle(.secondary)
 
-                                Image(systemName: "arrow.right")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(.secondary)
+                Image(systemName: "arrow.right")
+                  .font(.caption.weight(.semibold))
+                  .foregroundStyle(.secondary)
 
-                                Text(entry.headword)
-                                    .font(.body.weight(.semibold))
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                Text(entry.headword)
+                  .font(.body.weight(.semibold))
+              }
+              .frame(maxWidth: .infinity, alignment: .leading)
 
-                            if let spellingCorrection {
-                                provenanceTag(
-                                    "拼写纠正 \(importOriginalText) → \(spellingCorrection)",
-                                    color: .orange
-                                )
-                            }
+              if let spellingCorrection {
+                provenanceTag(
+                  "拼写纠正 \(importOriginalText) → \(spellingCorrection)",
+                  color: .orange
+                )
+              }
 
-                            if let normalizedLemma {
-                                provenanceTag("原形 \(normalizedLemma)", color: .indigo)
-                            }
-                        }
-                    }
-                }
-
-                if let example = entry.example, !example.isEmpty {
-                    InfoMetaCard(title: "例句") {
-                        Text(example)
-                            .font(.body)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                }
-
-                if let note = entry.note, !note.isEmpty {
-                    InfoMetaCard(title: "笔记") {
-                        Text(note)
-                            .font(.body)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                }
-
-                InfoMetaCard(title: "词典详情") {
-                    Button {
-                        isSystemDictionaryPresented = true
-                    } label: {
-                        HStack {
-                            Label("在 Apple 词典中查看", systemImage: "character.book.closed")
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .foregroundStyle(.tertiary)
-                        }
-                        .frame(minHeight: WordMemDesign.minimumTouchTarget)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("systemDictionaryCard")
-                    .accessibilityLabel("在 Apple 系统词典中查看 \(entry.normalizedKey)")
-
-                    switch dictionaryAvailability {
-                    case .checking:
-                        Text("正在检查 Apple 本地词典收录状态。")
-                    case .available:
-                        Text("Apple 本地词典已收录该词。")
-                    case .unavailable:
-                        Text("Apple 本地词典未收录该词。")
-                    }
-                }
-
-                if !contexts.isEmpty {
-                    InfoMetaCard(title: "导入背景") {
-                        VStack(alignment: .leading, spacing: 16) {
-                            ForEach(contexts) { context in
-                                SourceEvidenceCard(context: context)
-                            }
-                        }
-                    }
-                }
+              if let normalizedLemma {
+                provenanceTag("原形 \(normalizedLemma)", color: .indigo)
+              }
             }
-                .padding(.horizontal, WordMemDesign.margin)
-                .padding(.top, 8)
-                .padding(.bottom, 24)
+          }
         }
-            .background(Color(.systemGroupedBackground))
-        .navigationTitle("单词详情")
-        .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $isSystemDictionaryPresented) {
-            SystemDictionaryView(term: entry.normalizedKey)
-        }
-        .task {
-            dictionaryAvailability = await UIKitSystemDictionaryAuthorizer()
-                .hasDefinition(forTerm: entry.normalizedKey) ? .available : .unavailable
-        }
-        .onDisappear { pronunciation.cancel() }
-    }
 
-    private func provenanceTag(_ text: String, color: Color) -> some View {
-        Text(text)
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(color)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(color.opacity(0.11), in: .capsule)
+        if let example = entry.example, !example.isEmpty {
+          InfoMetaCard(title: "例句") {
+            Text(example)
+              .font(.body)
+              .frame(maxWidth: .infinity, alignment: .leading)
+          }
+        }
+
+        if let note = entry.note, !note.isEmpty {
+          InfoMetaCard(title: "笔记") {
+            Text(note)
+              .font(.body)
+              .frame(maxWidth: .infinity, alignment: .leading)
+          }
+        }
+
+        InfoMetaCard(title: "词典详情") {
+          Button {
+            isSystemDictionaryPresented = true
+          } label: {
+            HStack {
+              Label("在 Apple 词典中查看", systemImage: "character.book.closed")
+              Spacer()
+              Image(systemName: "chevron.right")
+                .foregroundStyle(.tertiary)
+            }
+            .frame(minHeight: WordMemDesign.minimumTouchTarget)
+          }
+          .buttonStyle(.plain)
+          .accessibilityIdentifier("systemDictionaryCard")
+          .accessibilityLabel("在 Apple 系统词典中查看 \(entry.normalizedKey)")
+
+          switch dictionaryAvailability {
+          case .checking:
+            Text("正在检查 Apple 本地词典收录状态。")
+          case .available:
+            Text("Apple 本地词典已收录该词。")
+          case .unavailable:
+            Text("Apple 本地词典未收录该词。")
+          }
+        }
+
+        if !contexts.isEmpty {
+          InfoMetaCard(title: "导入背景") {
+            VStack(alignment: .leading, spacing: 16) {
+              ForEach(contexts) { context in
+                SourceEvidenceCard(context: context)
+              }
+            }
+          }
+        }
+      }
+      .padding(.horizontal, WordMemDesign.margin)
+      .padding(.top, 8)
+      .padding(.bottom, 24)
     }
+    .background(Color(.systemGroupedBackground))
+    .navigationTitle("单词详情")
+    .navigationBarTitleDisplayMode(.inline)
+    .sheet(isPresented: $isSystemDictionaryPresented) {
+      SystemDictionaryView(term: entry.normalizedKey)
+    }
+    .task {
+      dictionaryAvailability =
+        await UIKitSystemDictionaryAuthorizer()
+        .hasDefinition(forTerm: entry.normalizedKey) ? .available : .unavailable
+    }
+    .onDisappear { pronunciation.cancel() }
+  }
+
+  private func provenanceTag(_ text: String, color: Color) -> some View {
+    Text(text)
+      .font(.caption.weight(.semibold))
+      .foregroundStyle(color)
+      .padding(.horizontal, 8)
+      .padding(.vertical, 4)
+      .background(color.opacity(0.11), in: .capsule)
+  }
 
 }
 
 struct SourceEvidenceCard: View {
-    let context: WordImportContext
+  let context: WordImportContext
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 8) {
-                Label(context.source.displayName, systemImage: context.source.systemImage)
-                    .font(.caption.weight(.semibold))
+  var body: some View {
+    VStack(alignment: .leading, spacing: 14) {
+      HStack(spacing: 8) {
+        Label(context.source.displayName, systemImage: context.source.systemImage)
+          .font(.caption.weight(.semibold))
 
-                Spacer()
+        Spacer()
 
-                Text(context.createdAt, format: .dateTime.month().day().hour().minute())
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-            }
+        Text(context.createdAt, format: .dateTime.month().day().hour().minute())
+          .font(.caption2)
+          .foregroundStyle(.tertiary)
+      }
 
-            if let sourceText = displaySourceText {
-                Text(sourceText)
-                    .font(.body)
-                    .lineLimit(8)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
+      if let sourceText = displaySourceText {
+        Text(sourceText)
+          .font(.body)
+          .lineLimit(8)
+          .frame(maxWidth: .infinity, alignment: .leading)
+      }
 
-            if let phraseTranslation = context.metadata["phraseTranslation"], !phraseTranslation.isEmpty {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("整段翻译")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
+      if let phraseTranslation = context.metadata["phraseTranslation"], !phraseTranslation.isEmpty {
+        VStack(alignment: .leading, spacing: 6) {
+          Text("整段翻译")
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.secondary)
 
-                    Text(phraseTranslation)
-                        .font(.subheadline)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .padding(12)
-                .background(Color(.tertiarySystemGroupedBackground), in: .rect(cornerRadius: 12))
-            }
-
-            if let selected = context.selectedCandidate {
-                Text("选择：\(selected)")
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.secondary)
-            }
-
-            if let imageData = context.imageData,
-               !imageData.isEmpty,
-               let image = UIImage(data: imageData)
-            {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(maxWidth: .infinity, maxHeight: 300)
-                    .clipShape(.rect(cornerRadius: 14))
-                    .accessibilityLabel("导入来源图片")
-            }
+          Text(phraseTranslation)
+            .font(.subheadline)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(WordMemDesign.cardPadding)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: WordMemDesign.cardRadius))
-    }
+        .padding(12)
+        .background(Color(.tertiarySystemGroupedBackground), in: .rect(cornerRadius: 12))
+      }
 
-    private var displaySourceText: String? {
-        let text = context.sourceText ?? context.recognizedText
-        return text?.isEmpty == false ? text : nil
+      if let selected = context.selectedCandidate {
+        Text("选择：\(selected)")
+          .font(.caption.weight(.medium))
+          .foregroundStyle(.secondary)
+      }
+
+      if let imageData = context.imageData,
+        !imageData.isEmpty,
+        let image = UIImage(data: imageData)
+      {
+        Image(uiImage: image)
+          .resizable()
+          .scaledToFit()
+          .frame(maxWidth: .infinity, maxHeight: 300)
+          .clipShape(.rect(cornerRadius: 14))
+          .accessibilityLabel("导入来源图片")
+      }
     }
+    .padding(WordMemDesign.cardPadding)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(
+      Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: WordMemDesign.cardRadius))
+  }
+
+  private var displaySourceText: String? {
+    let text = context.sourceText ?? context.recognizedText
+    return text?.isEmpty == false ? text : nil
+  }
 }

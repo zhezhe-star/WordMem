@@ -1,7 +1,6 @@
 import PhotosUI
 import SwiftData
 import SwiftUI
-import Translation
 import UIKit
 
 struct ImageImportView: View {
@@ -10,24 +9,13 @@ struct ImageImportView: View {
 
   @Environment(\.dismiss) private var dismiss
   @Environment(\.modelContext) private var modelContext
+  @State private var model = DocumentImportReviewModel()
   @State private var photoItem: PhotosPickerItem?
   @State private var capturedImage: UIImage?
   @State private var imageData: Data?
-  @State private var canonicalDocument: CanonicalDocument?
-  @State private var recognizedText = ""
-  @State private var chips: [ImportCandidateChip] = []
-  @State private var selection = ImportChipSelection(chips: [])
-  @State private var isRecognizing = false
-  @State private var isSaving = false
   @State private var isCameraPresented = false
   @State private var cameraAvailability: CameraAvailability = .notDetermined
   @State private var cameraFallbackMessage: String?
-  @State private var errorMessage: String?
-  @State private var translationConfiguration: TranslationSession.Configuration?
-  @State private var translations: [String: String] = [:]
-  @State private var phraseTranslation: String?
-  @State private var isTranslating = false
-  @State private var translationPhase = DocumentTranslationPhase.idle
 
   private let recognitionService: any ImageDocumentRecognitionService = VisionDocumentReader()
   private let processingCoordinator = WordImageProcessingCoordinator()
@@ -42,11 +30,10 @@ struct ImageImportView: View {
       self.completion = completion
       _capturedImage = State(initialValue: previewState.thumbnail)
       _imageData = State(initialValue: previewState.thumbnail?.jpegData(compressionQuality: 0.9))
-      _recognizedText = State(initialValue: previewState.recognizedText)
-      _chips = State(initialValue: previewState.chips)
-      _selection = State(
-        initialValue: ImportPreviewFixtures.selection(
-          for: previewState.chips,
+      _model = State(
+        initialValue: DocumentImportReviewModel.preview(
+          sourceText: previewState.recognizedText,
+          chips: previewState.chips,
           selectedOffsets: previewState.selectedOffsets
         )
       )
@@ -57,171 +44,71 @@ struct ImageImportView: View {
     WordbookRepository(modelContext: modelContext)
   }
 
-  private var selectedWords: [String] {
-    selection.selectedChips.map(\.text)
-  }
-
-  private var currentStep: ImportStep {
-    chips.isEmpty ? .content : .selection
-  }
-
-  private var offeredChips: [ImportCandidateChip] {
-    chips.filter(\.isOffered)
-  }
-
   private var hasImage: Bool {
     capturedImage != nil
   }
 
   var body: some View {
-    NavigationStack {
-      VStack(spacing: 0) {
-        ScrollView {
-          VStack(alignment: .leading, spacing: 18) {
-            ImportStepHeader(
-              currentStep: currentStep,
-              title: "图片导入",
-              subtitle: hasImage ? "确认原图后，挑选要记的单词。" : "选择图片，本机识别英文后挑选单词。"
-            )
-
-            ImageImportSourceCard(
-              sourceText: recognizedText,
-              capturedImage: capturedImage,
-              currentStep: currentStep,
-              isRecognizing: isRecognizing,
-              isSaving: isSaving,
-              photoItem: $photoItem,
-              presentCamera: presentCameraIfAvailable
-            )
-
-            if capturedImage != nil {
-              ImportPhraseTranslationCard(
-                translation: phraseTranslation,
-                isTranslating: isTranslating && phraseTranslation == nil
-              )
-            }
-
-            if !chips.isEmpty {
-              if offeredChips.isEmpty {
-                ImportNoOfferedWordsView()
-              } else {
-                selectionContent
-              }
-            }
-
-            if let errorMessage {
-              ImportErrorMessage(message: errorMessage)
-            }
-          }
-          .padding(20)
-          .padding(.bottom, 8)
-          .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .scrollBounceBehavior(.basedOnSize)
-
-        ImportPrimaryCTA(
-          title: isTranslating
-            ? "正在翻译…"
-            : (isSaving ? "正在导入" : "导入 \(selectedWords.count) 个单词"),
-          isLoading: isSaving,
-          action: importSelectedWords
-        )
-        .padding(.horizontal, 20)
-        .padding(.top, 10)
-        .padding(.bottom, 14)
-        .background(.bar)
-        .disabled(selectedWords.isEmpty || isRecognizing || isTranslating || isSaving)
-      }
-      .background(Color(.systemGroupedBackground).ignoresSafeArea())
-      .navigationTitle("图片导入")
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItem(placement: .topBarTrailing) {
-          Button("取消") { dismiss() }
-            .disabled(isSaving)
-        }
-      }
-      .task(id: photoItem) {
-        await loadImage(from: photoItem)
-      }
-      .task {
-        cameraAvailability = CameraAvailability.current()
-      }
-      .onReceive(
-        NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)
-      ) { _ in
-        cameraAvailability = CameraAvailability.current()
-      }
-      .importCandidateTranslations(
-        chips: chips,
-        sourceText: recognizedText,
-        configuration: $translationConfiguration,
-        translations: $translations,
-        phraseTranslation: $phraseTranslation,
-        isTranslating: $isTranslating,
-        phase: $translationPhase
+    DocumentImportReviewScreen(
+      model: model,
+      title: "导入",
+      subtitle: hasImage ? "确认原图后，挑选要加入单词本的词。" : "选择图片，挑选要加入单词本的词。",
+      onCancel: { dismiss() },
+      onSubmit: { importSelectedWords() }
+    ) {
+      ImageImportSourceCard(
+        sourceText: model.preparedDisplayText,
+        capturedImage: capturedImage,
+        isProcessing: model.isBusy,
+        isSaving: model.isSaving,
+        photoItem: $photoItem,
+        presentCamera: presentCameraIfAvailable
       )
-      .alert(
-        "无法使用相机",
-        isPresented: .init(
-          get: { cameraFallbackMessage != nil },
-          set: { if !$0 { cameraFallbackMessage = nil } }
-        )
-      ) {
-        Button("好", role: .cancel) {}
-      } message: {
-        Text(cameraFallbackMessage ?? cameraAvailability.fallbackMessage)
-      }
-      .sheet(isPresented: $isCameraPresented) {
-        CameraImagePicker { data in
-          switch data {
-          case .success(let data):
-            Task { await processImageData(data) }
-          case .cancelled:
-            break
-          case .processingFailed:
-            errorMessage = "无法保存拍摄的照片，请重试。"
-          }
-        }
-        .ignoresSafeArea()
-      }
     }
-  }
-
-  private var selectionContent: some View {
-    VStack(alignment: .leading, spacing: 14) {
-      ImportSelectionToolbar(
-        selectedCount: selection.selectedCount,
-        totalCount: offeredChips.count,
-        onSelectAll: { selection.selectAll() },
-        onClear: { selection.clear() }
+    .task(id: photoItem) {
+      await loadImage(from: photoItem)
+    }
+    .task {
+      cameraAvailability = CameraAvailability.current()
+    }
+    .onReceive(
+      NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)
+    ) { _ in
+      cameraAvailability = CameraAvailability.current()
+    }
+    .alert(
+      "无法使用相机",
+      isPresented: .init(
+        get: { cameraFallbackMessage != nil },
+        set: { if !$0 { cameraFallbackMessage = nil } }
       )
-
-      ImportCandidateChipGrid(
-        chips: offeredChips,
-        selection: $selection,
-        meanings: translations,
-        isTranslating: isTranslating,
-        onRestoreOriginal: restoreOriginal
-      )
+    ) {
+      Button("好", role: .cancel) {}
+    } message: {
+      Text(cameraFallbackMessage ?? cameraAvailability.fallbackMessage)
+    }
+    .sheet(isPresented: $isCameraPresented) {
+      CameraImagePicker { data in
+        switch data {
+        case .success(let data):
+          Task { await processImageData(data) }
+        case .cancelled:
+          break
+        case .processingFailed:
+          model.failProcessing(with: WordImageImportError.invalidImageData)
+        }
+      }
+      .ignoresSafeArea()
     }
   }
 
   private func loadImage(from item: PhotosPickerItem?) async {
     guard let item else { return }
 
-    clearStaleResult()
     let token = processingCoordinator.begin()
-    isRecognizing = true
-    isTranslating = false
-    translationPhase = .idle
-    translationConfiguration = nil
-    translations = [:]
-    phraseTranslation = nil
+    model.beginImageProcessing()
     defer {
-      if processingCoordinator.finish(token) {
-        isRecognizing = false
-      }
+      _ = processingCoordinator.finish(token)
     }
 
     do {
@@ -230,16 +117,11 @@ struct ImageImportView: View {
       await processImageData(data, inheritedToken: token)
     } catch {
       guard !Task.isCancelled, processingCoordinator.shouldCommit(token) else { return }
-      errorMessage = "无法读取所选图片，请更换图片后重试。"
+      model.failProcessing(with: WordImageImportError.invalidImageData)
     }
   }
 
   private func processImageData(_ data: Data?, inheritedToken token: UUID? = nil) async {
-    if token == nil {
-      clearStaleResult()
-    }
-
-    // When loading supplies a token, the load phase already owns processing state.
     let ownsProcessing: Bool
     let activeToken: UUID
     if let token {
@@ -248,93 +130,39 @@ struct ImageImportView: View {
     } else {
       ownsProcessing = true
       activeToken = processingCoordinator.begin()
-      isTranslating = false
-      translationPhase = .idle
-      translationConfiguration = nil
-      translations = [:]
-      phraseTranslation = nil
+      model.beginImageProcessing()
     }
     defer {
-      if ownsProcessing, processingCoordinator.finish(activeToken) {
-        isRecognizing = false
+      if ownsProcessing {
+        _ = processingCoordinator.finish(activeToken)
       }
     }
 
-    guard let data, let image = UIImage(data: data), !data.isEmpty else {
-      guard processingCoordinator.shouldCommit(activeToken) else { return }
-      errorMessage = "无法读取所选图片，请更换图片后重试。"
-      return
-    }
-
-    guard processingCoordinator.shouldCommit(activeToken) else { return }
-    let preparedData = WordImagePreparer.prepare(data) ?? data
-    imageData = preparedData
-    capturedImage = image
-    canonicalDocument = nil
-
-    if processingCoordinator.shouldCommit(activeToken) {
-      errorMessage = nil
-    }
-
     do {
+      guard let data, let image = UIImage(data: data), !data.isEmpty else {
+        throw WordImageImportError.invalidImageData
+      }
+      guard processingCoordinator.shouldCommit(activeToken) else { return }
+
+      let preparedData = WordImagePreparer.prepare(data) ?? data
+      imageData = preparedData
+      capturedImage = image
+
       let document = try await recognitionService.recognizeDocument(in: preparedData)
       guard processingCoordinator.shouldCommit(activeToken) else { return }
-      canonicalDocument = document
+
       let rawText = Self.displayText(from: document)
       let text = OCRTextFormatter.formattedText(from: rawText)
-      guard !text.isEmpty else { throw WordImageImportError.noRecognizedText }
+      guard !text.isEmpty else {
+        throw WordImageImportError.noRecognizedText
+      }
 
-      let refreshedCandidates = EnglishWordCandidateSplitter.candidates(from: text)
-      guard !refreshedCandidates.isEmpty else { throw WordImageImportError.noRecognizedText }
-
-      let advisedChips = await ImportCandidatePipeline.chips(
-        from: refreshedCandidates,
-        context: text
-      )
-      guard !advisedChips.isEmpty else { throw WordImageImportError.noRecognizedText }
-
-      recognizedText = text
-      chips = advisedChips
-      selection = ImportChipSelection(chips: advisedChips)
-      translationConfiguration =
-        ImportCandidateTranslationModifier
-        .refreshedConfiguration(translationConfiguration)
-
+      await model.prepareImageDocument(document, displayText: text)
     } catch {
       guard processingCoordinator.shouldCommit(activeToken) else { return }
       guard !Task.isCancelled else { return }
-      recognizedText = ""
-      chips = []
-      selection = ImportChipSelection(chips: [])
-      isTranslating = false
-      translationPhase = .idle
-      translationConfiguration = nil
-      translations = [:]
-      phraseTranslation = nil
-      errorMessage = (error as? WordImageImportError)?.errorDescription ?? "文字识别失败，请重试。"
+      model.failProcessing(with: error)
     }
-  }
-
-  private func restoreOriginal(_ chip: ImportCandidateChip) {
-    let restored = chip.restoringOriginal()
-    chips = chips.map { $0.id == chip.id ? restored : $0 }
-    selection = ImportChipSelection(chips: chips)
-    if let translation = translations[chip.id] {
-      translations[restored.id] = translation
-    }
-  }
-
-  private func clearStaleResult() {
-    canonicalDocument = nil
-    recognizedText = ""
-    chips = []
-    selection = ImportChipSelection(chips: [])
-    errorMessage = nil
-    isTranslating = false
-    translationPhase = .idle
-    translationConfiguration = nil
-    translations = [:]
-    phraseTranslation = nil
   }
 
   private func presentCameraIfAvailable() {
@@ -349,25 +177,23 @@ struct ImageImportView: View {
   }
 
   private func importSelectedWords() {
-    guard let imageData, !selectedWords.isEmpty, !isSaving else { return }
+    guard model.canSubmit, let imageData else { return }
 
-    isSaving = true
-    errorMessage = nil
-
+    model.beginSaving()
     Task {
-      defer { isSaving = false }
+      defer { model.endSaving() }
 
       do {
         let submission = WordImportSubmission(
           source: .image,
-          sourceText: recognizedText,
-          recognizedText: recognizedText,
+          sourceText: model.preparedDisplayText,
+          recognizedText: model.preparedDisplayText,
           imageData: imageData,
           candidates: ImportCandidatePipeline.payloads(
-            from: selection.selectedChips,
-            translations: translations
+            from: model.selection.selectedChips,
+            translations: model.chipTranslations
           ),
-          metadata: phraseTranslationMetadata
+          metadata: saveMetadata
         )
         let outcomes = try await repository.importSubmission(
           submission,
@@ -376,24 +202,24 @@ struct ImageImportView: View {
         completion(WordImportSummary(outcomes: outcomes))
         dismiss()
       } catch {
-        errorMessage = "批量导入失败，请重试。"
+        model.failSaving()
       }
     }
   }
 
-  private var phraseTranslationMetadata: [String: String] {
+  private var saveMetadata: [String: String] {
     var metadata = [
       "channel": WordImportSource.image.rawValue,
       "imageByteCount": "\(imageData?.count ?? 0)",
     ]
-    if let phraseTranslation, !phraseTranslation.isEmpty {
-      metadata["phraseTranslation"] = phraseTranslation
+    if let translatedText = model.translatedText {
+      metadata["phraseTranslation"] = translatedText
     }
     return metadata
   }
 
   /// Canonical blocks stay untouched; this only projects structured source
-  /// text into the compact review format already shown by image import.
+  /// text into the compact review format shown by image import.
   private static func displayText(from document: CanonicalDocument) -> String {
     document.blocks
       .filter { $0.kind != .list && $0.kind != .table }

@@ -1,6 +1,5 @@
 import SwiftData
 import SwiftUI
-import Translation
 
 struct TextImportView: View {
   let dictionary: any SystemDictionaryAuthorizing
@@ -8,17 +7,9 @@ struct TextImportView: View {
 
   @Environment(\.dismiss) private var dismiss
   @Environment(\.modelContext) private var modelContext
-  @State private var sourceText = ""
-  @State private var chips: [ImportCandidateChip] = []
-  @State private var selection = ImportChipSelection(chips: [])
-  @State private var isSaving = false
-  @State private var errorMessage: String?
-  @State private var advisorToken = UUID()
-  @State private var translationConfiguration: TranslationSession.Configuration?
-  @State private var translations: [String: String] = [:]
-  @State private var phraseTranslation: String?
-  @State private var isTranslating = false
-  @State private var translationPhase = DocumentTranslationPhase.idle
+  @State private var model = DocumentImportReviewModel()
+  @State private var draftText = ""
+  @FocusState private var isSourceFocused: Bool
 
   #if DEBUG
     init(
@@ -28,14 +19,14 @@ struct TextImportView: View {
     ) {
       self.dictionary = dictionary
       self.completion = completion
-      _sourceText = State(initialValue: previewState.sourceText)
-      _chips = State(initialValue: previewState.chips)
-      _selection = State(
-        initialValue: ImportPreviewFixtures.selection(
-          for: previewState.chips,
+      _model = State(
+        initialValue: DocumentImportReviewModel.preview(
+          sourceText: previewState.sourceText,
+          chips: previewState.chips,
           selectedOffsets: previewState.selectedOffsets
         )
       )
+      _draftText = State(initialValue: previewState.sourceText)
     }
   #endif
 
@@ -43,174 +34,58 @@ struct TextImportView: View {
     WordbookRepository(modelContext: modelContext)
   }
 
-  private var selectedWords: [String] {
-    selection.selectedChips.map(\.text)
-  }
-
-  private var currentStep: ImportStep {
-    chips.isEmpty ? .content : .selection
-  }
-
-  private var offeredChips: [ImportCandidateChip] {
-    chips.filter(\.isOffered)
-  }
-
   var body: some View {
-    NavigationStack {
-      VStack(spacing: 0) {
-        ScrollView {
-          VStack(alignment: .leading, spacing: 18) {
-            ImportStepHeader(
-              currentStep: currentStep,
-              title: "文本导入",
-              subtitle: "输入英文内容，挑选要加入单词本的词。"
-            )
-
-            ImportSourceEditorCard(
-              title: "原文",
-              placeholder: "例如：The quick brown fox jumps over the lazy dog.",
-              text: $sourceText
-            )
-
-            if !sourceText.isEmpty {
-              ImportPhraseTranslationCard(
-                translation: phraseTranslation,
-                isTranslating: isTranslating && phraseTranslation == nil
-              )
-            }
-
-            if chips.isEmpty {
-              emptyState
-            } else if offeredChips.isEmpty {
-              ImportNoOfferedWordsView()
-            } else {
-              selectionContent
-            }
-
-            if let errorMessage {
-              ImportErrorMessage(message: errorMessage)
-            }
-          }
-          .padding(20)
-          .padding(.bottom, 8)
-          .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .scrollBounceBehavior(.basedOnSize)
-
-        ImportPrimaryCTA(
-          title: isTranslating
-            ? "正在翻译…"
-            : (isSaving ? "正在导入" : "导入 \(selectedWords.count) 个单词"),
-          isLoading: isSaving,
-          action: importSelectedWords
-        )
-        .padding(.horizontal, 20)
-        .padding(.top, 10)
-        .padding(.bottom, 14)
-        .background(.bar)
-        .disabled(selectedWords.isEmpty || isTranslating || isSaving)
+    DocumentImportReviewScreen(
+      model: model,
+      title: "导入",
+      subtitle: "输入英文内容，挑选要加入单词本的词。",
+      onCancel: { dismiss() },
+      onSubmit: { importSelectedWords() }
+    ) {
+      ImportSourceEditorCard(
+        title: "原文",
+        placeholder: "输入或粘贴英文内容。",
+        text: $draftText,
+        isFocused: $isSourceFocused
+      ) {
+        commitDraft()
       }
-      .background(Color(.systemGroupedBackground).ignoresSafeArea())
-      .navigationTitle("文本导入")
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItem(placement: .topBarTrailing) {
-          Button("取消") { dismiss() }
-            .disabled(isSaving)
-        }
+    }
+    .onChange(of: draftText) { _, newValue in
+      let isEmpty = newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+      if isEmpty, !model.chips.isEmpty {
+        model.reset()
       }
-      .onChange(of: sourceText, initial: true) {
-        refreshCandidates()
+    }
+    .onChange(of: model.phase) { _, newPhase in
+      // Content is ready for review; stop letting the keyboard dominate it.
+      if newPhase.isReviewReady {
+        isSourceFocused = false
       }
-      .importCandidateTranslations(
-        chips: chips,
-        sourceText: sourceText,
-        configuration: $translationConfiguration,
-        translations: $translations,
-        phraseTranslation: $phraseTranslation,
-        isTranslating: $isTranslating,
-        phase: $translationPhase
-      )
     }
   }
 
-  private var emptyState: some View {
-    ContentUnavailableView(
-      "还没有候选词",
-      systemImage: "text.magnifyingglass",
-      description: Text("输入英文内容后，这里会显示可选择单词。")
-    )
-    .frame(maxWidth: .infinity)
-    .padding(.vertical, 28)
-  }
-
-  private var selectionContent: some View {
-    VStack(alignment: .leading, spacing: 14) {
-      ImportSelectionToolbar(
-        selectedCount: selection.selectedCount,
-        totalCount: offeredChips.count,
-        onSelectAll: { selection.selectAll() },
-        onClear: { selection.clear() }
-      )
-
-      ImportCandidateChipGrid(
-        chips: offeredChips,
-        selection: $selection,
-        meanings: translations,
-        isTranslating: isTranslating,
-        onRestoreOriginal: restoreOriginal
-      )
-    }
-  }
-
-  private func refreshCandidates() {
-    let token = UUID()
-    advisorToken = token
-    phraseTranslation = nil
-    let context = sourceText
-
-    Task {
-      let candidates = EnglishWordCandidateSplitter.candidates(from: context)
-      let refreshedChips = await ImportCandidatePipeline.chips(
-        from: candidates,
-        context: context
-      )
-      guard advisorToken == token else { return }
-      chips = refreshedChips
-      selection.updateChips(refreshedChips)
-      translationConfiguration =
-        ImportCandidateTranslationModifier
-        .refreshedConfiguration(translationConfiguration)
-    }
-  }
-
-  private func restoreOriginal(_ chip: ImportCandidateChip) {
-    let restored = chip.restoringOriginal()
-    chips = chips.map { $0.id == chip.id ? restored : $0 }
-    selection.updateChips(chips)
-    if let translation = translations[chip.id] {
-      translations[restored.id] = translation
-    }
+  private func commitDraft() {
+    isSourceFocused = false
+    Task { await model.prepareText(draftText) }
   }
 
   private func importSelectedWords() {
-    guard !selectedWords.isEmpty, !isSaving else { return }
+    guard model.canSubmit else { return }
 
-    isSaving = true
-    errorMessage = nil
-
+    model.beginSaving()
     Task {
-      defer { isSaving = false }
+      defer { model.endSaving() }
 
       do {
         let submission = WordImportSubmission(
           source: .text,
-          sourceText: sourceText,
+          sourceText: model.preparedDisplayText,
           candidates: ImportCandidatePipeline.payloads(
-            from: selection.selectedChips,
-            translations: translations
+            from: model.selection.selectedChips,
+            translations: model.chipTranslations
           ),
-          metadata: phraseTranslationMetadata
+          metadata: saveMetadata
         )
         let outcomes = try await repository.importSubmission(
           submission,
@@ -219,15 +94,15 @@ struct TextImportView: View {
         completion(WordImportSummary(outcomes: outcomes))
         dismiss()
       } catch {
-        errorMessage = "批量导入失败，请重试。"
+        model.failSaving()
       }
     }
   }
 
-  private var phraseTranslationMetadata: [String: String] {
+  private var saveMetadata: [String: String] {
     var metadata = ["channel": WordImportSource.text.rawValue]
-    if let phraseTranslation, !phraseTranslation.isEmpty {
-      metadata["phraseTranslation"] = phraseTranslation
+    if let translatedText = model.translatedText {
+      metadata["phraseTranslation"] = translatedText
     }
     return metadata
   }

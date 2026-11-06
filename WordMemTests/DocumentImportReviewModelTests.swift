@@ -1,0 +1,383 @@
+import Foundation
+import Translation
+import XCTest
+
+@testable import WordMem
+
+@MainActor
+final class DocumentImportReviewModelTests: XCTestCase {
+  // MARK: - Text preparation
+
+  func testPrepareTextReachesReviewingWithOfferedChips() async {
+    let model = makeModel(available: ["garden"])
+
+    await model.prepareText("The garden grows quickly.")
+
+    XCTAssertEqual(model.phase, .reviewing)
+    XCTAssertEqual(model.offeredChips.map(\.text), ["garden"])
+    XCTAssertTrue(model.offeredChips.allSatisfy(\.isImportable))
+    XCTAssertTrue(model.selection.selectedChips.isEmpty)
+    XCTAssertNotNil(model.documentSession)
+    XCTAssertEqual(model.preparedDisplayText, "The garden grows quickly.")
+  }
+
+  func testPreparationRunsThroughOrganizingStateBeforeCandidates() async {
+    let model = makeModel(available: ["garden"])
+    var phaseWhenSessionCreated: DocumentImportReviewPhase?
+    model.documentSessionFactory = { document in
+      phaseWhenSessionCreated = model.phase
+      return ImportDocumentSession(
+        document: document,
+        engine: self.makeEngine(status: .installed)
+      )
+    }
+
+    await model.prepareText("The garden grows quickly.")
+
+    XCTAssertEqual(phaseWhenSessionCreated, .organizing)
+    XCTAssertEqual(model.phase, .reviewing)
+  }
+
+  func testDocumentTranslationFailureKeepsWordsSelectable() async {
+    let model = makeModel(
+      available: ["garden"],
+      availabilityStatus: .unsupported
+    )
+
+    await model.prepareText("The garden grows quickly.")
+
+    XCTAssertEqual(model.documentSession?.phase, .unsupportedLanguagePair)
+    XCTAssertNil(
+      model.reviewStatusMessage,
+      "Translation failure must not surface as a blocking error."
+    )
+    XCTAssertEqual(model.offeredChips.map(\.text), ["garden"])
+
+    model.toggleSelection(model.offeredChips[0])
+
+    XCTAssertEqual(model.selectedWords, ["garden"])
+    XCTAssertTrue(model.canSubmit)
+  }
+
+  func testFailedTranslationCanRetryIntoTranslatingPhase() async {
+    let model = makeModel(
+      available: ["garden"],
+      availabilityStatus: .unsupported
+    )
+    await model.prepareText("The garden grows quickly.")
+    guard let session = model.documentSession else {
+      return XCTFail("Document session should exist after preparation.")
+    }
+
+    session.retry()
+
+    XCTAssertEqual(session.phase, .translating)
+  }
+
+  func testTranslatedTextJoinsCompletedDocumentBlocks() async {
+    let model = makeModel(available: ["garden"])
+    await model.prepareText("The garden grows quickly.")
+    guard let session = model.documentSession else {
+      return XCTFail("Document session should exist after preparation.")
+    }
+    XCTAssertNil(model.translatedText)
+
+    await session.handle(EchoDocumentTranslationSession())
+
+    XCTAssertEqual(session.phase, .completed)
+    XCTAssertEqual(model.translatedText, "译文")
+  }
+
+  func testNoOfferedWordsShowsSemanticNoWordsState() async {
+    let model = makeModel(available: [])
+
+    await model.prepareText("Blurble zorp quux.")
+
+    XCTAssertEqual(model.phase, .noWordsAvailable)
+    XCTAssertEqual(
+      model.reviewStatusMessage,
+      "没有可保存的单词。可以更换内容或手动添加。"
+    )
+    XCTAssertTrue(model.offeredChips.isEmpty)
+    XCTAssertTrue(model.shouldReleaseFocus)
+    XCTAssertFalse(model.canSubmit)
+  }
+
+  func testClearingTextResetsReviewState() async {
+    let model = makeModel(available: ["garden"])
+    await model.prepareText("The garden grows quickly.")
+
+    await model.prepareText("   ")
+
+    XCTAssertEqual(model.phase, .capturing)
+    XCTAssertTrue(model.chips.isEmpty)
+    XCTAssertNil(model.documentSession)
+    XCTAssertNil(model.reviewStatusMessage)
+    XCTAssertFalse(model.shouldReleaseFocus)
+  }
+
+  // MARK: - Image preparation
+
+  func testImageProcessingMovesFromOrganizingToReviewing() async {
+    let model = makeModel(available: ["garden", "views"])
+
+    model.beginImageProcessing()
+    XCTAssertEqual(model.phase, .organizing)
+    XCTAssertEqual(model.reviewStatusMessage, "正在整理内容…")
+    XCTAssertTrue(model.isBusy)
+
+    let document = TextDocumentCanonicalizer().canonicalize("Garden views", origin: .image)
+    await model.prepareImageDocument(document, displayText: "Garden views")
+
+    XCTAssertEqual(model.phase, .reviewing)
+    XCTAssertFalse(model.isBusy)
+    XCTAssertEqual(model.preparedDisplayText, "Garden views")
+  }
+
+  func testImageProcessingErrorsUseActionableSemanticCopy() {
+    XCTAssertEqual(
+      DocumentImportStatusPresenter.processingErrorMessage(
+        for: WordImageImportError.invalidImageData
+      ),
+      "无法读取所选图片，请更换图片后重试。"
+    )
+    XCTAssertEqual(
+      DocumentImportStatusPresenter.processingErrorMessage(
+        for: WordImageImportError.noRecognizedText
+      ),
+      "没有识别到可整理的内容。"
+    )
+    XCTAssertEqual(
+      DocumentImportStatusPresenter.processingErrorMessage(for: URLError(.badURL)),
+      "暂时无法处理所选内容，请重试。"
+    )
+  }
+
+  func testFailedImageProcessingRestoresCapturingState() async {
+    let model = makeModel(available: ["garden"])
+    await model.prepareText("The garden grows quickly.")
+
+    model.failProcessing(with: WordImageImportError.noRecognizedText)
+
+    XCTAssertEqual(model.phase, .capturing)
+    XCTAssertTrue(model.chips.isEmpty)
+    XCTAssertNil(model.documentSession)
+    XCTAssertEqual(
+      model.reviewStatusMessage,
+      "没有识别到可整理的内容。"
+    )
+  }
+
+  // MARK: - Selection and saving
+
+  func testSelectionUpdatesTrackOfferedChipsOnly() async {
+    let model = makeModel(available: ["garden", "grows"])
+    await model.prepareText("The garden grows quickly.")
+    let offered = model.offeredChips
+    XCTAssertEqual(offered.count, 2)
+
+    model.selectAllWords()
+    XCTAssertEqual(model.selectedWords, ["garden", "grows"])
+    XCTAssertTrue(model.canSubmit)
+
+    model.clearSelection()
+    XCTAssertTrue(model.selectedWords.isEmpty)
+    XCTAssertFalse(model.canSubmit)
+  }
+
+  func testSavingLifecycleShowsConciseFailureAndRecovers() async {
+    let model = makeModel(available: ["garden"])
+    await model.prepareText("The garden grows quickly.")
+
+    model.beginSaving()
+    XCTAssertTrue(model.isSaving)
+    XCTAssertFalse(model.canSubmit, "Saving must disable resubmission.")
+
+    model.failSaving()
+    XCTAssertFalse(model.isSaving)
+    XCTAssertEqual(model.reviewStatusMessage, "批量导入失败，请重试。")
+
+    model.beginSaving()
+    model.endSaving()
+    XCTAssertNil(model.errorMessage)
+    XCTAssertFalse(model.isSaving)
+  }
+
+  func testPrimaryButtonTitleAlwaysShowsSelectedCount() {
+    XCTAssertEqual(
+      DocumentImportStatusPresenter.primaryButtonTitle(selectedCount: 0, isSaving: false),
+      "导入 0 个单词"
+    )
+    XCTAssertEqual(
+      DocumentImportStatusPresenter.primaryButtonTitle(selectedCount: 2, isSaving: false),
+      "导入 2 个单词"
+    )
+    XCTAssertEqual(
+      DocumentImportStatusPresenter.primaryButtonTitle(selectedCount: 2, isSaving: true),
+      "正在导入"
+    )
+  }
+
+  // MARK: - Pipeline hiding
+
+  func testUserCopyHidesPipelineTerminology() {
+    let userVisibleStrings = [
+      DocumentImportStatusPresenter.reviewStatus(for: .organizing),
+      DocumentImportStatusPresenter.reviewStatus(for: .preparingWords),
+      DocumentImportStatusPresenter.reviewStatus(for: .noWordsAvailable),
+      DocumentImportStatusPresenter.translationStatus(for: .checkingAvailability),
+      DocumentImportStatusPresenter.translationStatus(for: .translating),
+      DocumentImportStatusPresenter.translationStatus(for: .needsLanguageDownload),
+      DocumentImportStatusPresenter.translationStatus(for: .unsupportedLanguagePair),
+      DocumentImportStatusPresenter.translationStatus(for: .failed(.languageDetection)),
+      DocumentImportStatusPresenter.translationStatus(
+        for: .failed(.internalFailure("VNRecognizeTextRequest crashed"))
+      ),
+      DocumentImportStatusPresenter.processingErrorMessage(
+        for: WordImageImportError.invalidImageData
+      ),
+      DocumentImportStatusPresenter.processingErrorMessage(
+        for: WordImageImportError.noRecognizedText
+      ),
+      DocumentImportStatusPresenter.saveFailureMessage,
+      DocumentImportStatusPresenter.primaryButtonTitle(selectedCount: 3, isSaving: false),
+    ]
+
+    let forbiddenTerms = [
+      "Vision",
+      "OCR",
+      "Foundation",
+      "Translation",
+      "TranslationSession",
+      "Recognize",
+      "batch",
+      "Stage",
+      "Step",
+      "阶段",
+      "步骤",
+    ]
+
+    for userVisibleString in userVisibleStrings.compactMap({ $0 }) {
+      for forbiddenTerm in forbiddenTerms {
+        XCTAssertFalse(
+          userVisibleString.contains(forbiddenTerm),
+          "User copy '\(userVisibleString)' must not expose '\(forbiddenTerm)'."
+        )
+      }
+    }
+  }
+
+  func testTranslationStatusesMapToDesignCopy() {
+    XCTAssertEqual(
+      DocumentImportStatusPresenter.translationStatus(for: .translating),
+      "正在翻译…"
+    )
+    XCTAssertEqual(
+      DocumentImportStatusPresenter.translationStatus(for: .needsLanguageDownload),
+      "需要下载翻译资源后才能翻译。"
+    )
+    XCTAssertEqual(
+      DocumentImportStatusPresenter.translationStatus(for: .unsupportedLanguagePair),
+      "当前设备暂不支持这对语言的翻译。"
+    )
+    XCTAssertEqual(
+      DocumentImportStatusPresenter.translationStatus(for: .failed(.languageDetection)),
+      "无法识别语言，可以直接保存单词。"
+    )
+    XCTAssertEqual(
+      DocumentImportStatusPresenter.translationStatus(
+        for: .failed(.internalFailure("missing response"))
+      ),
+      "翻译暂时不可用，可以直接保存单词。"
+    )
+    XCTAssertNil(DocumentImportStatusPresenter.translationStatus(for: .idle))
+    XCTAssertNil(DocumentImportStatusPresenter.translationStatus(for: .completed))
+  }
+
+  // MARK: - Fixtures
+
+  private func makeModel(
+    available: Set<String>,
+    availabilityStatus: DocumentLanguageAvailabilityStatus = .installed
+  ) -> DocumentImportReviewModel {
+    let model = DocumentImportReviewModel(
+      advisor: makeAdvisor(available: available)
+    )
+    model.documentSessionFactory = { document in
+      ImportDocumentSession(
+        document: document,
+        engine: self.makeEngine(status: availabilityStatus)
+      )
+    }
+    return model
+  }
+
+  private func makeAdvisor(available: Set<String>) -> ImportWordAdvisor {
+    ImportWordAdvisor(
+      lemmaProvider: NoopLemmaProvider(),
+      spellingSuggester: NoopSpellingSuggester(),
+      availability: StubSystemDictionary(available: available)
+    )
+  }
+
+  private func makeEngine(
+    status: DocumentLanguageAvailabilityStatus
+  ) -> DocumentTranslationEngine {
+    DocumentTranslationEngine(
+      availabilityChecker: StubAvailabilityChecker(status: status),
+      languageDetector: StubLanguageDetector(language: Locale.Language(identifier: "en"))
+    )
+  }
+}
+
+private struct StubSystemDictionary: SystemDictionaryAuthorizing {
+  let available: Set<String>
+
+  func hasDefinition(forTerm term: String) async -> Bool {
+    available.contains(term)
+  }
+}
+
+private struct NoopLemmaProvider: ImportWordLemmaProviding {
+  func lemma(for word: String, context: String?) async -> String? {
+    nil
+  }
+}
+
+private struct NoopSpellingSuggester: ImportWordSpellingSuggesting {
+  func correction(for word: String) async -> String? {
+    nil
+  }
+}
+
+private struct StubAvailabilityChecker: DocumentLanguageAvailabilityChecking {
+  let status: DocumentLanguageAvailabilityStatus
+
+  func status(
+    from source: Locale.Language,
+    to target: Locale.Language
+  ) async throws -> DocumentLanguageAvailabilityStatus {
+    status
+  }
+}
+
+private struct StubLanguageDetector: DocumentLanguageDetecting {
+  let language: Locale.Language?
+
+  func detectLanguage(in text: String) -> Locale.Language? {
+    language
+  }
+}
+
+private struct EchoDocumentTranslationSession: DocumentTranslationSessionHandling {
+  func translate(
+    _ requests: [DocumentTranslationRequest]
+  ) async throws -> [DocumentTranslationResponse] {
+    requests.map { request in
+      DocumentTranslationResponse(
+        clientIdentifier: request.clientIdentifier,
+        targetText: "译文"
+      )
+    }
+  }
+}

@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		DRM01 /* DocumentImportReviewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DRM02 /* DocumentImportReviewModel.swift */; };
+		DRV01 /* DocumentImportReviewViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = DRV02 /* DocumentImportReviewViews.swift */; };
+		DRVT01 /* DocumentImportReviewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DRVT02 /* DocumentImportReviewModelTests.swift */; };
 		SHRD30 /* TextImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SHRD31 /* TextImportView.swift */; };
 		SHRD32 /* ImageImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SHRD33 /* ImageImportView.swift */; };
 		SHRD34 /* ImageImportSourceCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = SHRD35 /* ImageImportSourceCard.swift */; };
@@ -78,6 +81,9 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		DRM02 /* DocumentImportReviewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentImportReviewModel.swift; sourceTree = "<group>"; };
+		DRV02 /* DocumentImportReviewViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentImportReviewViews.swift; sourceTree = "<group>"; };
+		DRVT02 /* DocumentImportReviewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentImportReviewModelTests.swift; sourceTree = "<group>"; };
 		SHRD31 /* TextImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextImportView.swift; sourceTree = "<group>"; };
 		SHRD33 /* ImageImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageImportView.swift; sourceTree = "<group>"; };
 		SHRD35 /* ImageImportSourceCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageImportSourceCard.swift; sourceTree = "<group>"; };
@@ -272,6 +278,8 @@
 		SHRD13 /* Import */ = {
 			isa = PBXGroup;
 			children = (
+				DRM02 /* DocumentImportReviewModel.swift */,
+				DRV02 /* DocumentImportReviewViews.swift */,
 				SHRD11 /* ImportCandidateModels.swift */,
 				OCR02 /* OCRTextSanitizer.swift */,
 				DOC05 /* Document */,
@@ -326,6 +334,7 @@
 		TEST13 /* WordMemTests */ = {
 			isa = PBXGroup;
 			children = (
+				DRVT02 /* DocumentImportReviewModelTests.swift */,
 				CAN02 /* CanonicalCleanResetTests.swift */,
 				CAN04 /* TextDocumentCanonicalizerTests.swift */,
 				VDR06 /* VisionDocumentReaderTests.swift */,
@@ -528,6 +537,8 @@
 				SHRD20 /* ImportFlowLayout.swift in Sources */,
 				SHRD23 /* ImportContextViews.swift in Sources */,
 				SHRD26 /* ImportSelectionViews.swift in Sources */,
+				DRM01 /* DocumentImportReviewModel.swift in Sources */,
+				DRV01 /* DocumentImportReviewViews.swift in Sources */,
 				TRN01 /* ImportCandidateTranslationModifier.swift in Sources */,
 				FRM01 /* OCRTextFormatter.swift in Sources */,
 				CAL01 /* CalendarChallengeService.swift in Sources */,
@@ -557,6 +568,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				CAN01 /* CanonicalCleanResetTests.swift in Sources */,
+				DRVT01 /* DocumentImportReviewModelTests.swift in Sources */,
 				CAN03 /* TextDocumentCanonicalizerTests.swift in Sources */,
 				VDR05 /* VisionDocumentReaderTests.swift in Sources */,
 				DTE07 /* DocumentTranslationEngineTests.swift in Sources */,
