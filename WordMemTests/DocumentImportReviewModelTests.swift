@@ -116,6 +116,39 @@ final class DocumentImportReviewModelTests: XCTestCase {
     XCTAssertFalse(model.shouldReleaseFocus)
   }
 
+  func testRapidReprocessingKeepsOnlyLatestPreparation() async {
+    let dictionary = ReleasableDictionary()
+    let model = DocumentImportReviewModel(
+      advisor: ImportWordAdvisor(
+        lemmaProvider: NoopLemmaProvider(),
+        spellingSuggester: NoopSpellingSuggester(),
+        availability: dictionary
+      )
+    )
+    model.documentSessionFactory = { document in
+      ImportDocumentSession(
+        document: document,
+        engine: self.makeEngine(status: .installed)
+      )
+    }
+
+    let staleTask = Task { await model.prepareText("garden") }
+    await dictionary.waitUntilWaiting(count: 1)
+
+    let latestTask = Task { await model.prepareText("Blurble zorp quux.") }
+    await dictionary.waitUntilWaiting(count: 2)
+    await dictionary.releaseAll(with: false)
+
+    await staleTask.value
+    await latestTask.value
+
+    XCTAssertEqual(model.phase, .noWordsAvailable)
+    XCTAssertTrue(model.offeredChips.isEmpty)
+    XCTAssertEqual(model.chips.map(\.text), ["Blurble", "zorp", "quux"])
+    XCTAssertTrue(model.selectedWords.isEmpty)
+    XCTAssertFalse(model.selectedWords.contains("garden"))
+  }
+
   // MARK: - Image preparation
 
   func testImageProcessingMovesFromOrganizingToReviewing() async {
@@ -335,6 +368,36 @@ private struct StubSystemDictionary: SystemDictionaryAuthorizing {
 
   func hasDefinition(forTerm term: String) async -> Bool {
     available.contains(term)
+  }
+}
+
+private actor ReleasableDictionary: SystemDictionaryAuthorizing {
+  private var continuations: [CheckedContinuation<Bool, Never>] = []
+  private var isReleasing = false
+
+  func hasDefinition(forTerm term: String) async -> Bool {
+    if isReleasing {
+      return false
+    }
+
+    return await withCheckedContinuation { continuation in
+      continuations.append(continuation)
+    }
+  }
+
+  func waitUntilWaiting(count: Int) async {
+    while continuations.count < count {
+      await Task.yield()
+    }
+  }
+
+  func releaseAll(with value: Bool) {
+    isReleasing = true
+    let pending = continuations
+    continuations = []
+    for continuation in pending {
+      continuation.resume(returning: value)
+    }
   }
 }
 
