@@ -66,6 +66,8 @@
 		MEM32 /* SystemDictionaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEM33 /* SystemDictionaryView.swift */; };
 		STORE01 /* WordMemStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = STORE02 /* WordMemStore.swift */; };
 		OCR01 /* OCRTextSanitizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = OCR02 /* OCRTextSanitizer.swift */; };
+		DOC01 /* CanonicalDocumentModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = DOC03 /* CanonicalDocumentModels.swift */; };
+		DOC02 /* TextDocumentCanonicalizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = DOC04 /* TextDocumentCanonicalizer.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -117,8 +119,12 @@
 		TEST04 /* WordMemTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WordMemTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		CAN01 /* CanonicalCleanResetTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAN02 /* CanonicalCleanResetTests.swift */; };
 		CAN02 /* CanonicalCleanResetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanonicalCleanResetTests.swift; sourceTree = "<group>"; };
+		CAN03 /* TextDocumentCanonicalizerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAN04 /* TextDocumentCanonicalizerTests.swift */; };
+		CAN04 /* TextDocumentCanonicalizerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextDocumentCanonicalizerTests.swift; sourceTree = "<group>"; };
 		STORE02 /* WordMemStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordMemStore.swift; sourceTree = "<group>"; };
 		OCR02 /* OCRTextSanitizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OCRTextSanitizer.swift; sourceTree = "<group>"; };
+		DOC03 /* CanonicalDocumentModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanonicalDocumentModels.swift; sourceTree = "<group>"; };
+		DOC04 /* TextDocumentCanonicalizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextDocumentCanonicalizer.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -254,6 +260,7 @@
 			children = (
 				SHRD11 /* ImportCandidateModels.swift */,
 				OCR02 /* OCRTextSanitizer.swift */,
+				DOC05 /* Document */,
 				SHRD21 /* ImportFlowLayout.swift */,
 				SHRD24 /* ImportContextViews.swift */,
 				SHRD27 /* ImportSelectionViews.swift */,
@@ -261,6 +268,15 @@
 				FRM02 /* OCRTextFormatter.swift */,
 			);
 			path = Import;
+			sourceTree = "<group>";
+		};
+		DOC05 /* Document */ = {
+			isa = PBXGroup;
+			children = (
+				DOC03 /* CanonicalDocumentModels.swift */,
+				DOC04 /* TextDocumentCanonicalizer.swift */,
+			);
+			path = Document;
 			sourceTree = "<group>";
 		};
 		MEM16 /* Domain */ = {
@@ -292,6 +308,7 @@
 			isa = PBXGroup;
 			children = (
 				CAN02 /* CanonicalCleanResetTests.swift */,
+				CAN04 /* TextDocumentCanonicalizerTests.swift */,
 			);
 			path = WordMemTests;
 			sourceTree = "<group>";
@@ -478,6 +495,8 @@
 				STORE01 /* WordMemStore.swift in Sources */,
 				APP03 /* ContentView.swift in Sources */,
 				WPV01 /* WordPresentationViews.swift in Sources */,
+				DOC01 /* CanonicalDocumentModels.swift in Sources */,
+				DOC02 /* TextDocumentCanonicalizer.swift in Sources */,
 				SHRD10 /* ImportCandidateModels.swift in Sources */,
 				OCR01 /* OCRTextSanitizer.swift in Sources */,
 				SHRD20 /* ImportFlowLayout.swift in Sources */,
@@ -512,6 +531,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				CAN01 /* CanonicalCleanResetTests.swift in Sources */,
+				CAN03 /* TextDocumentCanonicalizerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
