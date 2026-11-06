@@ -71,6 +71,10 @@
 		VDR01 /* VisionDocumentSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = VDR03 /* VisionDocumentSnapshot.swift */; };
 		VDR02 /* VisionDocumentReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = VDR04 /* VisionDocumentReader.swift */; };
 		VDR05 /* VisionDocumentReaderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = VDR06 /* VisionDocumentReaderTests.swift */; };
+		DTE01 /* DocumentTranslationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = DTE02 /* DocumentTranslationModels.swift */; };
+		DTE03 /* DocumentTranslationEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = DTE04 /* DocumentTranslationEngine.swift */; };
+		DTE05 /* ImportDocumentSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = DTE06 /* ImportDocumentSession.swift */; };
+		DTE07 /* DocumentTranslationEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DTE08 /* DocumentTranslationEngineTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -131,6 +135,10 @@
 		VDR03 /* VisionDocumentSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisionDocumentSnapshot.swift; sourceTree = "<group>"; };
 		VDR04 /* VisionDocumentReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisionDocumentReader.swift; sourceTree = "<group>"; };
 		VDR06 /* VisionDocumentReaderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisionDocumentReaderTests.swift; sourceTree = "<group>"; };
+		DTE02 /* DocumentTranslationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentTranslationModels.swift; sourceTree = "<group>"; };
+		DTE04 /* DocumentTranslationEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentTranslationEngine.swift; sourceTree = "<group>"; };
+		DTE06 /* ImportDocumentSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportDocumentSession.swift; sourceTree = "<group>"; };
+		DTE08 /* DocumentTranslationEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentTranslationEngineTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -283,6 +291,9 @@
 				DOC04 /* TextDocumentCanonicalizer.swift */,
 				VDR03 /* VisionDocumentSnapshot.swift */,
 				VDR04 /* VisionDocumentReader.swift */,
+				DTE02 /* DocumentTranslationModels.swift */,
+				DTE04 /* DocumentTranslationEngine.swift */,
+				DTE06 /* ImportDocumentSession.swift */,
 			);
 			path = Document;
 			sourceTree = "<group>";
@@ -318,6 +329,7 @@
 				CAN02 /* CanonicalCleanResetTests.swift */,
 				CAN04 /* TextDocumentCanonicalizerTests.swift */,
 				VDR06 /* VisionDocumentReaderTests.swift */,
+				DTE08 /* DocumentTranslationEngineTests.swift */,
 			);
 			path = WordMemTests;
 			sourceTree = "<group>";
@@ -508,6 +520,9 @@
 				DOC02 /* TextDocumentCanonicalizer.swift in Sources */,
 				VDR01 /* VisionDocumentSnapshot.swift in Sources */,
 				VDR02 /* VisionDocumentReader.swift in Sources */,
+				DTE01 /* DocumentTranslationModels.swift in Sources */,
+				DTE03 /* DocumentTranslationEngine.swift in Sources */,
+				DTE05 /* ImportDocumentSession.swift in Sources */,
 				SHRD10 /* ImportCandidateModels.swift in Sources */,
 				OCR01 /* OCRTextSanitizer.swift in Sources */,
 				SHRD20 /* ImportFlowLayout.swift in Sources */,
@@ -544,6 +559,7 @@
 				CAN01 /* CanonicalCleanResetTests.swift in Sources */,
 				CAN03 /* TextDocumentCanonicalizerTests.swift in Sources */,
 				VDR05 /* VisionDocumentReaderTests.swift in Sources */,
+				DTE07 /* DocumentTranslationEngineTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

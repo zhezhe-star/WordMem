@@ -27,6 +27,7 @@ struct ImageImportView: View {
   @State private var translations: [String: String] = [:]
   @State private var phraseTranslation: String?
   @State private var isTranslating = false
+  @State private var translationPhase = DocumentTranslationPhase.idle
 
   private let recognitionService: any ImageDocumentRecognitionService = VisionDocumentReader()
   private let processingCoordinator = WordImageProcessingCoordinator()
@@ -157,7 +158,8 @@ struct ImageImportView: View {
         configuration: $translationConfiguration,
         translations: $translations,
         phraseTranslation: $phraseTranslation,
-        isTranslating: $isTranslating
+        isTranslating: $isTranslating,
+        phase: $translationPhase
       )
       .alert(
         "无法使用相机",
@@ -212,6 +214,7 @@ struct ImageImportView: View {
     let token = processingCoordinator.begin()
     isRecognizing = true
     isTranslating = false
+    translationPhase = .idle
     translationConfiguration = nil
     translations = [:]
     phraseTranslation = nil
@@ -246,6 +249,7 @@ struct ImageImportView: View {
       ownsProcessing = true
       activeToken = processingCoordinator.begin()
       isTranslating = false
+      translationPhase = .idle
       translationConfiguration = nil
       translations = [:]
       phraseTranslation = nil
@@ -303,6 +307,7 @@ struct ImageImportView: View {
       chips = []
       selection = ImportChipSelection(chips: [])
       isTranslating = false
+      translationPhase = .idle
       translationConfiguration = nil
       translations = [:]
       phraseTranslation = nil
@@ -326,6 +331,7 @@ struct ImageImportView: View {
     selection = ImportChipSelection(chips: [])
     errorMessage = nil
     isTranslating = false
+    translationPhase = .idle
     translationConfiguration = nil
     translations = [:]
     phraseTranslation = nil
