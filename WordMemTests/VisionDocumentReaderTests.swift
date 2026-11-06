@@ -7,7 +7,7 @@ import XCTest
 
 final class VisionDocumentReaderTests: XCTestCase {
   func testTitleParagraphListAndTableMappingUsesStableCanonicalEvidence() throws {
-    let snapshot = makeSnapshot()
+    let snapshot = Self.makeSnapshot()
     let document = VisionDocumentCanonicalMapper.canonicalDocument(from: snapshot)
 
     XCTAssertEqual(document.origin, .image)
@@ -65,8 +65,8 @@ final class VisionDocumentReaderTests: XCTestCase {
   }
 
   func testMappingIsDeterministicAcrossRepeatedObservations() {
-    let first = VisionDocumentCanonicalMapper.canonicalDocument(from: makeSnapshot())
-    let second = VisionDocumentCanonicalMapper.canonicalDocument(from: makeSnapshot())
+    let first = VisionDocumentCanonicalMapper.canonicalDocument(from: Self.makeSnapshot())
+    let second = VisionDocumentCanonicalMapper.canonicalDocument(from: Self.makeSnapshot())
 
     XCTAssertEqual(first, second)
     let identifiers = first.blocks.flatMap { [$0.id] + $0.spans.map(\.id) }
@@ -77,14 +77,16 @@ final class VisionDocumentReaderTests: XCTestCase {
     let upper = VisionTextSnapshot(
       transcript: "Upper",
       lines: [
-        makeLine("Upper", confidence: 0.9, rect: CGRect(x: 0.1, y: 0.1, width: 0.2, height: 0.02))
+        Self.makeLine(
+          "Upper", confidence: 0.9, rect: CGRect(x: 0.1, y: 0.1, width: 0.2, height: 0.02))
       ],
       boundingBox: CGRect(x: 0.1, y: 0.1, width: 0.2, height: 0.02)
     )
     let lower = VisionTextSnapshot(
       transcript: "Lower",
       lines: [
-        makeLine("Lower", confidence: 0.9, rect: CGRect(x: 0.5, y: 0.5, width: 0.2, height: 0.02))
+        Self.makeLine(
+          "Lower", confidence: 0.9, rect: CGRect(x: 0.5, y: 0.5, width: 0.2, height: 0.02))
       ],
       boundingBox: CGRect(x: 0.5, y: 0.5, width: 0.2, height: 0.02)
     )
@@ -98,7 +100,7 @@ final class VisionDocumentReaderTests: XCTestCase {
   }
 
   func testConfidenceIsPreservedWithoutArtificialInflation() throws {
-    let document = VisionDocumentCanonicalMapper.canonicalDocument(from: makeSnapshot())
+    let document = VisionDocumentCanonicalMapper.canonicalDocument(from: Self.makeSnapshot())
     let paragraph = try XCTUnwrap(document.blocks.first { $0.kind == .paragraph })
     let word = try XCTUnwrap(paragraph.spans.first { $0.text == "increased" })
 
@@ -107,7 +109,7 @@ final class VisionDocumentReaderTests: XCTestCase {
   }
 
   func testSanitizerFiltersDisplayAndCandidateTextWithoutMutatingCanonicalEvidence() throws {
-    let document = VisionDocumentCanonicalMapper.canonicalDocument(from: makeSnapshot())
+    let document = VisionDocumentCanonicalMapper.canonicalDocument(from: Self.makeSnapshot())
     let rawTable = try XCTUnwrap(document.blocks.first { $0.kind == .table })
     let rawParagraph = try XCTUnwrap(document.blocks.first { $0.kind == .paragraph })
     let rawText = [
@@ -135,7 +137,7 @@ final class VisionDocumentReaderTests: XCTestCase {
   }
 
   func testFakeProviderFeedsMapperThroughImageDocumentService() async throws {
-    let provider = FakeVisionDocumentObservationProvider(snapshot: makeSnapshot())
+    let provider = FakeVisionDocumentObservationProvider(snapshot: Self.makeSnapshot())
     let reader = VisionDocumentReader(observationProvider: provider)
     let imageData = try XCTUnwrap(makeJPEGData())
 
@@ -145,7 +147,64 @@ final class VisionDocumentReaderTests: XCTestCase {
     XCTAssertEqual(provider.requestedOrientations, [.up])
   }
 
-  private func makeSnapshot() -> VisionDocumentSnapshot {
+  @MainActor
+  func testTranslationMetadataUsesChildUnitsWithoutDuplicatingContainers() async throws {
+    let document = VisionDocumentCanonicalMapper.canonicalDocument(from: Self.makeSnapshot())
+    let model = DocumentImportReviewModel(
+      advisor: ImportWordAdvisor(
+        lemmaProvider: NoopVisionLemmaProvider(),
+        spellingSuggester: NoopVisionSpellingSuggester(),
+        availability: UnavailableVisionDictionary()
+      )
+    )
+    model.documentSessionFactory = { canonicalDocument in
+      ImportDocumentSession(
+        document: canonicalDocument,
+        engine: DocumentTranslationEngine(
+          availabilityChecker: InstalledVisionAvailabilityChecker(),
+          languageDetector: EnglishVisionLanguageDetector()
+        )
+      )
+    }
+    let fullDisplayText = document.blocks.map(\.text).joined(separator: "\n")
+
+    await model.prepareImageDocument(document, displayText: fullDisplayText)
+    guard let session = model.documentSession else {
+      return XCTFail("Document session should exist after preparation.")
+    }
+    await session.handle(SourceEchoTranslationSession())
+
+    XCTAssertEqual(session.phase, .completed)
+    XCTAssertEqual(model.preparedDisplayText, fullDisplayText)
+    XCTAssertEqual(session.document.blocks.map(\.kind).count, 10)
+    XCTAssertEqual(session.document, document)
+    XCTAssertTrue(document.blocks.contains { $0.kind == .list })
+    XCTAssertTrue(document.blocks.contains { $0.kind == .table })
+
+    let translated = try XCTUnwrap(session.translatedDocument)
+    let sourceByTranslatedID = Dictionary(
+      uniqueKeysWithValues: document.blocks.map { ($0.id, $0) }
+    )
+    let translatedSources = translated.blocks.compactMap { block in
+      sourceByTranslatedID[block.sourceBlockID]
+    }
+    let expectedSourceKinds: [CanonicalBlockKind] = [
+      .title, .paragraph, .listItem, .listItem, .tableCell, .tableCell, .tableCell,
+      .tableCell,
+    ]
+    XCTAssertEqual(
+      translatedSources.map(\.kind),
+      expectedSourceKinds
+    )
+    XCTAssertEqual(
+      model.translatedText, translatedSources.map { "\($0.text)译" }.joined(separator: "\n"))
+    for container in document.blocks where container.kind == .list || container.kind == .table {
+      XCTAssertFalse(model.translatedText?.contains(container.text) ?? true)
+    }
+    XCTAssertTrue(model.chips.map(\.text).contains("Revenue"))
+  }
+
+  private static func makeSnapshot() -> VisionDocumentSnapshot {
     let titleLine = makeLine(
       "Quarterly Report",
       confidence: 0.97,
@@ -224,7 +283,7 @@ final class VisionDocumentReaderTests: XCTestCase {
     )
   }
 
-  private func makeLine(
+  private static func makeLine(
     _ text: String,
     confidence: Double,
     rect: CGRect,
@@ -238,7 +297,7 @@ final class VisionDocumentReaderTests: XCTestCase {
     )
   }
 
-  private func makeCell(_ text: String, x: CGFloat, y: CGFloat) -> VisionTableCellSnapshot {
+  private static func makeCell(_ text: String, x: CGFloat, y: CGFloat) -> VisionTableCellSnapshot {
     let line = makeLine(
       text,
       confidence: 0.9,
@@ -305,5 +364,51 @@ private final class FakeVisionDocumentObservationProvider: VisionDocumentObserva
   ) async throws -> [VisionDocumentSnapshot] {
     requestedOrientations.append(orientation)
     return [snapshot]
+  }
+}
+
+private struct SourceEchoTranslationSession: DocumentTranslationSessionHandling {
+  func translate(
+    _ requests: [DocumentTranslationRequest]
+  ) async throws -> [DocumentTranslationResponse] {
+    requests.map {
+      DocumentTranslationResponse(
+        clientIdentifier: $0.clientIdentifier,
+        targetText: "\($0.sourceText)译"
+      )
+    }
+  }
+}
+
+private struct InstalledVisionAvailabilityChecker: DocumentLanguageAvailabilityChecking {
+  func status(
+    from source: Locale.Language,
+    to target: Locale.Language
+  ) async throws -> DocumentLanguageAvailabilityStatus {
+    .installed
+  }
+}
+
+private struct EnglishVisionLanguageDetector: DocumentLanguageDetecting {
+  func detectLanguage(in text: String) -> Locale.Language? {
+    Locale.Language(identifier: "en")
+  }
+}
+
+private struct UnavailableVisionDictionary: SystemDictionaryAuthorizing {
+  func hasDefinition(forTerm term: String) async -> Bool {
+    false
+  }
+}
+
+private struct NoopVisionLemmaProvider: ImportWordLemmaProviding {
+  func lemma(for word: String, context: String?) async -> String? {
+    nil
+  }
+}
+
+private struct NoopVisionSpellingSuggester: ImportWordSpellingSuggesting {
+  func correction(for word: String) async -> String? {
+    nil
   }
 }

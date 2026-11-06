@@ -145,12 +145,13 @@ struct DocumentTranslationEngine: Sendable {
     using session: any DocumentTranslationSessionHandling,
     preserving userEditedTranslations: [UUID: TranslatedBlock] = [:]
   ) async throws -> TranslatedDocument {
-    let source = try sourceLanguage(in: document)
+    _ = try sourceLanguage(in: document)
+    let translationUnits = document.translationUnitBlocks
     var translatedByID: [UUID: TranslatedBlock] = [:]
-    translatedByID.reserveCapacity(document.blocks.count)
+    translatedByID.reserveCapacity(translationUnits.count)
     var requests: [DocumentTranslationRequest] = []
 
-    for block in document.blocks {
+    for block in translationUnits {
       if let userEdited = userEditedTranslations[block.id],
         userEdited.state == .userEdited
       {
@@ -186,7 +187,7 @@ struct DocumentTranslationEngine: Sendable {
       )
     }
 
-    for block in document.blocks where translatedByID[block.id] == nil {
+    for block in translationUnits where translatedByID[block.id] == nil {
       let trimmed = block.text.trimmingCharacters(in: .whitespacesAndNewlines)
       guard let response = responseByID[block.id], !trimmed.isEmpty else {
         translatedByID[block.id] = Self.failedBlock(from: block, text: block.text)
@@ -199,7 +200,7 @@ struct DocumentTranslationEngine: Sendable {
       )
     }
 
-    let blocks = document.blocks.compactMap { translatedByID[$0.id] }
+    let blocks = translationUnits.compactMap { translatedByID[$0.id] }
     return TranslatedDocument(
       id: UUID(),
       sourceDocumentID: document.id,
