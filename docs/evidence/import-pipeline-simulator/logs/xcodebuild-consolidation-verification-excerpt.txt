@@ -1,0 +1,16 @@
+# Consolidation verification excerpt
+
+- Branch: feature/import-document-pipeline
+- Verification commit inspected: eaf54f2 (working tree before docs commit)
+- Command: xcodebuild test -project WordMem.xcodeproj -scheme WordMem -configuration Debug -destination 'platform=iOS Simulator,id=987CB4F0-4DB9-478B-99AF-AF2E45C0B4A0' CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+- Exit code: 0
+- Result: ** TEST SUCCEEDED **
+- Aggregate: Executed 71 tests, with 0 failures (0 unexpected) in 1.149 (1.166) seconds
+- Test result bundle: /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-fkrgbgtbwrtkiiaeqclllnfpumft/Logs/Test/Test-WordMem-2026.11.08_18-14-36-+0800.xcresult
+
+## Signing-exempt Debug build
+
+- Command: xcodebuild -project WordMem.xcodeproj -scheme WordMem -configuration Debug -destination 'platform=iOS Simulator,id=987CB4F0-4DB9-478B-99AF-AF2E45C0B4A0' -derivedDataPath /private/tmp/wordmem-consolidation-signing-exempt-dd CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY='' build
+- Exit code: 0
+- Result: ** BUILD SUCCEEDED **
+- No signing identity was passed because `CODE_SIGN_IDENTITY` was explicitly empty and signing was disabled/unnecessary.

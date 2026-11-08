@@ -1,192 +1,72 @@
 # Import Pipeline Simulator Smoke Report
 
-- Date: 2026-11-08
-- Repository commit: `274d9bb6f8d7df164632e26a8e4b7dc219c7d703`
+- Consolidation date: 2026-11-08
+- Evidence inspected at: commit `eaf54f2` (`test(import): add simulator translation fallback evidence`)
 - Branch: `feature/import-document-pipeline`
-- Simulator: iPhone Duo Test, UDID `987CB4F0-4DB9-478B-99AF-AF2E45C0B4A0`, iOS 27.1, booted
-- App: `com.zhezhe.wordmem`, version `0.1.0`, build `1`, Debug
-- Result: overall smoke-complete with one import-display issue and translation/runtime limitations
+- Simulator: iPhone Duo Test, UDID `987CB4F0-4DB9-478B-99AF-AF2E45C0B4A0`, iOS 27.1
+- Evidence reviewed: all 63 pre-consolidation files under `docs/evidence/import-pipeline-simulator/`
 
-## Scope and limitations
+## Overall simulator smoke decision
 
-This was a simulator-only app-level smoke run. Translation assets were unavailable and the system translation sheet explicitly reported that translation is unsupported on the simulated device. Apple Intelligence model availability was not independently exposed by WordMem's UI and was not validated; therefore this evidence does **not** constitute Apple Intelligence hardware validation and does **not** replace the physical-device Apple Intelligence/translation release checklist item.
+**PARTIAL — not a release-ready device substitute.** The app, Share Extension, Translation Provider invocation, and unsupported-translation fallback paths were exercised successfully. Release evidence remains PARTIAL because image OCR duplicated list and table content, Translation Provider save/queue could not be driven, and the simulator cannot provide installed translation assets, completed translation, or Apple Intelligence model validation. Simulator fallback results must not be read as proof that translation works on hardware.
 
-The text was entered by placing it on the simulator pasteboard with `xcrun simctl pbcopy` and sending Cmd+V through AXe because AXe direct typing does not support multiline input. Photo-library limited access was shown by the system photo picker; the fixture image was visible and selectable without changing permissions.
+## Consolidation verification gate
 
-## Command and exit-code evidence
+```sh
+xcodebuild test -project WordMem.xcodeproj -scheme WordMem -configuration Debug -destination 'platform=iOS Simulator,id=987CB4F0-4DB9-478B-99AF-AF2E45C0B4A0' CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+```
 
-| Step | Command | Exit |
-|---|---:|---:|
-| Build | `xcodebuild -project WordMem.xcodeproj -scheme WordMem -configuration Debug -destination 'id=987CB4F0-4DB9-478B-99AF-AF2E45C0B4A0' -derivedDataPath /private/tmp/wordmem-smoke-dd-274d9bb build` | 0 |
-| Install | `xcrun simctl install 987CB4F0-4DB9-478B-99AF-AF2E45C0B4A0 /private/tmp/wordmem-smoke-dd-274d9bb/Build/Products/Debug-iphonesimulator/WordMem.app` | 0 |
-| Launch | `xcrun simctl launch 987CB4F0-4DB9-478B-99AF-AF2E45C0B4A0 com.zhezhe.wordmem` | 0 |
-| Paste text | `printf '%s' '<test article>' | xcrun simctl pbcopy 987CB4F0-4DB9-478B-99AF-AF2E45C0B4A0`; `axe key-combo --modifiers 227 --key 25 --udid 987CB4F0-4DB9-478B-99AF-AF2E45C0B4A0` | 0 / 0 |
-| Add image | `xcrun simctl addmedia 987CB4F0-4DB9-478B-99AF-AF2E45C0B4A0 docs/evidence/import-pipeline-simulator/screenshots/deterministic-image-import-fixture.png` | 0 |
-| Log capture | `xcrun simctl spawn 987CB4F0-4DB9-478B-99AF-AF2E45C0B4A0 log show --style compact --last 45m --predicate 'process == "WordMem" OR eventMessage CONTAINS[c] "translation" OR eventMessage CONTAINS[c] "LanguageModel"'` | 0 |
-| App info | `xcrun simctl appinfo 987CB4F0-4DB9-478B-99AF-AF2E45C0B4A0 com.zhezhe.wordmem` | 0 |
+The test exited `0` with `** TEST SUCCEEDED **`, 71 tests, and 0 failures. A separate signing-exempt Debug build also exited `0`:
 
-UI interactions used XcodeBuildMCP runtime snapshots/taps and its bundled AXe for coordinates, Cmd+V, and manual dismissal of the system translation sheet. The full build log, concise translation fallback excerpt, full 45-minute filtered simulator log, and app info are under `docs/evidence/import-pipeline-simulator/logs/`.
+```sh
+xcodebuild -project WordMem.xcodeproj -scheme WordMem -configuration Debug -destination 'platform=iOS Simulator,id=987CB4F0-4DB9-478B-99AF-AF2E45C0B4A0' -derivedDataPath /private/tmp/wordmem-consolidation-signing-exempt-dd CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY='' build
+```
 
-## Text import checks
+It ended with `** BUILD SUCCEEDED **`. Bounded evidence: [verification excerpt](../../evidence/import-pipeline-simulator/logs/xcodebuild-consolidation-verification-excerpt.txt).
 
-| Check | Status | Evidence / observation |
-|---|---|---|
-| Open text import | PASS | Wordbook `+` → 导入单词 → 文本导入. |
-| Enter structured article | PASS | Pasted heading, paragraph, two-item list, fenced code block, and normal paragraph. Full text is retained by the runtime text field. |
-| Keyboard dismissal with 完成 | PASS | 完成 removed keyboard entry focus. The optional document translation sheet then appeared and was dismissed. |
-| One simple import screen | PASS | One review screen contains source, translation card, status, chips, and one CTA; the translation UI is a temporary system overlay during availability check. |
-| Semantic status only | PASS | UI shows “当前设备暂不支持这对语言的翻译。” and 重试; no canonical IDs or technical pipeline rows. |
-| Translation card state | PASS (fallback) | The expected unsupported fallback card and retry control are shown; translation output is unavailable on simulator. |
-| Chips selectable | PASS | `morning` and `study` selected; count changed from 0/28 to 2/28. |
-| Sheet medium/large resizing | PASS | Medium: `07-text-sheet-medium.png`; large after grabber drag: `02-text-review-large-unsupported-translation.png`. |
-| Selected-count CTA | PASS | CTA became enabled as “导入 2 个单词”. |
-| Save success alert | PASS | Alert: “已添加 2 个单词，已有 0 个单词。” |
-| Words visible in wordbook | PASS | `study` and `morning` rows visible with EN, phonetics, 待学习, and 暂无本地翻译. |
+## Simulator flow coverage
 
-## Image import checks
+| Original release-checklist flow | Simulator status | Evidence | Interpretation |
+|---|---|---|---|
+| Text import and unsupported-translation fallback | PASS (simulator scope) | [initial fallback](../../evidence/import-pipeline-simulator/screenshots/00-text-import-initial-unsupported-translation.png), [wordbook](../../evidence/import-pipeline-simulator/screenshots/06-text-wordbook-visible.png), [translation log](../../evidence/import-pipeline-simulator/logs/translation-fallback-excerpt.txt) | Structured text review, chips, CTA, save, wordbook, actionable fallback, and retry all worked. Completed translation is not claimed. |
+| Image import and unsupported-translation fallback | PARTIAL | [picker and review screenshots](../../evidence/import-pipeline-simulator/screenshots/09-image-photo-picker.jpg), [duplicate OCR runtime value](../../evidence/import-pipeline-simulator/logs/image-ocr-runtime-value.txt) | Picker, OCR, review, chips, CTA, and save worked, but OCR visibly duplicated both list entries and both table cells. This display defect must be addressed and revalidated before release. |
+| Share Extension end-to-end | PASS (simulator scope) | [extension opened](../../evidence/import-pipeline-simulator/screenshots/03-share-extension-opened.png), [fallback](../../evidence/import-pipeline-simulator/screenshots/05-share-extension-translation-fallback.png), [saved word](../../evidence/import-pipeline-simulator/screenshots/07-wordmem-after-share-save.png), [extension log](../../evidence/import-pipeline-simulator/logs/extension-smoke-log-excerpt.txt) | Share sheet, extraction, unsupported fallback, manual meaning, save, and WordMem wordbook confirmation worked. |
+| Translation Provider invocation and card render | PASS (simulator scope) | [provider invoked](../../evidence/import-pipeline-simulator/screenshots/08-translation-provider-invoked.png), [card/chips](../../evidence/import-pipeline-simulator/screenshots/09-translation-provider-wordmem-card.png), [process log](../../evidence/import-pipeline-simulator/logs/extension-process-excerpt.txt) | ExtensionKit launched the provider and rendered the source card/chips. |
+| Translation Provider save/queue | BLOCKED (automation) | [save disabled](../../evidence/import-pipeline-simulator/screenshots/11-translation-provider-save-disabled.png), [extension log](../../evidence/import-pipeline-simulator/logs/extension-smoke-log-excerpt.txt) | AXe and MCP taps did not toggle chips in the hosted scene; save stayed at 0 and disabled. Native save/queue needs hardware or an instrumented host. |
+| Translation output and model availability | BLOCKED (platform) | [AI empty / all engines unavailable](../../evidence/import-pipeline-simulator/logs/translation-availability-diagnostics-excerpt.txt), [mapping tests](../../evidence/import-pipeline-simulator/logs/xcodebuild-translation-mapping-tests.log) | Every observed translation engine was unavailable and `translation_api:AI:no-progress` was empty. Unit mappings pass, but runtime translation and Apple Intelligence were not validated. |
 
-The deterministic fixture is committed at `screenshots/deterministic-image-import-fixture.png`; its generator is `make-image-fixture.py`. It contains a visible title, paragraph, two-item list, and bordered 2x2 table.
+## Original physical-device checklist reconciliation
 
-| Check | Status | Evidence / observation |
-|---|---|---|
-| Create deterministic image | PASS | Generator exit 0; PNG is 1200x1600 and committed. |
-| Add to Photos | PASS | `simctl addmedia` exit 0; fixture appears first in picker (`09-image-photo-picker.jpg`). |
-| Exercise photo picker | PASS | Fixture selected; OCR began and review appeared. |
-| Recognized expected content | PARTIAL | Title, paragraph, list, and table text were recognized, but the visible 图片原文 runtime value duplicates both list entries and both table cells. Exact value: `logs/image-ocr-runtime-value.txt`; screenshot `11-image-review-large-duplicate-source.png`. |
-| Candidate selection | PASS | Count changed from 0/23 to 2/23 by selecting `morning` and `study`. |
-| Image save | PASS | Save completed with alert “已添加 0 个单词，已有 2 个单词。” because the selected words already existed from text import; no error occurred. |
-| No duplicate container/cell translation text | PARTIAL | No translated text was visible because translation is unsupported on simulator, so translated-card duplication cannot be checked. Independently, the raw recognized display already duplicates list/table container and cell text, which should not be considered release-ready. |
+| Original residual checklist item | Consolidated status | Evidence | Why the simulator is insufficient |
+|---|---|---:|---|
+| Confirm en→zh-Hans is installed or supported-not-installed through real `LanguageAvailability` on an Apple Intelligence-capable iPhone | BLOCKED | [diagnostics](../../evidence/import-pipeline-simulator/logs/translation-availability-diagnostics-excerpt.txt), [mapping tests](../../evidence/import-pipeline-simulator/logs/xcodebuild-translation-mapping-tests.log) | The simulator returned unsupported for the pairing and never exposed `supportedNotInstalled`; mapping code has unit coverage only. |
+| Exercise needs-download, start/complete resource download, and verify the system sheet does not block the app card | PARTIAL | [retry](../../evidence/import-pipeline-simulator/screenshots/t03-retry-translating.png), [system unsupported sheet](../../evidence/import-pipeline-simulator/screenshots/t04-retry-after-translation-failure.png), [mapping tests](../../evidence/import-pipeline-simulator/logs/xcodebuild-translation-mapping-tests.log) | Download-state copy has unit coverage, and the simulator exposed an overlay-blocking interaction risk, but no real downloadable/completed resource exists. |
+| Verify completed document output, block/span preservation, persisted phrase translation, and completed card | PARTIAL | [import success / fallback](../../evidence/import-pipeline-simulator/screenshots/t14-normal-en-import-success-fallback.png), [71-test gate](../../evidence/import-pipeline-simulator/logs/xcodebuild-consolidation-verification-excerpt.txt) | Unit tests cover translation-unit child selection and span structure, and import remained usable, but actual completed translation output and persistence require hardware assets. |
+| Repeat CJK/Chinese/Japanese and true mixed CJK/Latin probes; verify detection and chip behavior | PARTIAL | [non-English overlay](../../evidence/import-pipeline-simulator/screenshots/t05-unsupported-nonenglish-system-overlay.png), [app fallback](../../evidence/import-pipeline-simulator/screenshots/t07-unsupported-nonenglish-review.png), [mixed probe](../../evidence/import-pipeline-simulator/screenshots/t12-mixed-language-text-unsupported.png) | ASCII Polish exercised unsupported copy, but CJK entry was blocked and mixed-language routing was not truly tested. |
+| Exercise short text, rapid edits, cancellation/staleness, and retry after real interruption/session failure | PARTIAL | [short text](../../evidence/import-pipeline-simulator/screenshots/t08-very-short-text-unsupported.png), [rapid edits](../../evidence/import-pipeline-simulator/screenshots/t10-rapid-edit-1-sun.png), [diagnostics](../../evidence/import-pipeline-simulator/logs/translation-availability-diagnostics-excerpt.txt) | Short text, edits, and retry were stable, but cancellation and recovery under installed translation assets cannot occur on simulator. |
+| Confirm unsupported/failed import stays nonblocking, copy is actionable, retry is not duplicated | PARTIAL | [selection ready](../../evidence/import-pipeline-simulator/screenshots/t13-normal-en-selected-ready.png), [import success](../../evidence/import-pipeline-simulator/screenshots/t14-normal-en-import-success-fallback.png), [overlay risk](../../evidence/import-pipeline-simulator/screenshots/t05-unsupported-nonenglish-system-overlay.png) | Import remained usable and candidates did not visibly duplicate, but the non-English chip path first showed a blocking system sheet and a recoverable session-failure runtime was not available. |
+| Capture installed/downloadable/unsupported/failure transitions and confirm no production diagnostics were added | PARTIAL | [initial fallback](../../evidence/import-pipeline-simulator/logs/translation-fallback-excerpt.txt), [focused diagnostics](../../evidence/import-pipeline-simulator/logs/translation-availability-diagnostics-excerpt.txt), [extension log](../../evidence/import-pipeline-simulator/logs/extension-smoke-log-excerpt.txt) | Unsupported and engine-absence transitions were captured; installed, downloadable, completed, and real-failure transitions were not. |
 
-## Translation / model fallback
+## Physical release requirement
 
-- WordMem UI fallback: **PASS captured** — unsupported language pair on this simulator, with retry shown.
-- System translation sheet: **PASS captured** — “翻译”在模拟设备上不受支持。若要测试此功能，请在真实设备上运行代码。
-- System log excerpt: `translation_api:AllEngines:no-progress` and `progress` list every language engine with `🔴...---`, and `TranslationAPISupportExtension` is present. This supports “translation assets/model unavailable/unsupported” rather than “installed.”
-- Apple Intelligence model availability: **BLOCKED / not determinable from this app flow** — WordMem does not expose an Apple Intelligence availability control, and the smoke evidence covers only the system Translation API. No Apple Intelligence hardware validation is claimed.
+Before production release, run the image/text/Share Extension/Translation Provider matrix on **both** an Apple Intelligence-capable, translation-supported iPhone and a fallback iPhone. The simulator cannot satisfy this because it lacks qualifying Apple Intelligence hardware/model provisioning and installed Translation assets; it explicitly reported translation unsupported and had no AI engines. Hardware coverage must validate real availability/download states, completed translation output and persistence, native extension touch/save behavior, CJK and true mixed-language routing, interruption recovery, and both supported/fallback UI behavior.
+
+## Reconciliation decisions
+
+- App-level and focused-translation duplicate en→zh-Hans observations were collapsed into the two matrices above.
+- “Smoke complete” was removed as an overall release claim; OCR display duplication makes the combined result PARTIAL.
+- Image save reporting “已添加 0 个” is a result of reusing two words already created by text import, not a save failure.
+- Share Extension save success is not generalized to Translation Provider save/queue.
+- Apple Intelligence remains unvalidated: WordMem did not expose a model-availability control and the simulator exposed no AI engines.
+- Raw oversized logs were intentionally excluded; their bounded excerpts remain the durable evidence.
 
 ## Evidence index
 
-- `00-text-import-initial-unsupported-translation.png`: text import sheet and inline unsupported translation card.
-- `01-text-translation-system-sheet-unsupported.png`: system translation sheet fallback.
-- `02-text-review-large-unsupported-translation.png`: large text review, structured source, fallback card.
-- `03-text-candidate-chips-unselected.png`: 28 candidate chips, selected 0/28.
-- `04-text-two-chips-selected-cta-enabled.png`: selected 2/28 and enabled “导入 2 个单词”.
-- `05-text-save-success-alert.png`: “已添加 2 个单词，已有 0 个单词。”.
-- `06-text-wordbook-visible.png`: saved words in the wordbook.
-- `07-text-sheet-medium.png`: medium text sheet.
-- `08-image-import-source-medium.png`: image source sheet with album/camera actions.
-- `09-image-photo-picker.jpg`: photo picker showing the deterministic fixture.
-- `10-image-translation-system-sheet-unsupported.png`: image-flow translation fallback.
-- `11-image-review-large-duplicate-source.png`: large image review with duplicated list/table source text.
-- `12-image-candidate-chips-unselected.png`: 23 image-derived candidate chips.
-- `13-image-two-chips-selected-cta-enabled.png`: selected 2/23 and enabled image-import CTA.
-- `14-image-save-success-alert-existing.png`: image save alert with two existing words.
-- `deterministic-image-import-fixture.png`: source fixture with title, paragraph, two-item list, and 2x2 table.
-- `docs/evidence/import-pipeline-simulator/logs/xcodebuild-build.log`: incremental build log and exit 0.
-- `docs/evidence/import-pipeline-simulator/logs/appinfo.txt`: installed bundle/version/build.
-- `docs/evidence/import-pipeline-simulator/logs/translation-fallback-excerpt.txt`: concise translation fallback evidence.
-- `docs/evidence/import-pipeline-simulator/logs/simulator-log-45m.txt`: full filtered simulator log.
-- `docs/evidence/import-pipeline-simulator/logs/image-ocr-runtime-value.txt`: exact OCR display value showing list/table duplication.
-
-
-## Extension smoke appendix (Share Extension + Translation Provider)
-
-- Date: 2026-11-08 (same run window as the app smoke above)
-- Branch: `feature/import-document-pipeline`
-- Simulator: iPhone Duo Test, UDID `987CB4F0-4DB9-478B-99AF-AF2E45C0B4A0`, iOS 27.1, booted (same device, fresh derivedDataPath `/private/tmp/wordmem-ext-smoke-dd`, so it did not contend with the app-smoke build)
-- App: `com.zhezhe.wordmem` Debug build with embedded extensions
-  - Share Extension bundle id: `com.zhezhe.wordmem.ShareExtension` (`PlugIns/WordMemShareExtension.appex`, `NSExtensionPointIdentifier=com.apple.share-services`)
-  - Translation Provider bundle id: `com.zhezhe.wordmem.TranslationProvider` (ExtensionKit `Extensions/WordMemTranslationProvider.appex`)
-- Host: Safari local page `file:///private/tmp/wordmem-ext-smoke-test.html` (English article with "morning" and "study")
-
-### Result summary
-
-| Flow | Status | Notes |
-|---|---|---|
-| Share Extension end-to-end | PASS | Share sheet → WordMem → source extracted → translation fallback with actionable message → manual meaning saved → word visible in WordMem wordbook. |
-| Translation Provider invocation + card | PASS | System 翻译 action launched `com.zhezhe.wordmem.TranslationProvider`; its card rendered with source `morning` and the candidate chip grid. |
-| Translation Provider save/queue | BLOCKED | Candidate chip selection could not be driven by the installed automation (AXe HID taps and XcodeBuildMCP taps did not toggle the chip inside the ExtensionKit-hosted scene); `保存 0 个` stayed disabled, so save/queue behavior is unverified. |
-| Extension translation output | BLOCKED (platform) | System translation engines unavailable on simulator (`translation_api:AllEngines:no-progress`, all engines 🔴) for both extensions; matches the app-level smoke finding. |
-
-### Share Extension step evidence
-
-| Step | Command / interaction | Exit / result |
-|---|---|---|
-| Build full Debug app | `xcodebuild -project WordMem.xcodeproj -scheme WordMem -configuration Debug -destination 'id=987CB4F0-4DB9-478B-99AF-AF2E45C0B4A0' -derivedDataPath /private/tmp/wordmem-ext-smoke-dd build` | 0 (`logs/xcodebuild-ext-build.log`) |
-| Install | `xcrun simctl install 987CB4F0-4DB9-478B-99AF-AF2E45C0B4A0 /private/tmp/wordmem-ext-smoke-dd/Build/Products/Debug-iphonesimulator/WordMem.app` | 0 |
-| Open test page | `xcrun simctl openurl … "file:///private/tmp/wordmem-ext-smoke-test.html"` | 0 |
-| Select text | AXe touch down/up long-press at (55, 38) points over "morning" | 0, selection handles visible (`00-context-menu-translate-available.png`) |
-| Open share sheet | Tap `共享…` in the Safari context menu | share sheet with WordMem tile (`02-share-sheet-wordmem-visible.png`) |
-| Launch extension | AXe tap at WordMem tile (72, 437) points | extension UI opened (`03-share-extension-opened.png`, `04-share-extension-source-translating.png`) |
-| Translation fallback | Automatic after system translation fails | “翻译不可用，请手动输入释义。” + 重新翻译 (`05-share-extension-translation-fallback.png`) |
-| Enter manual meaning | `printf '%s' '早晨' \| xcrun simctl pbcopy …` + AXe Cmd+V into 中文释义 editor | 0 (`06-share-extension-manual-meaning-entered.png`) |
-| Save | AXe tap 保存 (345, 48) points | extension closed back to Safari |
-| Verify in WordMem | `xcrun simctl launch … com.zhezhe.wordmem` then screenshot | wordbook shows `morning` / `/mɔːrnɪŋ/` / 待学习 / 早晨 (`07-wordmem-after-share-save.png`) |
-
-Process evidence: `WordMemShareExtension` launched as pid 74684 and the share sheet registered the `UISocialActivity` for `com.zhezhe.wordmem.ShareExtension` (`logs/shareextension-launch-excerpt.txt`, `logs/extension-launch-excerpt.txt`).
-
-### Translation Provider step evidence
-
-| Step | Command / interaction | Exit / result |
-|---|---|---|
-| Invoke provider | Safari context menu → 翻译 (AXe tap 179, 79 points) | `WordMemTranslationProvider` pid 77260 launched (`08-translation-provider-invoked.png`) |
-| Card render | Automatic | `正在准备单词卡片…` startup, then 原句 `morning`, candidate chip `morning`, `保存 0 个` footer (`09-translation-provider-wordmem-card.png`, `10-translation-provider-wordpicker.png`, `11-translation-provider-save-disabled.png`) |
-| Chip selection | AXe taps at (128, 379), (72, 379), (131, 403) points on the chip | all exit 0 but `保存 0 个` never changed and the chip stayed unselected — synthetic HID taps are not acted on by this ExtensionKit-hosted scene |
-| Save/queue | Not reachable | `保存` stayed disabled at 0 selections; queue/save behavior unverified |
-
-`logs/extension-process-excerpt.txt` shows the ExtensionKit bootstrap of `extension<com.zhezhe.wordmem.TranslationProvider>` pid 77260.
-
-### Simulator coverage conclusion
-
-Simulator coverage can replace the happy-path mechanical coverage of the Share Extension (sheet → extract → fallback → manual save → wordbook) on iOS 27.1, and it can prove that the Translation Provider process launches and renders its card from the system 翻译 action. It cannot replace physical-device smoke for: system translation output (translation engines are unavailable on simulator), Apple Intelligence availability, and ExtensionKit chip interaction fidelity — the TranslationProvider card ignored synthetic taps in this run, so save/queue coverage still needs a physical device or an instrumented UI test host.
-
-Reduced log evidence: `docs/evidence/import-pipeline-simulator/logs/extension-smoke-log-excerpt.txt` (≤256 KB) keeps the timestamped Share Extension / TranslationProvider launch, card-scene, and engine-unavailability lines; the 112 MB raw 30-minute capture was intentionally not committed.
-
-## Appendix: translation availability and fallback focused run
-
-- Run date/time: 2026-11-08, 17:58–18:11 Asia/Shanghai.
-- Commit: `c1b318161862f147036f0c92c5351baece141884`; Debug WordMem from current HEAD.
-- Simulator: iPhone Duo Test, UDID `987CB4F0-4DB9-478B-99AF-AF2E45C0B4A0`, iOS 27.1.
-- Temporary derived data: `/private/tmp/wordmem-translation-availability-dd`.
-- Build/install/launch/screenshot/log/test commands and exits are in `docs/evidence/import-pipeline-simulator/translation-availability-manifest.md`.
-
-### Scenario result matrix
-
-| Scenario | Runtime result | Covered UI states | Interpretation |
-|---|---|---|---|
-| Normal English → zh-Hans import | **PARTIAL** | 正在翻译 during retry (`t03`), unsupported + 重试 (`t01`–`t02`), nonblocking import success (`t13`–`t14`) | Text-import workflow and fallback are healthy. An actual completed en→zh-Hans translation is BLOCKED by simulator. |
-| Missing language resource | **BLOCKED** (runtime); mapping PASS in unit tests | None on simulator | `LanguageAvailability` never returned supported-but-not-installed; every engine observed `🔴...---`. Unit test confirms `.supportedNotInstalled → needsLanguageDownload` and copy “需要下载翻译资源后才能翻译。” but does not exercise the download runtime. |
-| Unsupported non-English pair | **PARTIAL** | System unsupported sheet (`t05`) and app unsupported + 重试 (`t06`–`t07`) | AXe cannot type CJK, so the probe used ASCII Polish (NLLanguageRecognizer returns `pl` in a host check); its `pl_PL` engine was also absent. The app exposed the expected unsupported copy, but a chip translation session first opened a blocking system overlay. |
-| Very short text | **PARTIAL** | Unsupported + 重试 (`t08`–`t09`) | `Hi.` retained one candidate and the actionable fallback; true completed short-string translation requires device. |
-| Mixed-language text | **PARTIAL** | Unsupported (`t12`) | English/Polish text was used because CJK entry was unavailable. NaturalLanguage selected a dominant language, so true mixed-language routing remains unverified. |
-| Rapid repeated edits | **PARTIAL** | Stable unsupported review across edits (`t10`–`t11`) | `Sun rises.` then `Rain falls.` each refreshed to exactly two fresh chips and no stale candidates. Translation cancellation under installed assets is device-only. |
-| Retry after translation failure | **PARTIAL** | 正在翻译 → system unsupported sheet → app unsupported (`t03`–`t04`; `t09`) | Retry control works and remains actionable. A real failure/recovery cycle requires device. |
-| Completed translation | **BLOCKED** | None | Simulator reports the pairing unsupported; do not infer zh-Hans completion from this run. |
-| Failed with actionable copy | **PARTIAL** | Unsupported copy + 重试; generic/internal copy PASS in unit tests | Runtime reached system-level unsupported, not a recoverable session exception. Unit tests cover internal failure and language-detection mappings/copy. |
-
-### Focused log evidence
-
-The bounded excerpt is `logs/translation-availability-diagnostics-excerpt.txt`. The raw 20-minute filtered capture was 165,533 lines / 83,442,513 bytes and was intentionally reduced before commit. WordMem emitted:
-
-- `[com.apple.Translation:Assets] LTLanguageStatus ... alloc task:8 engineType:0 dedicated:YES`
-- `[com.apple.Translation:Assets] LTLanguageStatus ... alloc task:8 engineType:2 dedicated:YES`
-- `translation_api:AllEngines:no-progress` with all listed engines marked `🔴...---`
-- `Delegate says translation isn't supported on the current device`
-- `Preflight checks showed translation isn't supported on the current device`
-- `TranslationErrorDomain Code=11` carrying source and target locales
-
-No literal `LanguageAvailability` log token appeared. The framework diagnostics above support simulator-wide absence rather than a missing single language pack.
-
-### Additional focused finding
-
-When the non-English probe was committed, candidate-chip translation opened the system unsupported sheet before the user could see the document fallback card. Dragging the sheet down revealed the app card, unsupported copy, and 重试. This is a simulator-only repro of an overlay-blocking interaction risk; it needs a device repro before deciding whether the chip configuration should be deferred when document availability is unsupported.
-
-### Residual physical-device checklist
-
-1. On an Apple Intelligence-capable iPhone, confirm en→zh-Hans reports installed or supported-not-installed through real `LanguageAvailability`.
-2. Exercise the real “需要下载翻译资源后才能翻译。” state, start/download/complete the resource, and verify the system sheet does not block the app card.
-3. Verify completed en→zh-Hans document output, block/span preservation, persisted `phraseTranslation`, and the completed card.
-4. Repeat with CJK/Chinese/Japanese source and true mixed CJK/Latin text; record language detection and whether unsupported avoids candidate chip auto-translation.
-5. Exercise very short text, rapid edits, cancellation/staleness, and retry after an actual interruption/session failure.
-6. Confirm unsupported and failed states keep import nonblocking, copy is actionable, and retry does not create duplicate candidates.
-7. Capture device logs for installed/downloadable/unsupported/failure transitions and confirm no production diagnostics were added.
+- Primary manifests: [evidence manifest](../../evidence/import-pipeline-simulator/evidence-manifest.md) and [translation-availability manifest](../../evidence/import-pipeline-simulator/translation-availability-manifest.md)
+- App smoke screenshots: `screenshots/00-text-import-initial-unsupported-translation.png` through `14-image-save-success-alert-existing.png`
+- Focused fallback screenshots: `screenshots/t00-app-launch.png` through `t14-normal-en-import-success-fallback.png`
+- Extension screenshots: `screenshots/00-context-menu-translate-available.png` through `11-translation-provider-save-disabled.png`
+- Consolidation verification excerpt: [xcodebuild-consolidation-verification-excerpt.txt](../../evidence/import-pipeline-simulator/logs/xcodebuild-consolidation-verification-excerpt.txt)
+- Translation diagnostics: `logs/translation-fallback-excerpt.txt`, `logs/translation-availability-diagnostics-excerpt.txt`
+- Extension process and smoke logs: `logs/extension-process-excerpt.txt`, `logs/extension-smoke-log-excerpt.txt`
+- OCR defect value: `logs/image-ocr-runtime-value.txt`
