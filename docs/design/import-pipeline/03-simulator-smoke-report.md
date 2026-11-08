@@ -88,3 +88,54 @@ The deterministic fixture is committed at `screenshots/deterministic-image-impor
 - `docs/evidence/import-pipeline-simulator/logs/simulator-log-45m.txt`: full filtered simulator log.
 - `docs/evidence/import-pipeline-simulator/logs/image-ocr-runtime-value.txt`: exact OCR display value showing list/table duplication.
 
+
+## Extension smoke appendix (Share Extension + Translation Provider)
+
+- Date: 2026-11-08 (same run window as the app smoke above)
+- Branch: `feature/import-document-pipeline`
+- Simulator: iPhone Duo Test, UDID `987CB4F0-4DB9-478B-99AF-AF2E45C0B4A0`, iOS 27.1, booted (same device, fresh derivedDataPath `/private/tmp/wordmem-ext-smoke-dd`, so it did not contend with the app-smoke build)
+- App: `com.zhezhe.wordmem` Debug build with embedded extensions
+  - Share Extension bundle id: `com.zhezhe.wordmem.ShareExtension` (`PlugIns/WordMemShareExtension.appex`, `NSExtensionPointIdentifier=com.apple.share-services`)
+  - Translation Provider bundle id: `com.zhezhe.wordmem.TranslationProvider` (ExtensionKit `Extensions/WordMemTranslationProvider.appex`)
+- Host: Safari local page `file:///private/tmp/wordmem-ext-smoke-test.html` (English article with "morning" and "study")
+
+### Result summary
+
+| Flow | Status | Notes |
+|---|---|---|
+| Share Extension end-to-end | PASS | Share sheet → WordMem → source extracted → translation fallback with actionable message → manual meaning saved → word visible in WordMem wordbook. |
+| Translation Provider invocation + card | PASS | System 翻译 action launched `com.zhezhe.wordmem.TranslationProvider`; its card rendered with source `morning` and the candidate chip grid. |
+| Translation Provider save/queue | BLOCKED | Candidate chip selection could not be driven by the installed automation (AXe HID taps and XcodeBuildMCP taps did not toggle the chip inside the ExtensionKit-hosted scene); `保存 0 个` stayed disabled, so save/queue behavior is unverified. |
+| Extension translation output | BLOCKED (platform) | System translation engines unavailable on simulator (`translation_api:AllEngines:no-progress`, all engines 🔴) for both extensions; matches the app-level smoke finding. |
+
+### Share Extension step evidence
+
+| Step | Command / interaction | Exit / result |
+|---|---|---|
+| Build full Debug app | `xcodebuild -project WordMem.xcodeproj -scheme WordMem -configuration Debug -destination 'id=987CB4F0-4DB9-478B-99AF-AF2E45C0B4A0' -derivedDataPath /private/tmp/wordmem-ext-smoke-dd build` | 0 (`logs/xcodebuild-ext-build.log`) |
+| Install | `xcrun simctl install 987CB4F0-4DB9-478B-99AF-AF2E45C0B4A0 /private/tmp/wordmem-ext-smoke-dd/Build/Products/Debug-iphonesimulator/WordMem.app` | 0 |
+| Open test page | `xcrun simctl openurl … "file:///private/tmp/wordmem-ext-smoke-test.html"` | 0 |
+| Select text | AXe touch down/up long-press at (55, 38) points over "morning" | 0, selection handles visible (`00-context-menu-translate-available.png`) |
+| Open share sheet | Tap `共享…` in the Safari context menu | share sheet with WordMem tile (`02-share-sheet-wordmem-visible.png`) |
+| Launch extension | AXe tap at WordMem tile (72, 437) points | extension UI opened (`03-share-extension-opened.png`, `04-share-extension-source-translating.png`) |
+| Translation fallback | Automatic after system translation fails | “翻译不可用，请手动输入释义。” + 重新翻译 (`05-share-extension-translation-fallback.png`) |
+| Enter manual meaning | `printf '%s' '早晨' \| xcrun simctl pbcopy …` + AXe Cmd+V into 中文释义 editor | 0 (`06-share-extension-manual-meaning-entered.png`) |
+| Save | AXe tap 保存 (345, 48) points | extension closed back to Safari |
+| Verify in WordMem | `xcrun simctl launch … com.zhezhe.wordmem` then screenshot | wordbook shows `morning` / `/mɔːrnɪŋ/` / 待学习 / 早晨 (`07-wordmem-after-share-save.png`) |
+
+Process evidence: `WordMemShareExtension` launched as pid 74684 and the share sheet registered the `UISocialActivity` for `com.zhezhe.wordmem.ShareExtension` (`logs/shareextension-launch-excerpt.txt`, `logs/extension-launch-excerpt.txt`).
+
+### Translation Provider step evidence
+
+| Step | Command / interaction | Exit / result |
+|---|---|---|
+| Invoke provider | Safari context menu → 翻译 (AXe tap 179, 79 points) | `WordMemTranslationProvider` pid 77260 launched (`08-translation-provider-invoked.png`) |
+| Card render | Automatic | `正在准备单词卡片…` startup, then 原句 `morning`, candidate chip `morning`, `保存 0 个` footer (`09-translation-provider-wordmem-card.png`, `10-translation-provider-wordpicker.png`, `11-translation-provider-save-disabled.png`) |
+| Chip selection | AXe taps at (128, 379), (72, 379), (131, 403) points on the chip | all exit 0 but `保存 0 个` never changed and the chip stayed unselected — synthetic HID taps are not acted on by this ExtensionKit-hosted scene |
+| Save/queue | Not reachable | `保存` stayed disabled at 0 selections; queue/save behavior unverified |
+
+`logs/extension-process-excerpt.txt` shows the ExtensionKit bootstrap of `extension<com.zhezhe.wordmem.TranslationProvider>` pid 77260.
+
+### Simulator coverage conclusion
+
+Simulator coverage can replace the happy-path mechanical coverage of the Share Extension (sheet → extract → fallback → manual save → wordbook) on iOS 27.1, and it can prove that the Translation Provider process launches and renders its card from the system 翻译 action. It cannot replace physical-device smoke for: system translation output (translation engines are unavailable on simulator), Apple Intelligence availability, and ExtensionKit chip interaction fidelity — the TranslationProvider card ignored synthetic taps in this run, so save/queue coverage still needs a physical device or an instrumented UI test host.

@@ -1,0 +1,21 @@
+=== Extension bundle IDs (from built app bundle) ===
+com.zhezhe.wordmem.ShareExtension
+com.zhezhe.wordmem.TranslationProvider
+
+=== Share extension NSExtension declaration ===
+  "NSExtension" => {
+    "NSExtensionAttributes" => {
+      "NSExtensionActivationRule" => {
+        "NSExtensionActivationDictionaryVersion" => 2
+        "NSExtensionActivationSupportsText" => true
+        "NSExtensionActivationSupportsWebPageWithMaxCount" => 1
+        "NSExtensionActivationSupportsWebURLWithMaxCount" => 1
+      }
+    }
+    "NSExtensionPointIdentifier" => "com.apple.share-services"
+    "NSExtensionPrincipalClass" => "WordMemShareExtension.ShareViewController"
+  }
+  "UIDeviceFamily" => [
+    0 => 1
+    1 => 2
+  ]
