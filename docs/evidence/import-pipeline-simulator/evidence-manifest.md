@@ -62,4 +62,6 @@ xcrun simctl appinfo 987CB4F0-4DB9-478B-99AF-AF2E45C0B4A0 com.zhezhe.wordmem > d
 - XcodeBuildMCP runtime snapshots and taps were available and used.
 - Bundled AXe was available and used for coordinate taps, Cmd+V, sheet drag, and system-sheet dismissal.
 - AXe direct multiline typing was unavailable because `type_text` rejects newline characters; pasteboard + Cmd+V was used instead.
+## Translation availability/fallback focused run (appendix)
 
+Commit under test: `c1b318161862f147036f0c92c5351baece141884`. Detailed result table and limitations are in the focused-run appendix of `docs/design/import-pipeline/03-simulator-smoke-report.md`.

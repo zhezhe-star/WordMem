@@ -141,3 +141,52 @@ Process evidence: `WordMemShareExtension` launched as pid 74684 and the share sh
 Simulator coverage can replace the happy-path mechanical coverage of the Share Extension (sheet → extract → fallback → manual save → wordbook) on iOS 27.1, and it can prove that the Translation Provider process launches and renders its card from the system 翻译 action. It cannot replace physical-device smoke for: system translation output (translation engines are unavailable on simulator), Apple Intelligence availability, and ExtensionKit chip interaction fidelity — the TranslationProvider card ignored synthetic taps in this run, so save/queue coverage still needs a physical device or an instrumented UI test host.
 
 Reduced log evidence: `docs/evidence/import-pipeline-simulator/logs/extension-smoke-log-excerpt.txt` (≤256 KB) keeps the timestamped Share Extension / TranslationProvider launch, card-scene, and engine-unavailability lines; the 112 MB raw 30-minute capture was intentionally not committed.
+
+## Appendix: translation availability and fallback focused run
+
+- Run date/time: 2026-11-08, 17:58–18:11 Asia/Shanghai.
+- Commit: `c1b318161862f147036f0c92c5351baece141884`; Debug WordMem from current HEAD.
+- Simulator: iPhone Duo Test, UDID `987CB4F0-4DB9-478B-99AF-AF2E45C0B4A0`, iOS 27.1.
+- Temporary derived data: `/private/tmp/wordmem-translation-availability-dd`.
+- Build/install/launch/screenshot/log/test commands and exits are in `docs/evidence/import-pipeline-simulator/translation-availability-manifest.md`.
+
+### Scenario result matrix
+
+| Scenario | Runtime result | Covered UI states | Interpretation |
+|---|---|---|---|
+| Normal English → zh-Hans import | **PARTIAL** | 正在翻译 during retry (`t03`), unsupported + 重试 (`t01`–`t02`), nonblocking import success (`t13`–`t14`) | Text-import workflow and fallback are healthy. An actual completed en→zh-Hans translation is BLOCKED by simulator. |
+| Missing language resource | **BLOCKED** (runtime); mapping PASS in unit tests | None on simulator | `LanguageAvailability` never returned supported-but-not-installed; every engine observed `🔴...---`. Unit test confirms `.supportedNotInstalled → needsLanguageDownload` and copy “需要下载翻译资源后才能翻译。” but does not exercise the download runtime. |
+| Unsupported non-English pair | **PARTIAL** | System unsupported sheet (`t05`) and app unsupported + 重试 (`t06`–`t07`) | AXe cannot type CJK, so the probe used ASCII Polish (NLLanguageRecognizer returns `pl` in a host check); its `pl_PL` engine was also absent. The app exposed the expected unsupported copy, but a chip translation session first opened a blocking system overlay. |
+| Very short text | **PARTIAL** | Unsupported + 重试 (`t08`–`t09`) | `Hi.` retained one candidate and the actionable fallback; true completed short-string translation requires device. |
+| Mixed-language text | **PARTIAL** | Unsupported (`t12`) | English/Polish text was used because CJK entry was unavailable. NaturalLanguage selected a dominant language, so true mixed-language routing remains unverified. |
+| Rapid repeated edits | **PARTIAL** | Stable unsupported review across edits (`t10`–`t11`) | `Sun rises.` then `Rain falls.` each refreshed to exactly two fresh chips and no stale candidates. Translation cancellation under installed assets is device-only. |
+| Retry after translation failure | **PARTIAL** | 正在翻译 → system unsupported sheet → app unsupported (`t03`–`t04`; `t09`) | Retry control works and remains actionable. A real failure/recovery cycle requires device. |
+| Completed translation | **BLOCKED** | None | Simulator reports the pairing unsupported; do not infer zh-Hans completion from this run. |
+| Failed with actionable copy | **PARTIAL** | Unsupported copy + 重试; generic/internal copy PASS in unit tests | Runtime reached system-level unsupported, not a recoverable session exception. Unit tests cover internal failure and language-detection mappings/copy. |
+
+### Focused log evidence
+
+The bounded excerpt is `logs/translation-availability-diagnostics-excerpt.txt`. The raw 20-minute filtered capture was 165,533 lines / 83,442,513 bytes and was intentionally reduced before commit. WordMem emitted:
+
+- `[com.apple.Translation:Assets] LTLanguageStatus ... alloc task:8 engineType:0 dedicated:YES`
+- `[com.apple.Translation:Assets] LTLanguageStatus ... alloc task:8 engineType:2 dedicated:YES`
+- `translation_api:AllEngines:no-progress` with all listed engines marked `🔴...---`
+- `Delegate says translation isn't supported on the current device`
+- `Preflight checks showed translation isn't supported on the current device`
+- `TranslationErrorDomain Code=11` carrying source and target locales
+
+No literal `LanguageAvailability` log token appeared. The framework diagnostics above support simulator-wide absence rather than a missing single language pack.
+
+### Additional focused finding
+
+When the non-English probe was committed, candidate-chip translation opened the system unsupported sheet before the user could see the document fallback card. Dragging the sheet down revealed the app card, unsupported copy, and 重试. This is a simulator-only repro of an overlay-blocking interaction risk; it needs a device repro before deciding whether the chip configuration should be deferred when document availability is unsupported.
+
+### Residual physical-device checklist
+
+1. On an Apple Intelligence-capable iPhone, confirm en→zh-Hans reports installed or supported-not-installed through real `LanguageAvailability`.
+2. Exercise the real “需要下载翻译资源后才能翻译。” state, start/download/complete the resource, and verify the system sheet does not block the app card.
+3. Verify completed en→zh-Hans document output, block/span preservation, persisted `phraseTranslation`, and the completed card.
+4. Repeat with CJK/Chinese/Japanese source and true mixed CJK/Latin text; record language detection and whether unsupported avoids candidate chip auto-translation.
+5. Exercise very short text, rapid edits, cancellation/staleness, and retry after an actual interruption/session failure.
+6. Confirm unsupported and failed states keep import nonblocking, copy is actionable, and retry does not create duplicate candidates.
+7. Capture device logs for installed/downloadable/unsupported/failure transitions and confirm no production diagnostics were added.

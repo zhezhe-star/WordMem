@@ -1,0 +1,23 @@
+{
+    ApplicationType = User;
+    Bundle = "file:///Users/zhezhu/Library/Developer/CoreSimulator/DevicesLocal/987CB4F0-4DB9-478B-99AF-AF2E45C0B4A0/data/Containers/Bundle/Application/84255B62-0D6A-45F7-AEFD-3AC97E74A76F/WordMem.app/";
+    BundleContainer = "file:///Users/zhezhu/Library/Developer/CoreSimulator/DevicesLocal/987CB4F0-4DB9-478B-99AF-AF2E45C0B4A0/data/Containers/Bundle/Application/84255B62-0D6A-45F7-AEFD-3AC97E74A76F/";
+    CFBundleDisplayName = WordMem;
+    CFBundleExecutable = WordMem;
+    CFBundleIdentifier = "com.zhezhe.wordmem";
+    CFBundleName = WordMem;
+    CFBundleShortVersionString = "0.1.0";
+    CFBundleVersion = 1;
+    DataContainer = "file:///Users/zhezhu/Library/Developer/CoreSimulator/DevicesLocal/987CB4F0-4DB9-478B-99AF-AF2E45C0B4A0/data/Containers/Data/Application/4CAC5A75-0102-49EB-9E64-9699A8BB2FA5/";
+    GroupContainers =     {
+        "group.com.zhezhe.wordmem" = "file:///Users/zhezhu/Library/Developer/CoreSimulator/DevicesLocal/987CB4F0-4DB9-478B-99AF-AF2E45C0B4A0/data/Containers/Shared/AppGroup/EAB09F92-0AEC-45F5-99B5-F2AAB8BE337C/";
+    };
+    IsAppClip = 0;
+    IsDeveloperApp = 1;
+    IsFirstParty = 0;
+    IsHidden = 0;
+    IsRemovable = 1;
+    Path = "/Users/zhezhu/Library/Developer/CoreSimulator/DevicesLocal/987CB4F0-4DB9-478B-99AF-AF2E45C0B4A0/data/Containers/Bundle/Application/84255B62-0D6A-45F7-AEFD-3AC97E74A76F/WordMem.app";
+    SBAppTags =     (
+    );
+}
