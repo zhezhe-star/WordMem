@@ -139,3 +139,5 @@ Process evidence: `WordMemShareExtension` launched as pid 74684 and the share sh
 ### Simulator coverage conclusion
 
 Simulator coverage can replace the happy-path mechanical coverage of the Share Extension (sheet → extract → fallback → manual save → wordbook) on iOS 27.1, and it can prove that the Translation Provider process launches and renders its card from the system 翻译 action. It cannot replace physical-device smoke for: system translation output (translation engines are unavailable on simulator), Apple Intelligence availability, and ExtensionKit chip interaction fidelity — the TranslationProvider card ignored synthetic taps in this run, so save/queue coverage still needs a physical device or an instrumented UI test host.
+
+Reduced log evidence: `docs/evidence/import-pipeline-simulator/logs/extension-smoke-log-excerpt.txt` (≤256 KB) keeps the timestamped Share Extension / TranslationProvider launch, card-scene, and engine-unavailability lines; the 112 MB raw 30-minute capture was intentionally not committed.
