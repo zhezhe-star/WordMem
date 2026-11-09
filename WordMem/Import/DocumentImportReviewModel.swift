@@ -84,6 +84,8 @@ final class DocumentImportReviewModel {
   private(set) var selection = ImportChipSelection(chips: [])
   private(set) var documentSession: ImportDocumentSession?
   private(set) var preparedDisplayText = ""
+  private(set) var reviewDocument: CanonicalDocument?
+  private(set) var originalImageDocument: CanonicalDocument?
   private(set) var errorMessage: String?
   private(set) var isSaving = false
 
@@ -137,6 +139,12 @@ final class DocumentImportReviewModel {
     documentSession != nil
   }
 
+  /// Deterministic review formatting used by the read-only source card.
+  var reviewDisplayText: String {
+    guard let reviewDocument else { return preparedDisplayText }
+    return CanonicalReviewProjection.formattedText(for: reviewDocument)
+  }
+
   /// Joined document translation, reused as phrase metadata on save.
   var translatedText: String? {
     let blocks = documentSession?.translatedDocument?.blocks ?? []
@@ -148,6 +156,14 @@ final class DocumentImportReviewModel {
 
   func reset() {
     preparationToken = UUID()
+    clearResults()
+    errorMessage = nil
+    phase = .capturing
+  }
+
+  /// Returns typed input to capture without discarding the user's draft.
+  /// Derived review state is discarded so a later commit starts from one truth.
+  func beginEditingOriginal() {
     clearResults()
     errorMessage = nil
     phase = .capturing
@@ -169,8 +185,15 @@ final class DocumentImportReviewModel {
     startPreparation()
   }
 
-  func prepareImageDocument(_ document: CanonicalDocument, displayText: String) async {
+  func prepareImageDocument(
+    _ document: CanonicalDocument,
+    displayText: String,
+    originalDocument: CanonicalDocument? = nil
+  ) async {
+    let preparationToken = self.preparationToken
     await prepare(from: document, displayText: displayText)
+    guard preparationToken == self.preparationToken else { return }
+    originalImageDocument = originalDocument
   }
 
   func failProcessing(with error: Error) {
@@ -195,6 +218,8 @@ final class DocumentImportReviewModel {
     chipTranslationPhase = .idle
     documentSession = nil
     preparedDisplayText = ""
+    reviewDocument = nil
+    originalImageDocument = nil
   }
 
   private func prepare(from document: CanonicalDocument, displayText: String) async {
@@ -209,7 +234,10 @@ final class DocumentImportReviewModel {
 
     phase = .preparingWords
     preparedDisplayText = displayText
-    let candidates = EnglishWordCandidateSplitter.candidates(from: displayText)
+    reviewDocument = document
+    let candidates = ImportHighValueCandidateFilter.highValueCandidates(
+      from: EnglishWordCandidateSplitter.candidates(from: displayText)
+    )
     let advisedChips = await advisor.chips(from: candidates, context: displayText)
     guard preparationToken == token else { return }
 

@@ -151,13 +151,17 @@ struct ImageImportView: View {
       let document = try await recognitionService.recognizeDocument(in: preparedData)
       guard processingCoordinator.shouldCommit(activeToken) else { return }
 
-      let rawText = Self.displayText(from: document)
-      let text = OCRTextFormatter.formattedText(from: rawText)
+      let reviewDocument = ImageReviewDocumentSanitizer.reviewDocument(from: document)
+      let text = CanonicalReviewProjection.formattedText(for: reviewDocument)
       guard !text.isEmpty else {
         throw WordImageImportError.noRecognizedText
       }
 
-      await model.prepareImageDocument(document, displayText: text)
+      await model.prepareImageDocument(
+        reviewDocument,
+        displayText: text,
+        originalDocument: document
+      )
     } catch {
       guard processingCoordinator.shouldCommit(activeToken) else { return }
       guard !Task.isCancelled else { return }
@@ -218,14 +222,6 @@ struct ImageImportView: View {
     return metadata
   }
 
-  /// Canonical blocks stay untouched; this only projects structured source
-  /// text into the compact review format shown by image import.
-  private static func displayText(from document: CanonicalDocument) -> String {
-    document.blocks
-      .filter { $0.kind != .list && $0.kind != .table }
-      .map(\.text)
-      .joined(separator: "\n")
-  }
 }
 
 #if DEBUG

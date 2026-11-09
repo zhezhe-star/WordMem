@@ -42,13 +42,21 @@ struct TextImportView: View {
       onCancel: { dismiss() },
       onSubmit: { importSelectedWords() }
     ) {
-      ImportSourceEditorCard(
-        title: "原文",
-        placeholder: "输入或粘贴英文内容。",
-        text: $draftText,
-        isFocused: $isSourceFocused
-      ) {
-        commitDraft()
+      if let reviewDocument = model.reviewDocument, model.phase.isReviewReady {
+        ImportStructuredReviewCard(
+          title: "原文",
+          formattedText: CanonicalReviewProjection.formattedText(for: reviewDocument),
+          onEditOriginal: { model.beginEditingOriginal() }
+        )
+      } else {
+        ImportSourceEditorCard(
+          title: "原文",
+          placeholder: "输入或粘贴英文内容。",
+          text: $draftText,
+          isFocused: $isSourceFocused
+        ) {
+          commitDraft()
+        }
       }
     }
     .onChange(of: draftText) { _, newValue in
