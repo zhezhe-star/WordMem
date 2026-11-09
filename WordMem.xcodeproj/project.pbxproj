@@ -10,6 +10,8 @@
 		DRM01 /* DocumentImportReviewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DRM02 /* DocumentImportReviewModel.swift */; };
 		DRV01 /* DocumentImportReviewViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = DRV02 /* DocumentImportReviewViews.swift */; };
 		DRVT01 /* DocumentImportReviewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DRVT02 /* DocumentImportReviewModelTests.swift */; };
+		CUR01 /* ImportCandidateCurator.swift in Sources */ = {isa = PBXBuildFile; fileRef = CUR02 /* ImportCandidateCurator.swift */; };
+		CURT01 /* FoundationModelsCuratorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CURT02 /* FoundationModelsCuratorTests.swift */; };
 		SHRD30 /* TextImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SHRD31 /* TextImportView.swift */; };
 		SHRD32 /* ImageImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SHRD33 /* ImageImportView.swift */; };
 		SHRD34 /* ImageImportSourceCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = SHRD35 /* ImageImportSourceCard.swift */; };
@@ -26,7 +28,6 @@
 		FRM01 /* OCRTextFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FRM02 /* OCRTextFormatter.swift */; };
 		REV01 /* CanonicalReviewProjection.swift in Sources */ = {isa = PBXBuildFile; fileRef = REV02 /* CanonicalReviewProjection.swift */; };
 		SAN01 /* ImageReviewDocumentSanitizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = SAN02 /* ImageReviewDocumentSanitizer.swift */; };
-		FLT01 /* ImportHighValueCandidateFilter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FLT02 /* ImportHighValueCandidateFilter.swift */; };
 		SRCV01 /* ImportStructuredSourceViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = SRCV02 /* ImportStructuredSourceViews.swift */; };
 		REV03 /* ImportReviewQualityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = REV04 /* ImportReviewQualityTests.swift */; };
 		WPV01 /* WordPresentationViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = WPV02 /* WordPresentationViews.swift */; };
@@ -93,6 +94,8 @@
 		SHRD33 /* ImageImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageImportView.swift; sourceTree = "<group>"; };
 		SHRD35 /* ImageImportSourceCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageImportSourceCard.swift; sourceTree = "<group>"; };
 		SHRD21 /* ImportFlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportFlowLayout.swift; sourceTree = "<group>"; };
+		CUR02 /* ImportCandidateCurator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportCandidateCurator.swift; sourceTree = "<group>"; };
+		CURT02 /* FoundationModelsCuratorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoundationModelsCuratorTests.swift; sourceTree = "<group>"; };
 		SHRD24 /* ImportContextViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportContextViews.swift; sourceTree = "<group>"; };
 		SHRD27 /* ImportSelectionViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportSelectionViews.swift; sourceTree = "<group>"; };
 		SHRD11 /* ImportCandidateModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportCandidateModels.swift; sourceTree = "<group>"; };
@@ -100,7 +103,6 @@
 		FRM02 /* OCRTextFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OCRTextFormatter.swift; sourceTree = "<group>"; };
 		REV02 /* CanonicalReviewProjection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanonicalReviewProjection.swift; sourceTree = "<group>"; };
 		SAN02 /* ImageReviewDocumentSanitizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageReviewDocumentSanitizer.swift; sourceTree = "<group>"; };
-		FLT02 /* ImportHighValueCandidateFilter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportHighValueCandidateFilter.swift; sourceTree = "<group>"; };
 		SRCV02 /* ImportStructuredSourceViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportStructuredSourceViews.swift; sourceTree = "<group>"; };
 		REV04 /* ImportReviewQualityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportReviewQualityTests.swift; sourceTree = "<group>"; };
 		WPV02 /* WordPresentationViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordPresentationViews.swift; sourceTree = "<group>"; };
@@ -300,7 +302,7 @@
 				FRM02 /* OCRTextFormatter.swift */,
 				REV02 /* CanonicalReviewProjection.swift */,
 				SAN02 /* ImageReviewDocumentSanitizer.swift */,
-				FLT02 /* ImportHighValueCandidateFilter.swift */,
+				CUR02 /* ImportCandidateCurator.swift */,
 				SRCV02 /* ImportStructuredSourceViews.swift */,
 			);
 			path = Import;
@@ -350,6 +352,7 @@
 			children = (
 				DRVT02 /* DocumentImportReviewModelTests.swift */,
 				REV04 /* ImportReviewQualityTests.swift */,
+				CURT02 /* FoundationModelsCuratorTests.swift */,
 				CAN02 /* CanonicalCleanResetTests.swift */,
 				CAN04 /* TextDocumentCanonicalizerTests.swift */,
 				VDR06 /* VisionDocumentReaderTests.swift */,
@@ -558,7 +561,7 @@
 				FRM01 /* OCRTextFormatter.swift in Sources */,
 				REV01 /* CanonicalReviewProjection.swift in Sources */,
 				SAN01 /* ImageReviewDocumentSanitizer.swift in Sources */,
-				FLT01 /* ImportHighValueCandidateFilter.swift in Sources */,
+				CUR01 /* ImportCandidateCurator.swift in Sources */,
 				SRCV01 /* ImportStructuredSourceViews.swift in Sources */,
 				CAL01 /* CalendarChallengeService.swift in Sources */,
 				CAL03 /* CalendarChallengeViews.swift in Sources */,
@@ -589,6 +592,7 @@
 				CAN01 /* CanonicalCleanResetTests.swift in Sources */,
 				DRVT01 /* DocumentImportReviewModelTests.swift in Sources */,
 				REV03 /* ImportReviewQualityTests.swift in Sources */,
+				CURT01 /* FoundationModelsCuratorTests.swift in Sources */,
 				CAN03 /* TextDocumentCanonicalizerTests.swift in Sources */,
 				VDR05 /* VisionDocumentReaderTests.swift in Sources */,
 				DTE07 /* DocumentTranslationEngineTests.swift in Sources */,

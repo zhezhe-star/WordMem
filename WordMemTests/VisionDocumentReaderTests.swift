@@ -155,7 +155,8 @@ final class VisionDocumentReaderTests: XCTestCase {
         lemmaProvider: NoopVisionLemmaProvider(),
         spellingSuggester: NoopVisionSpellingSuggester(),
         availability: UnavailableVisionDictionary()
-      )
+      ),
+      curator: AllRecommendedVisionCurator()
     )
     model.documentSessionFactory = { canonicalDocument in
       ImportDocumentSession(
@@ -410,5 +411,24 @@ private struct NoopVisionLemmaProvider: ImportWordLemmaProviding {
 private struct NoopVisionSpellingSuggester: ImportWordSpellingSuggesting {
   func correction(for word: String) async -> String? {
     nil
+  }
+}
+
+private struct AllRecommendedVisionCurator: ImportCandidateCurating {
+  func assess(
+    candidates: [WordImportCandidate],
+    context: ImportCandidateCurationContext
+  ) async -> ImportCandidateCurationResult {
+    .curated(
+      candidates.map { candidate in
+        ImportCandidateAssessment(
+          candidateID: candidate.normalizedKey,
+          isRecommended: true,
+          valueScore: 5,
+          shortReason: "原文",
+          contextualMeaning: nil
+        )
+      }
+    )
   }
 }

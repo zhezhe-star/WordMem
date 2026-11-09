@@ -9,9 +9,10 @@ enum DocumentImportReviewPhase: Equatable, Sendable {
   case preparingWords
   case reviewing
   case noWordsAvailable
+  case curatorUnavailable
 
   var isReviewReady: Bool {
-    self == .reviewing || self == .noWordsAvailable
+    self == .reviewing || self == .noWordsAvailable || self == .curatorUnavailable
   }
 }
 
@@ -20,6 +21,7 @@ enum DocumentImportReviewPhase: Equatable, Sendable {
 /// document pipeline, so failures stay usable instead of technical.
 enum DocumentImportStatusPresenter: Sendable {
   static let noWordsMessage = "没有可保存的单词。可以更换内容或手动添加。"
+  static let curatorUnavailableMessage = "暂时无法整理候选词，可以更换内容或手动添加。"
   static let saveFailureMessage = "批量导入失败，请重试。"
 
   static func reviewStatus(for phase: DocumentImportReviewPhase) -> String? {
@@ -34,6 +36,8 @@ enum DocumentImportStatusPresenter: Sendable {
       nil
     case .noWordsAvailable:
       noWordsMessage
+    case .curatorUnavailable:
+      curatorUnavailableMessage
     }
   }
 
@@ -102,10 +106,15 @@ final class DocumentImportReviewModel {
   }
 
   private let advisor: ImportWordAdvisor
+  private let curator: any ImportCandidateCurating
   private var preparationToken = UUID()
 
-  init(advisor: ImportWordAdvisor = .live()) {
+  init(
+    advisor: ImportWordAdvisor = .live(),
+    curator: any ImportCandidateCurating = FoundationModelsCandidateCurator()
+  ) {
     self.advisor = advisor
+    self.curator = curator
   }
 
   var offeredChips: [ImportCandidateChip] {
@@ -235,9 +244,28 @@ final class DocumentImportReviewModel {
     phase = .preparingWords
     preparedDisplayText = displayText
     reviewDocument = document
-    let candidates = ImportHighValueCandidateFilter.highValueCandidates(
-      from: EnglishWordCandidateSplitter.candidates(from: displayText)
+    let deterministicCandidates = EnglishWordCandidateSplitter.candidates(from: displayText)
+    let context = ImportCandidateCurationContext(
+      sourceText: displayText,
+      candidateIDs: deterministicCandidates.map(\.normalizedKey)
     )
+    let curation = await curator.assess(
+      candidates: deterministicCandidates,
+      context: context
+    )
+    guard preparationToken == token else { return }
+
+    guard case .curated(let assessments) = curation else {
+      phase = .curatorUnavailable
+      return
+    }
+
+    let recommendedIDs = Set(
+      assessments.filter(\.isRecommended).map(\.candidateID)
+    )
+    let candidates = deterministicCandidates.filter {
+      recommendedIDs.contains($0.normalizedKey)
+    }
     let advisedChips = await advisor.chips(from: candidates, context: displayText)
     guard preparationToken == token else { return }
 

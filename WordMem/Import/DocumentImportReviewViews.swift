@@ -127,6 +127,8 @@ struct DocumentImportReviewScreen<Source: View>: View {
       announcement = "内容已准备好，请选择要保存的单词。"
     case .noWordsAvailable:
       announcement = DocumentImportStatusPresenter.noWordsMessage
+    case .curatorUnavailable:
+      announcement = DocumentImportStatusPresenter.curatorUnavailableMessage
     case .capturing, .organizing, .preparingWords:
       announcement = nil
     }

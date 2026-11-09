@@ -9,7 +9,7 @@ final class DocumentImportReviewModelTests: XCTestCase {
   // MARK: - Text preparation
 
   func testPrepareTextReachesReviewingWithOfferedChips() async {
-    let model = makeModel(available: ["garden"])
+    let model = makeModel(available: ["garden"], curatedIDs: ["garden"])
 
     await model.prepareText("The garden grows quickly.")
 
@@ -22,7 +22,7 @@ final class DocumentImportReviewModelTests: XCTestCase {
   }
 
   func testPreparationRunsThroughOrganizingStateBeforeCandidates() async {
-    let model = makeModel(available: ["garden"])
+    let model = makeModel(available: ["garden"], curatedIDs: ["garden", "grows"])
     var phaseWhenSessionCreated: DocumentImportReviewPhase?
     model.documentSessionFactory = { document in
       phaseWhenSessionCreated = model.phase
@@ -41,6 +41,7 @@ final class DocumentImportReviewModelTests: XCTestCase {
   func testDocumentTranslationFailureKeepsWordsSelectable() async {
     let model = makeModel(
       available: ["garden"],
+      curatedIDs: ["garden"],
       availabilityStatus: .unsupported
     )
 
@@ -62,6 +63,7 @@ final class DocumentImportReviewModelTests: XCTestCase {
   func testFailedTranslationCanRetryIntoTranslatingPhase() async {
     let model = makeModel(
       available: ["garden"],
+      curatedIDs: ["garden"],
       availabilityStatus: .unsupported
     )
     await model.prepareText("The garden grows quickly.")
@@ -75,7 +77,7 @@ final class DocumentImportReviewModelTests: XCTestCase {
   }
 
   func testTranslatedTextJoinsCompletedDocumentBlocks() async {
-    let model = makeModel(available: ["garden"])
+    let model = makeModel(available: ["garden"], curatedIDs: ["garden"])
     await model.prepareText("The garden grows quickly.")
     guard let session = model.documentSession else {
       return XCTFail("Document session should exist after preparation.")
@@ -89,7 +91,7 @@ final class DocumentImportReviewModelTests: XCTestCase {
   }
 
   func testNoOfferedWordsShowsSemanticNoWordsState() async {
-    let model = makeModel(available: [])
+    let model = makeModel(available: [], curatedIDs: [])
 
     await model.prepareText("Blurble zorp quux.")
 
@@ -104,7 +106,7 @@ final class DocumentImportReviewModelTests: XCTestCase {
   }
 
   func testClearingTextResetsReviewState() async {
-    let model = makeModel(available: ["garden"])
+    let model = makeModel(available: ["garden"], curatedIDs: ["garden"])
     await model.prepareText("The garden grows quickly.")
 
     await model.prepareText("   ")
@@ -123,7 +125,8 @@ final class DocumentImportReviewModelTests: XCTestCase {
         lemmaProvider: NoopLemmaProvider(),
         spellingSuggester: NoopSpellingSuggester(),
         availability: dictionary
-      )
+      ),
+      curator: AlwaysAvailableStubCurator()
     )
     model.documentSessionFactory = { document in
       ImportDocumentSession(
@@ -152,7 +155,7 @@ final class DocumentImportReviewModelTests: XCTestCase {
   // MARK: - Image preparation
 
   func testImageProcessingMovesFromOrganizingToReviewing() async {
-    let model = makeModel(available: ["garden", "views"])
+    let model = makeModel(available: ["garden", "views"], curatedIDs: ["garden", "views"])
 
     model.beginImageProcessing()
     XCTAssertEqual(model.phase, .organizing)
@@ -187,7 +190,7 @@ final class DocumentImportReviewModelTests: XCTestCase {
   }
 
   func testFailedImageProcessingRestoresCapturingState() async {
-    let model = makeModel(available: ["garden"])
+    let model = makeModel(available: ["garden"], curatedIDs: ["garden"])
     await model.prepareText("The garden grows quickly.")
 
     model.failProcessing(with: WordImageImportError.noRecognizedText)
@@ -204,7 +207,7 @@ final class DocumentImportReviewModelTests: XCTestCase {
   // MARK: - Selection and saving
 
   func testSelectionUpdatesTrackOfferedChipsOnly() async {
-    let model = makeModel(available: ["garden", "grows"])
+    let model = makeModel(available: ["garden", "grows"], curatedIDs: ["garden", "grows"])
     await model.prepareText("The garden grows quickly.")
     let offered = model.offeredChips
     XCTAssertEqual(offered.count, 2)
@@ -219,7 +222,7 @@ final class DocumentImportReviewModelTests: XCTestCase {
   }
 
   func testSavingLifecycleShowsConciseFailureAndRecovers() async {
-    let model = makeModel(available: ["garden"])
+    let model = makeModel(available: ["garden"], curatedIDs: ["garden"])
     await model.prepareText("The garden grows quickly.")
 
     model.beginSaving()
@@ -331,10 +334,12 @@ final class DocumentImportReviewModelTests: XCTestCase {
 
   private func makeModel(
     available: Set<String>,
+    curatedIDs: Set<String> = [],
     availabilityStatus: DocumentLanguageAvailabilityStatus = .installed
   ) -> DocumentImportReviewModel {
     let model = DocumentImportReviewModel(
-      advisor: makeAdvisor(available: available)
+      advisor: makeAdvisor(available: available),
+      curator: StubDocumentCurator(curatedIDs: curatedIDs)
     )
     model.documentSessionFactory = { document in
       ImportDocumentSession(
@@ -410,6 +415,54 @@ private struct NoopLemmaProvider: ImportWordLemmaProviding {
 private struct NoopSpellingSuggester: ImportWordSpellingSuggesting {
   func correction(for word: String) async -> String? {
     nil
+  }
+}
+
+private struct StubDocumentCurator: ImportCandidateCurating {
+  let curatedIDs: Set<String>
+
+  func assess(
+    candidates: [WordImportCandidate],
+    context: ImportCandidateCurationContext
+  ) async -> ImportCandidateCurationResult {
+    guard !context.isEmpty else { return .failed }
+    let knownIDs = Set(context.candidateIDs)
+    let hasCuration = !curatedIDs.isEmpty
+    let assessments =
+      hasCuration
+      ? curatedIDs.intersection(knownIDs).map { id in
+        ImportCandidateAssessment(
+          candidateID: id,
+          isRecommended: true,
+          valueScore: 8,
+          shortReason: "值得学习",
+          contextualMeaning: nil
+        )
+      }
+      : []
+    if assessments.isEmpty {
+      return hasCuration ? .failed : .curated([])
+    }
+    return .curated(assessments.sorted { $0.candidateID < $1.candidateID })
+  }
+}
+
+private struct AlwaysAvailableStubCurator: ImportCandidateCurating {
+  func assess(
+    candidates: [WordImportCandidate],
+    context: ImportCandidateCurationContext
+  ) async -> ImportCandidateCurationResult {
+    .curated(
+      candidates.map { candidate in
+        ImportCandidateAssessment(
+          candidateID: candidate.normalizedKey,
+          isRecommended: true,
+          valueScore: 5,
+          shortReason: "原文",
+          contextualMeaning: nil
+        )
+      }
+    )
   }
 }
 

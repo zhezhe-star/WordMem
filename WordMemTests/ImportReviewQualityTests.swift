@@ -59,7 +59,7 @@ final class ImportReviewQualityTests: XCTestCase {
   }
 
   func testEditingOriginalClearsDerivedReviewAndReturnsToEditableCapture() async {
-    let model = makeModel(available: ["study"])
+    let model = makeModel(available: ["study"], curatedIDs: ["study"])
 
     await model.prepareText("Study the case carefully.")
     XCTAssertEqual(model.phase, .reviewing)
@@ -139,30 +139,11 @@ final class ImportReviewQualityTests: XCTestCase {
     XCTAssertTrue(formatted.contains("- Test the mapper"))
   }
 
-  // MARK: - Candidate filtering and selection
-
-  func testCandidateFilterRemovesFeedbackNoiseAndKeepsLearningWords() {
-    let candidates = EnglishWordCandidateSplitter.candidates(
-      from: "am is are com v AI anthropic try chapter case study"
-    )
-    let filtered = ImportHighValueCandidateFilter.highValueCandidates(from: candidates)
-
-    XCTAssertEqual(
-      filtered.map(\.text),
-      ["anthropic", "try", "chapter", "case", "study"]
-    )
-    XCTAssertFalse(ImportHighValueCandidateFilter.isHighValue("com"))
-    XCTAssertFalse(ImportHighValueCandidateFilter.isHighValue("v"))
-    XCTAssertFalse(ImportHighValueCandidateFilter.isHighValue("AI"))
-    XCTAssertTrue(ImportHighValueCandidateFilter.isHighValue("anthropic"))
-    XCTAssertTrue(ImportHighValueCandidateFilter.isHighValue("try"))
-    XCTAssertTrue(ImportHighValueCandidateFilter.isHighValue("chapter"))
-    XCTAssertTrue(ImportHighValueCandidateFilter.isHighValue("case"))
-    XCTAssertTrue(ImportHighValueCandidateFilter.isHighValue("study"))
-  }
-
   func testFilteredFunctionWordsNeverBecomeSelectableChips() async {
-    let model = makeModel(available: ["study", "case", "chapter"])
+    let model = makeModel(
+      available: ["study", "case", "chapter"],
+      curatedIDs: ["study", "case", "chapter"]
+    )
 
     await model.prepareText("I am the study. It is a case in this chapter.")
 
@@ -177,7 +158,7 @@ final class ImportReviewQualityTests: XCTestCase {
   }
 
   func testFunctionWordOnlyInputCannotProduceChipsOrChipTranslation() async {
-    let model = makeModel(available: [])
+    let model = makeModel(available: [], curatedIDs: [])
 
     await model.prepareText("I am. It is. www com AI v")
 
@@ -191,7 +172,7 @@ final class ImportReviewQualityTests: XCTestCase {
   func testImageReviewUsesSanitizedDocumentWhileKeepingOriginalEvidence() async {
     let original = makeNoisyImageDocument()
     let review = ImageReviewDocumentSanitizer.reviewDocument(from: original)
-    let model = makeModel(available: ["study"])
+    let model = makeModel(available: ["study"], curatedIDs: ["study"])
 
     await model.prepareImageDocument(
       review,
@@ -209,7 +190,7 @@ final class ImportReviewQualityTests: XCTestCase {
   func testRapidImagePreparationKeepsOnlyLatestOriginalEvidence() async {
     let staleOriginal = makeDocument([makeBlock("Stale study", kind: .paragraph, y: 0.3)])
     let latestOriginal = makeDocument([makeBlock("Latest study", kind: .paragraph, y: 0.3)])
-    let model = makeModel(available: ["study"])
+    let model = makeModel(available: ["study"], curatedIDs: ["study"])
 
     let staleTask = Task { await model.prepareText("Stale study") }
     await staleTask.value
@@ -288,12 +269,21 @@ final class ImportReviewQualityTests: XCTestCase {
   }
 
   private func makeModel(available: Set<String>) -> DocumentImportReviewModel {
+    makeModel(available: available, curatedIDs: [])
+  }
+
+  private func makeModel(
+    available: Set<String>,
+    curatedIDs: Set<String>
+  ) -> DocumentImportReviewModel {
+    let advisor = ImportWordAdvisor(
+      lemmaProvider: QualityNoopLemmaProvider(),
+      spellingSuggester: QualityNoopSpellingSuggester(),
+      availability: StubQualityDictionary(available: available)
+    )
     let model = DocumentImportReviewModel(
-      advisor: ImportWordAdvisor(
-        lemmaProvider: QualityNoopLemmaProvider(),
-        spellingSuggester: QualityNoopSpellingSuggester(),
-        availability: StubQualityDictionary(available: available)
-      )
+      advisor: advisor,
+      curator: StubQualityCurator(curatedIDs: curatedIDs)
     )
     model.documentSessionFactory = { document in
       ImportDocumentSession(
@@ -381,6 +371,35 @@ private struct StubQualityDictionary: SystemDictionaryAuthorizing {
 private struct QualityNoopLemmaProvider: ImportWordLemmaProviding {
   func lemma(for word: String, context: String?) async -> String? {
     nil
+  }
+}
+
+private struct StubQualityCurator: ImportCandidateCurating {
+  let curatedIDs: Set<String>
+
+  func assess(
+    candidates: [WordImportCandidate],
+    context: ImportCandidateCurationContext
+  ) async -> ImportCandidateCurationResult {
+    guard !context.isEmpty else { return .failed }
+    let knownIDs = Set(context.candidateIDs)
+    let hasCuration = !curatedIDs.isEmpty
+    let assessments =
+      hasCuration
+      ? curatedIDs.intersection(knownIDs).map { id in
+        ImportCandidateAssessment(
+          candidateID: id,
+          isRecommended: true,
+          valueScore: 8,
+          shortReason: "值得学习",
+          contextualMeaning: nil
+        )
+      }
+      : []
+    if assessments.isEmpty {
+      return hasCuration ? .failed : .curated([])
+    }
+    return .curated(assessments)
   }
 }
 
