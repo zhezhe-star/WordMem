@@ -43,6 +43,37 @@ final class ImportReviewQualityTests: XCTestCase {
     )
   }
 
+  func testTextProjectionRendersTableRowsWithoutDuplicatingCells() {
+    let document = makeTextDocument([
+      makeTextBlock("Metric\tChange\nRevenue\t18%", kind: .table),
+      makeTextBlock("Metric", kind: .tableCell),
+      makeTextBlock("Change", kind: .tableCell),
+      makeTextBlock("Revenue", kind: .tableCell),
+      makeTextBlock("18%", kind: .tableCell),
+    ])
+
+    let formatted = CanonicalReviewProjection.formattedText(for: document)
+
+    XCTAssertEqual(formatted, "| Metric | Change |\n| Revenue | 18% |")
+    XCTAssertEqual(formatted.components(separatedBy: "Revenue").count - 1, 1)
+  }
+
+  func testEditingOriginalClearsDerivedReviewAndReturnsToEditableCapture() async {
+    let model = makeModel(available: ["study"])
+
+    await model.prepareText("Study the case carefully.")
+    XCTAssertEqual(model.phase, .reviewing)
+    XCTAssertNotNil(model.reviewDocument)
+
+    model.beginEditingOriginal()
+
+    XCTAssertEqual(model.phase, .capturing)
+    XCTAssertNil(model.reviewDocument)
+    XCTAssertNil(model.documentSession)
+    XCTAssertTrue(model.chips.isEmpty)
+    XCTAssertTrue(model.preparedDisplayText.isEmpty)
+  }
+
   // MARK: - Image review sanitization
 
   func testImageSanitizerRemovesScreenshotNoiseAndPreservesCanonicalEvidence() {
@@ -143,6 +174,18 @@ final class ImportReviewQualityTests: XCTestCase {
       XCTAssertFalse(
         model.offeredChips.contains { $0.text.caseInsensitiveCompare(token) == .orderedSame })
     }
+  }
+
+  func testFunctionWordOnlyInputCannotProduceChipsOrChipTranslation() async {
+    let model = makeModel(available: [])
+
+    await model.prepareText("I am. It is. www com AI v")
+
+    XCTAssertEqual(model.phase, .noWordsAvailable)
+    XCTAssertTrue(model.chips.isEmpty)
+    XCTAssertTrue(model.offeredChips.isEmpty)
+    XCTAssertTrue(model.chipTranslations.isEmpty)
+    XCTAssertNil(model.chipTranslationConfiguration)
   }
 
   func testImageReviewUsesSanitizedDocumentWhileKeepingOriginalEvidence() async {
