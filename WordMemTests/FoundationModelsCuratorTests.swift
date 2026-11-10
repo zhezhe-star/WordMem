@@ -10,10 +10,10 @@ final class FoundationModelsCuratorTests: XCTestCase {
     let assessments = Self.makeEntries([
       Self.entry(id: "study", isRecommended: true, score: 9),
       Self.entry(id: "case", isRecommended: true, score: 8),
-      Self.entry(id: "chapter", isRecommended: true, score: 7),
-      Self.entry(id: "am", isRecommended: false, score: 2),
-      Self.entry(id: "is", isRecommended: false, score: 2),
-      Self.entry(id: "are", isRecommended: false, score: 2),
+      Self.entry(id: "chapter", isRecommended: true, score: 8),
+      Self.entry(id: "am", isRecommended: false, score: 2, isFunctionWord: true),
+      Self.entry(id: "is", isRecommended: false, score: 2, isFunctionWord: true),
+      Self.entry(id: "are", isRecommended: false, score: 2, isFunctionWord: true),
     ])
 
     let result = FoundationModelsCandidateCurator.validated(
@@ -28,6 +28,46 @@ final class FoundationModelsCuratorTests: XCTestCase {
     XCTAssertEqual(recommended, ["study", "case", "chapter"])
     let rejected = Set(curated.filter { !$0.isRecommended }.map(\.candidateID))
     XCTAssertEqual(rejected, ["am", "is", "are"])
+  }
+
+  func testFunctionWordClassificationOverridesAHighestScoreRecommendation() {
+    let assessments = Self.makeEntries([
+      Self.entry(
+        id: "library", isRecommended: true, score: 9, isFunctionWord: false
+      ),
+      Self.entry(
+        id: "is", isRecommended: true, score: 10, isFunctionWord: true
+      ),
+    ])
+
+    let result = FoundationModelsCandidateCurator.validated(
+      assessments,
+      knownIDs: ["library", "is"]
+    )
+
+    guard case .curated(let curated) = result else {
+      return XCTFail("Expected curated result.")
+    }
+    let recommended = Set(curated.filter(\.isRecommended).map(\.candidateID))
+    XCTAssertEqual(recommended, ["library"])
+  }
+
+  func testRecommendedCandidateMustReachTheHighValueThreshold() {
+    let assessments = Self.makeEntries([
+      Self.entry(id: "library", isRecommended: true, score: 8),
+      Self.entry(id: "case", isRecommended: true, score: 7),
+    ])
+
+    let result = FoundationModelsCandidateCurator.validated(
+      assessments,
+      knownIDs: ["library", "case"]
+    )
+
+    guard case .curated(let curated) = result else {
+      return XCTFail("Expected curated result.")
+    }
+    let recommended = Set(curated.filter(\.isRecommended).map(\.candidateID))
+    XCTAssertEqual(recommended, ["library"])
   }
 
   func testRejectsUnknownIDsAndNewWords() {
@@ -175,12 +215,14 @@ final class FoundationModelsCuratorTests: XCTestCase {
     isRecommended: Bool,
     score: Int,
     reason: String = "语义判断",
-    meaning: String? = nil
+    meaning: String? = nil,
+    isFunctionWord: Bool = false
   ) -> FoundationCandidateAssessmentEntry {
     FoundationCandidateAssessmentEntry(
       candidateID: id,
       isRecommended: isRecommended,
       valueScore: score,
+      isFunctionWord: isFunctionWord,
       shortReason: reason,
       contextualMeaning: meaning
     )

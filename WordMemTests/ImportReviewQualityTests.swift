@@ -157,6 +157,38 @@ final class ImportReviewQualityTests: XCTestCase {
     }
   }
 
+  func testTranslationProviderChipsApplyFoundationModelRecommendations() async {
+    let advisor = ImportWordAdvisor(
+      lemmaProvider: QualityNoopLemmaProvider(),
+      spellingSuggester: QualityNoopSpellingSuggester(),
+      availability: StubQualityDictionary(available: ["fascinating"])
+    )
+
+    let chips = await ImportCandidatePipeline.translationChips(
+      from: "She is reading a fascinating book in the quiet library.",
+      advisor: advisor,
+      curator: StubQualityCurator(curatedIDs: ["fascinating"])
+    )
+
+    XCTAssertEqual(chips.map(\.text), ["fascinating"])
+  }
+
+  func testTranslationProviderChipsStayEmptyWhenCurationFails() async {
+    let advisor = ImportWordAdvisor(
+      lemmaProvider: QualityNoopLemmaProvider(),
+      spellingSuggester: QualityNoopSpellingSuggester(),
+      availability: StubQualityDictionary(available: ["fascinating"])
+    )
+
+    let chips = await ImportCandidatePipeline.translationChips(
+      from: "She is reading a fascinating book in the quiet library.",
+      advisor: advisor,
+      curator: FailingQualityCurator()
+    )
+
+    XCTAssertTrue(chips.isEmpty)
+  }
+
   func testFunctionWordOnlyInputCannotProduceChipsOrChipTranslation() async {
     let model = makeModel(available: [], curatedIDs: [])
 
@@ -400,6 +432,15 @@ private struct StubQualityCurator: ImportCandidateCurating {
       return hasCuration ? .failed : .curated([])
     }
     return .curated(assessments)
+  }
+}
+
+private struct FailingQualityCurator: ImportCandidateCurating {
+  func assess(
+    candidates: [WordImportCandidate],
+    context: ImportCandidateCurationContext
+  ) async -> ImportCandidateCurationResult {
+    .failed
   }
 }
 

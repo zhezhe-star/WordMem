@@ -11,6 +11,8 @@
 		DRV01 /* DocumentImportReviewViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = DRV02 /* DocumentImportReviewViews.swift */; };
 		DRVT01 /* DocumentImportReviewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DRVT02 /* DocumentImportReviewModelTests.swift */; };
 		CUR01 /* ImportCandidateCurator.swift in Sources */ = {isa = PBXBuildFile; fileRef = CUR02 /* ImportCandidateCurator.swift */; };
+		CURTPR01 /* ImportCandidateCurator.swift in Sources */ = {isa = PBXBuildFile; fileRef = CUR02 /* ImportCandidateCurator.swift */; };
+		CURSE01 /* ImportCandidateCurator.swift in Sources */ = {isa = PBXBuildFile; fileRef = CUR02 /* ImportCandidateCurator.swift */; };
 		CURT01 /* FoundationModelsCuratorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CURT02 /* FoundationModelsCuratorTests.swift */; };
 		SHRD30 /* TextImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SHRD31 /* TextImportView.swift */; };
 		SHRD32 /* ImageImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SHRD33 /* ImageImportView.swift */; };
@@ -610,6 +612,7 @@
 				MEM35 /* WordInputNormalizer.swift in Sources */,
 				MEM37 /* SystemDictionaryLookupService.swift in Sources */,
 				SHRD14 /* ImportCandidateModels.swift in Sources */,
+				CURSE01 /* ImportCandidateCurator.swift in Sources */,
 				SUB12 /* WordImportSubmission.swift in Sources */,
 				EXT07 /* WordData.swift in Sources */,
 				EXT08 /* LocalStorageManager.swift in Sources */,
@@ -623,6 +626,7 @@
 				TPR03 /* TranslationProviderMain.swift in Sources */,
 				TPR05 /* TranslationCardView.swift in Sources */,
 				TPR07 /* WordPickerView.swift in Sources */,
+				CURTPR01 /* ImportCandidateCurator.swift in Sources */,
 				SHRD12 /* ImportCandidateModels.swift in Sources */,
 				MEM38 /* DictionaryModels.swift in Sources */,
 				MEM40 /* WordEntry.swift in Sources */,

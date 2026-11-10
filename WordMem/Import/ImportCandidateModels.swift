@@ -293,12 +293,30 @@ enum ImportCandidatePipeline {
         await advisor.chips(from: candidates, context: context)
     }
 
+    @available(iOS 26.0, *)
     static func translationChips(
         from source: String,
-        advisor: ImportWordAdvisor = .live()
+        advisor: ImportWordAdvisor,
+        curator: any ImportCandidateCurating
     ) async -> [ImportCandidateChip] {
         let candidates = EnglishWordCandidateSplitter.candidates(from: source)
-        let advisedWords = await advisor.chips(from: candidates, context: source)
+        let context = ImportCandidateCurationContext(
+            sourceText: source,
+            candidateIDs: candidates.map(\.normalizedKey)
+        )
+        let curation = await curator.assess(
+            candidates: candidates,
+            context: context
+        )
+        guard case .curated(let assessments) = curation else { return [] }
+
+        let recommendedIDs = Set(
+            assessments.filter(\.isRecommended).map(\.candidateID)
+        )
+        let advisedWords = await advisor.chips(
+            from: candidates.filter { recommendedIDs.contains($0.normalizedKey) },
+            context: source
+        )
         return ImportCandidateChip.uniquelyIdentified(
             advisedWords.map {
                 ImportCandidateChip(
@@ -309,6 +327,18 @@ enum ImportCandidatePipeline {
                     advice: $0.advice
                 )
             }
+        )
+    }
+
+    static func translationChips(
+        from source: String,
+        advisor: ImportWordAdvisor = .live()
+    ) async -> [ImportCandidateChip] {
+        guard #available(iOS 26.0, *) else { return [] }
+        return await translationChips(
+            from: source,
+            advisor: advisor,
+            curator: FoundationModelsCandidateCurator()
         )
     }
 }
