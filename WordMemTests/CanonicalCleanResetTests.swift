@@ -274,6 +274,69 @@ final class CanonicalCleanResetTests: XCTestCase {
         XCTAssertEqual(importContext.metadata["phraseTranslation"], "给我一点时间。")
     }
 
+    func testSavedProviderCompletionReturnsNonEmptyOriginalText() {
+        let completion = TranslationProviderCloseRequest.savedCompletion(
+            originalInput: AttributedString("Read the quiet library."),
+            fallbackSourceText: "Read the quiet library."
+        )
+        let completionText = completion.map { String($0.characters) } ?? ""
+
+        XCTAssertEqual(completionText, "Read the quiet library.")
+    }
+
+    func testSavedProviderCompletionDoesNotReplaceWithEmptyText() {
+        let completion = TranslationProviderCloseRequest.savedCompletion(
+            originalInput: AttributedString(" "),
+            fallbackSourceText: ""
+        )
+
+        XCTAssertNil(completion)
+    }
+
+    func testSuccessfulProviderSaveCallsCloseCallbackExactlyOnce() {
+        let storage = ProviderCloseTestStorage(result: true)
+        let coordinator = TranslationProviderSaveCoordinator()
+        var closeCount = 0
+
+        let result = coordinator.save(makeProviderSubmission(), storage: storage) {
+            closeCount += 1
+        }
+
+        XCTAssertEqual(result, .completed(nil))
+        XCTAssertEqual(closeCount, 1)
+        XCTAssertEqual(storage.appendCount, 1)
+    }
+
+    func testFailedProviderSaveDoesNotCallCloseCallback() {
+        let storage = ProviderCloseTestStorage(result: false)
+        let coordinator = TranslationProviderSaveCoordinator()
+        var closeCount = 0
+
+        let result = coordinator.save(makeProviderSubmission(), storage: storage) {
+            closeCount += 1
+        }
+
+        XCTAssertEqual(result, .completed("保存导入记录失败，请重试。"))
+        XCTAssertEqual(closeCount, 0)
+        XCTAssertEqual(storage.appendCount, 1)
+    }
+
+    func testRepeatedProviderSaveAfterSuccessDoesNotSaveOrClose() {
+        let storage = ProviderCloseTestStorage(result: true)
+        let coordinator = TranslationProviderSaveCoordinator()
+        var closeCount = 0
+        let close = {
+            closeCount += 1
+        }
+
+        _ = coordinator.save(makeProviderSubmission(), storage: storage, onSaved: close)
+        let repeated = coordinator.save(makeProviderSubmission(), storage: storage, onSaved: close)
+
+        XCTAssertEqual(repeated, .ignoredAfterSuccess)
+        XCTAssertEqual(closeCount, 1)
+        XCTAssertEqual(storage.appendCount, 1)
+    }
+
     func testCalendarUsesOnlyEntriesWithTranslation() throws {
         let context = try makeContext()
         context.insert(WordEntry(
@@ -576,6 +639,30 @@ final class CanonicalCleanResetTests: XCTestCase {
             What we've found
             """
         )
+    }
+}
+
+private func makeProviderSubmission() -> WordImportSubmission {
+    WordImportSubmission(
+        source: .translationProvider,
+        sourceText: "Read the quiet library.",
+        candidates: [WordImportCandidatePayload(text: "library", normalizedKey: "library")]
+    )
+}
+
+private final class ProviderCloseTestStorage: WordImportSubmissionStoring {
+    private let result: Bool
+    private(set) var appendCount = 0
+    var persistenceMessage: String? { result ? nil : "保存导入记录失败，请重试。" }
+
+    init(result: Bool) {
+        self.result = result
+    }
+
+    @discardableResult
+    func appendSubmission(_ submission: WordImportSubmission) -> Bool {
+        appendCount += 1
+        return result
     }
 }
 

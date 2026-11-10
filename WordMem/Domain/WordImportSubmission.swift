@@ -353,6 +353,27 @@ final class TranslationProviderSaveCoordinator {
     }
 }
 
+/// Successful saves preserve the source text. Real-device testing showed that
+/// a nil completion can leave an expanded provider open; the host ignores the
+/// replacement when the source cannot be replaced.
+enum TranslationProviderCloseRequest {
+    static func savedCompletion(
+        originalInput: AttributedString?,
+        fallbackSourceText: String
+    ) -> AttributedString? {
+        if let originalInput,
+            !String(originalInput.characters)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .isEmpty
+        {
+            return originalInput
+        }
+        let fallback = AttributedString(fallbackSourceText)
+        let fallbackText = String(fallback.characters)
+        return fallbackText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : fallback
+    }
+}
+
 protocol WordImportSubmissionStoring: AnyObject {
     @discardableResult
     func appendSubmission(_ submission: WordImportSubmission) -> Bool

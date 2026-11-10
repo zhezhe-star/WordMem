@@ -285,15 +285,13 @@ struct WordPickerView: View {
             let result = saveCoordinator.save(
                 submission,
                 storage: storage,
-                onSaved: {}
+                onSaved: onSave
             )
 
             if case .completed(nil) = result {
-                await Task.yield()
                 hasSavedSubmission = true
                 isPreparingSave = false
                 isWaitingForExtensionClose = true
-                onSave()
                 scheduleCloseFallback()
                 return
             }

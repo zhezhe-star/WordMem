@@ -7,6 +7,7 @@ struct TranslationCardView: View {
     let context: any TranslationUIProviderContext
 
     @State private var sourceText = ""
+    @State private var originalInput: AttributedString?
     @State private var translatedText = ""
     @State private var status: Status = .idle
     @State private var configuration: TranslationSession.Configuration?
@@ -34,9 +35,7 @@ struct TranslationCardView: View {
                         context.finish(translation: nil)
                     },
                     onSave: {
-                        // Finish immediately after persistence so the system card
-                        // closes without requiring a second interaction.
-                        context.finish(translation: nil)
+                        finishAfterSave(context: context)
                     }
                 )
                 .transition(.opacity)
@@ -72,6 +71,7 @@ struct TranslationCardView: View {
 
     private func loadCard() {
         guard sourceText.isEmpty, let input = context.inputText else { return }
+        originalInput = input
         let collapsed = String(input.characters)
             .split(whereSeparator: { $0.isNewline })
             .joined(separator: " ")
@@ -79,6 +79,17 @@ struct TranslationCardView: View {
         sourceText = collapsed
         context.expandSheet()
         startTranslation()
+    }
+
+    private func finishAfterSave(context: any TranslationUIProviderContext) {
+        // Completing with the original text avoids a destructive replacement and
+        // exercises the provider's successful-finish path on expanded sheets.
+        context.finish(
+            translation: TranslationProviderCloseRequest.savedCompletion(
+                originalInput: originalInput ?? context.inputText,
+                fallbackSourceText: sourceText
+            )
+        )
     }
 
     private func startTranslation() {
