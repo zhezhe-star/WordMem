@@ -6,6 +6,34 @@ import XCTest
 final class FoundationModelsCuratorTests: XCTestCase {
   // MARK: - Meaningful curation
 
+  func testCurationDeadlineReturnsBeforeAnUncancellableOperation() async {
+    let started = ContinuousClock.now
+
+    let outcome = await ImportCurationDeadline.run(timeout: .milliseconds(30)) {
+      _ = try? await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+        DispatchQueue.global().asyncAfter(deadline: .now() + 2) {
+          continuation.resume(returning: ())
+        }
+      }
+      return "late"
+    }
+
+    guard case .timedOut = outcome else {
+      return XCTFail("Expected deadline outcome.")
+    }
+    XCTAssertLessThan(ContinuousClock.now - started, .seconds(1))
+  }
+
+  func testCurationDeadlineReturnsCompletedOperation() async {
+    let outcome = await ImportCurationDeadline.run(timeout: .seconds(1)) {
+      "finished"
+    }
+
+    guard case .completed("finished") = outcome else {
+      return XCTFail("Expected completed outcome.")
+    }
+  }
+
   func testRecommendsMeaningfulWordsAndRejectsFunctionWords() {
     let assessments = Self.makeEntries([
       Self.entry(id: "study", isRecommended: true, score: 9),

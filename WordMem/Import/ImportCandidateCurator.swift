@@ -1,6 +1,81 @@
 import Foundation
 import FoundationModels
 
+/// Races a curation operation against a real deadline. Task cancellation is
+/// not sufficient as a timeout because some model calls may not observe it.
+@available(iOS 26.0, *)
+enum ImportCurationDeadline {
+  enum Outcome<Value: Sendable> {
+    case completed(Value)
+    case timedOut
+  }
+
+  static func run<Value: Sendable>(
+    timeout: Duration,
+    operation: @escaping @Sendable () async throws -> Value
+  ) async -> Outcome<Value> {
+    await withCheckedContinuation { continuation in
+      let gate = DeadlineGate()
+      let workTask = Task.detached(priority: .userInitiated) {
+        do {
+          let value = try await operation()
+          if gate.claim() {
+            continuation.resume(returning: .completed(value))
+            gate.cancelTimeout()
+          }
+        } catch {
+          if gate.claim() {
+            continuation.resume(returning: .timedOut)
+            gate.cancelTimeout()
+          }
+        }
+      }
+
+      gate.setTimeout(
+        Task.detached(priority: .utility) {
+          try? await Task.sleep(for: timeout)
+          if gate.claim() {
+            workTask.cancel()
+            continuation.resume(returning: .timedOut)
+          }
+        }
+      )
+    }
+  }
+
+  private final class DeadlineGate: @unchecked Sendable {
+    private let lock = NSLock()
+    private var isClaimed = false
+    private var timeoutTask: Task<Void, Never>?
+
+    func claim() -> Bool {
+      lock.lock()
+      defer { lock.unlock() }
+      guard !isClaimed else { return false }
+      isClaimed = true
+      return true
+    }
+
+    func setTimeout(_ task: Task<Void, Never>) {
+      lock.lock()
+      if isClaimed {
+        task.cancel()
+        lock.unlock()
+      } else {
+        timeoutTask = task
+        lock.unlock()
+      }
+    }
+
+    func cancelTimeout() {
+      lock.lock()
+      timeoutTask?.cancel()
+      timeoutTask = nil
+      lock.unlock()
+    }
+  }
+}
+
 /// Bounded context given to a semantic candidate curator. It carries only
 /// the review document text and deterministic candidate identities already
 /// extracted by the app, so the model can never introduce new words.
@@ -90,7 +165,7 @@ struct FoundationModelsCandidateCurator: ImportCandidateCurating {
 
   init(
     model: SystemLanguageModel = .default,
-    timeout: Duration = .seconds(10),
+    timeout: Duration = .seconds(20),
     maximumCandidates: Int = 120
   ) {
     self.model = model
@@ -114,31 +189,21 @@ struct FoundationModelsCandidateCurator: ImportCandidateCurating {
       candidateIDs: Array(boundedIDs)
     )
 
-    let curationTask = Task.detached {
+    let deadlineOutcome = await ImportCurationDeadline.run(timeout: timeout) {
       try await session.respond(
         to: prompt,
         generating: FoundationCandidateAssessment.self
       )
     }
-    let timeoutTask = Task.detached {
-      try await Task.sleep(for: self.timeout)
-      curationTask.cancel()
-    }
 
-    defer {
-      timeoutTask.cancel()
-    }
-
-    do {
-      let response = try await curationTask.value
+    switch deadlineOutcome {
+    case .timedOut:
+      return .failed
+    case .completed(let response):
       return Self.validated(
         response.content.assessments,
         knownIDs: knownIDs
       )
-    } catch is CancellationError {
-      return .failed
-    } catch {
-      return .failed
     }
   }
 

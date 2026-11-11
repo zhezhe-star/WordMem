@@ -80,9 +80,11 @@ enum DocumentTranslationSessionFactory {
     source: Locale.Language,
     target: Locale.Language
   ) -> TranslationSession.Configuration {
-    var next = configuration ?? highFidelity(source: source, target: target)
-    next.invalidate()
-    return next
+    if var configuration {
+      configuration.invalidate()
+      return configuration
+    }
+    return highFidelity(source: source, target: target)
   }
 }
 

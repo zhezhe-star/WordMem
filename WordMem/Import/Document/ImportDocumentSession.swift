@@ -30,6 +30,13 @@ final class ImportDocumentSession {
   }
 
   func prepare() async {
+    await checkAvailability()
+    if phase == .translating {
+      beginTranslation()
+    }
+  }
+
+  func checkAvailability() async {
     guard phase == .idle || phase.isRecoverableFailureOrUnavailable else { return }
     phase = .checkingAvailability
     phase = await engine.availabilityPhase(
@@ -37,18 +44,17 @@ final class ImportDocumentSession {
       target: targetLanguage,
       preferredSource: preferredSourceLanguage
     )
-
-    if phase == .translating {
-      beginTranslation()
-    }
   }
 
   func beginTranslation() {
     phase = .translating
+    let source =
+      (try? engine.sourceLanguage(in: document, preferredSource: preferredSourceLanguage))
+      ?? Locale.Language(identifier: "en")
+
     configuration = DocumentTranslationSessionFactory.refreshedHighFidelity(
       configuration,
-      source: (try? engine.sourceLanguage(in: document, preferredSource: preferredSourceLanguage))
-        ?? Locale.Language(identifier: "en"),
+      source: source,
       target: targetLanguage
     )
   }
@@ -72,7 +78,14 @@ final class ImportDocumentSession {
       phase = .completed
       configuration = nil
     } catch {
-      guard !Task.isCancelled else { return }
+      guard !(error is CancellationError), !Task.isCancelled else {
+        // SwiftUI may cancel this task while the surrounding review layout
+        // changes. Invalidate once so the reattached task starts a fresh run
+        // instead of leaving a permanently spinning translation card.
+        phase = .translating
+        configuration?.invalidate()
+        return
+      }
       phase = DocumentTranslationStateMapper.phase(for: error)
       configuration = nil
     }

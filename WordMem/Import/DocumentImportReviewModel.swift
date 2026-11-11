@@ -237,7 +237,7 @@ final class DocumentImportReviewModel {
     // Document translation is optional enrichment and never blocks selection.
     let session = documentSessionFactory(document)
     documentSession = session
-    await session.prepare()
+    await session.checkAvailability()
 
     guard preparationToken == token else { return }
 
@@ -272,6 +272,12 @@ final class DocumentImportReviewModel {
     chips = advisedChips
     selection = ImportChipSelection(chips: advisedChips)
     phase = offeredChips.isEmpty ? .noWordsAvailable : .reviewing
+
+    // Start the visible task after the structured source and chips reach their
+    // stable layout; an earlier start can be cancelled by that layout change.
+    if session.phase == .translating {
+      session.beginTranslation()
+    }
 
     if !offeredChips.isEmpty {
       chipTranslationConfiguration =

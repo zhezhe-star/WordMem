@@ -268,6 +268,61 @@ final class DocumentTranslationEngineTests: XCTestCase {
     XCTAssertGreaterThan(refreshed.version, initial.version)
   }
 
+  @MainActor
+  func testInitialTranslationConfigurationIsReadyForFirstTask() {
+    let baseline = DocumentTranslationSessionFactory.highFidelity(
+      source: Locale.Language(identifier: "en"),
+      target: Locale.Language(identifier: "zh-Hans")
+    )
+    let session = ImportDocumentSession(document: makeDocument([]))
+
+    session.beginTranslation()
+
+    XCTAssertEqual(session.configuration?.preferredStrategy, .highFidelity)
+    XCTAssertEqual(session.configuration?.version, baseline.version)
+  }
+
+  @MainActor
+  func testAvailabilityCheckDoesNotStartFirstTranslationTask() async throws {
+    let document = makeDocument([makeBlock(id: makeUUID(1), text: "Hello")])
+    let session = ImportDocumentSession(
+      document: document,
+      engine: DocumentTranslationEngine(
+        availabilityChecker: FakeAvailability(status: .installed),
+        languageDetector: FakeDetector(language: Locale.Language(identifier: "en"))
+      )
+    )
+
+    await session.checkAvailability()
+
+    XCTAssertEqual(session.phase, .translating)
+    XCTAssertNil(session.configuration)
+
+    session.beginTranslation()
+    XCTAssertNotNil(session.configuration)
+  }
+
+  @MainActor
+  func testCancelledTranslationTaskSchedulesARetryableConfiguration() async throws {
+    let document = makeDocument([makeBlock(id: makeUUID(1), text: "Hello")])
+    let engine = DocumentTranslationEngine(
+      availabilityChecker: FakeAvailability(status: .installed),
+      languageDetector: FakeDetector(language: Locale.Language(identifier: "en"))
+    )
+    let importSession = ImportDocumentSession(
+      document: document,
+      engine: engine
+    )
+    importSession.beginTranslation()
+    let initialConfiguration = try XCTUnwrap(importSession.configuration)
+
+    await importSession.handle(CancellingTranslationSession())
+
+    XCTAssertEqual(importSession.phase, .translating)
+    let retriedConfiguration = try XCTUnwrap(importSession.configuration)
+    XCTAssertGreaterThan(retriedConfiguration.version, initialConfiguration.version)
+  }
+
   private func makeDocument(_ blocks: [CanonicalBlock]) -> CanonicalDocument {
     CanonicalDocument(
       id: makeUUID(0),
@@ -391,4 +446,11 @@ private final class FailingThenSucceedingSession: DocumentTranslationSessionHand
 
 private struct GenericTranslationFailure: Error, CustomStringConvertible {
   var description: String { "generic translation failure" }
+}
+
+private struct CancellingTranslationSession: DocumentTranslationSessionHandling {
+  func translate(_ requests: [DocumentTranslationRequest]) async throws
+    -> [DocumentTranslationResponse] {
+    throw CancellationError()
+  }
 }
