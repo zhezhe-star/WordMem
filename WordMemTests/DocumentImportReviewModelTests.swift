@@ -76,6 +76,31 @@ final class DocumentImportReviewModelTests: XCTestCase {
     XCTAssertEqual(session.phase, .translating)
   }
 
+  func testCuratorFailureKeepsDocumentTranslationRetryable() async throws {
+    let advisor = ImportWordAdvisor(
+      lemmaProvider: NoopLemmaProvider(),
+      spellingSuggester: NoopSpellingSuggester(),
+      availability: StubAvailabilityDictionary(available: ["garden"])
+    )
+    let model = DocumentImportReviewModel(
+      advisor: advisor,
+      curator: FailingDocumentCurator()
+    )
+    model.documentSessionFactory = { document in
+      ImportDocumentSession(
+        document: document,
+        engine: self.makeEngine(status: .installed)
+      )
+    }
+
+    await model.prepareText("The garden grows quickly.")
+
+    XCTAssertEqual(model.phase, .curatorUnavailable)
+    let session = try XCTUnwrap(model.documentSession)
+    XCTAssertEqual(session.phase, .translating)
+    XCTAssertNotNil(session.configuration)
+  }
+
   func testTranslatedTextJoinsCompletedDocumentBlocks() async {
     let model = makeModel(available: ["garden"], curatedIDs: ["garden"])
     await model.prepareText("The garden grows quickly.")
@@ -474,6 +499,23 @@ private struct StubAvailabilityChecker: DocumentLanguageAvailabilityChecking {
     to target: Locale.Language
   ) async throws -> DocumentLanguageAvailabilityStatus {
     status
+  }
+}
+
+private struct StubAvailabilityDictionary: SystemDictionaryAuthorizing {
+  let available: Set<String>
+
+  func hasDefinition(forTerm term: String) async -> Bool {
+    available.contains(term)
+  }
+}
+
+private struct FailingDocumentCurator: ImportCandidateCurating {
+  func assess(
+    candidates: [WordImportCandidate],
+    context: ImportCandidateCurationContext
+  ) async -> ImportCandidateCurationResult {
+    .failed
   }
 }
 

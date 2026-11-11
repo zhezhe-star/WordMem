@@ -257,6 +257,7 @@ final class DocumentImportReviewModel {
 
     guard case .curated(let assessments) = curation else {
       phase = .curatorUnavailable
+      beginDocumentTranslationIfAvailable(session)
       return
     }
 
@@ -275,9 +276,7 @@ final class DocumentImportReviewModel {
 
     // Start the visible task after the structured source and chips reach their
     // stable layout; an earlier start can be cancelled by that layout change.
-    if session.phase == .translating {
-      session.beginTranslation()
-    }
+    beginDocumentTranslationIfAvailable(session)
 
     if !offeredChips.isEmpty {
       chipTranslationConfiguration =
@@ -286,6 +285,11 @@ final class DocumentImportReviewModel {
   }
 
   // MARK: Selection
+
+  private func beginDocumentTranslationIfAvailable(_ session: ImportDocumentSession) {
+    guard session.phase == .translating else { return }
+    session.beginTranslation()
+  }
 
   func toggleSelection(_ chip: ImportCandidateChip) {
     selection.toggle(chip.id)
