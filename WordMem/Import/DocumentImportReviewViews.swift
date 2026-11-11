@@ -26,7 +26,11 @@ struct DocumentImportReviewScreen<Source: View>: View {
             }
 
             if let statusMessage = model.reviewStatusMessage {
-              ImportInlineStatusView(text: statusMessage, isError: model.errorMessage != nil)
+              ImportInlineStatusView(
+                text: statusMessage,
+                isError: model.errorMessage != nil,
+                showsProgress: model.phase == .organizing || model.phase == .preparingWords
+              )
             }
 
             if model.phase == .reviewing {
@@ -232,6 +236,7 @@ struct ImportDocumentTranslationCard: View {
 struct ImportInlineStatusView: View {
   let text: String
   var isError = false
+  var showsProgress = true
 
   var body: some View {
     HStack(spacing: 10) {
@@ -242,7 +247,7 @@ struct ImportInlineStatusView: View {
         Text(text)
           .font(.footnote.weight(.medium))
           .foregroundStyle(.red)
-      } else {
+      } else if showsProgress {
         ProgressView()
           .controlSize(.small)
 
