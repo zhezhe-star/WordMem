@@ -243,17 +243,18 @@ struct ImportInlineStatusView: View {
       if isError {
         Image(systemName: "exclamationmark.triangle.fill")
           .foregroundStyle(.red)
-
-        Text(text)
-          .font(.footnote.weight(.medium))
-          .foregroundStyle(.red)
       } else if showsProgress {
         ProgressView()
           .controlSize(.small)
+      }
 
+      // Terminal states (for example "no words" or "curation unavailable")
+      // must still render their actionable copy without a spinner. Only the
+      // leading progress indicator is conditional.
+      if !text.isEmpty {
         Text(text)
-          .font(.subheadline)
-          .foregroundStyle(.secondary)
+          .font(isError ? .footnote.weight(.medium) : .subheadline)
+          .foregroundStyle(isError ? Color.red : Color.secondary)
       }
     }
     .accessibilityElement(children: .ignore)

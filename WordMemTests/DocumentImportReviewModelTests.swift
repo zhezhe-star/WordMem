@@ -1,5 +1,7 @@
 import Foundation
+import SwiftUI
 import Translation
+import UIKit
 import XCTest
 
 @testable import WordMem
@@ -281,6 +283,27 @@ final class DocumentImportReviewModelTests: XCTestCase {
 
   // MARK: - Pipeline hiding
 
+  func testTerminalStatusViewRendersMessageWithoutProgress() {
+    let view = ImportInlineStatusView(
+      text: DocumentImportStatusPresenter.curatorUnavailableMessage,
+      isError: false,
+      showsProgress: false
+    )
+    .frame(width: 320, height: 44)
+    .background(Color.white)
+
+    let renderer = ImageRenderer(content: view)
+    renderer.scale = 2
+
+    guard let image = renderer.uiImage else {
+      return XCTFail("Expected the terminal status to render an image.")
+    }
+    XCTAssertTrue(
+      containsNonWhitePixels(image),
+      "Terminal status copy must render even without a progress indicator."
+    )
+  }
+
   func testUserCopyHidesPipelineTerminology() {
     let userVisibleStrings = [
       DocumentImportStatusPresenter.reviewStatus(for: .organizing),
@@ -390,6 +413,34 @@ final class DocumentImportReviewModelTests: XCTestCase {
       availabilityChecker: StubAvailabilityChecker(status: status),
       languageDetector: StubLanguageDetector(language: Locale.Language(identifier: "en"))
     )
+  }
+
+  private func containsNonWhitePixels(_ image: UIImage) -> Bool {
+    guard let cgImage = image.cgImage else { return false }
+    let width = cgImage.width
+    let height = cgImage.height
+    guard width > 0, height > 0 else { return false }
+
+    var pixels = [UInt8](repeating: 0, count: width * height * 4)
+    guard
+      let context = CGContext(
+        data: &pixels,
+        width: width,
+        height: height,
+        bitsPerComponent: 8,
+        bytesPerRow: width * 4,
+        space: CGColorSpaceCreateDeviceRGB(),
+        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+      )
+    else { return false }
+
+    context.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+    for index in stride(from: 0, to: pixels.count, by: 4) {
+      if pixels[index] < 245 || pixels[index + 1] < 245 || pixels[index + 2] < 245 {
+        return true
+      }
+    }
+    return false
   }
 }
 
