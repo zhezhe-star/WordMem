@@ -104,6 +104,29 @@ final class DocumentImportReviewModelTests: XCTestCase {
     XCTAssertNotNil(session.configuration)
   }
 
+  func testSimulatorFoundationModelFailureFallsBackToDeterministicChips() async {
+    guard #available(iOS 26.0, *) else {
+      return XCTFail("The app target requires iOS 26 or later.")
+    }
+    let model = DocumentImportReviewModel(
+      advisor: makeAdvisor(available: ["garden"]),
+      curator: FoundationModelsCandidateCurator()
+    )
+    model.documentSessionFactory = { document in
+      ImportDocumentSession(
+        document: document,
+        engine: self.makeEngine(status: .installed)
+      )
+    }
+
+    // The simulator reports Foundation Models as unavailable, so this exercises
+    // the real production fallback path rather than a stub.
+    await model.prepareText("The garden grows quickly.")
+
+    XCTAssertEqual(model.phase, .reviewing)
+    XCTAssertEqual(model.offeredChips.map(\.text), ["garden"])
+  }
+
   func testCuratorFailureFallsBackToDeterministicFunctionWordFilter() async {
     let advisor = ImportWordAdvisor(
       lemmaProvider: NoopLemmaProvider(),
