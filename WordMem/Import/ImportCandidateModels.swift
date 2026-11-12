@@ -299,7 +299,7 @@ enum ImportCandidatePipeline {
         advisor: ImportWordAdvisor,
         curator: any ImportCandidateCurating
     ) async -> [ImportCandidateChip] {
-        let candidates = EnglishWordCandidateSplitter.candidates(from: source)
+        let candidates = baseTranslationCandidates(from: source)
         let context = ImportCandidateCurationContext(
             sourceText: source,
             candidateIDs: candidates.map(\.normalizedKey)
@@ -308,15 +308,71 @@ enum ImportCandidatePipeline {
             candidates: candidates,
             context: context
         )
-        guard case .curated(let assessments) = curation else { return [] }
 
-        let recommendedIDs = Set(
-            assessments.filter(\.isRecommended).map(\.candidateID)
+        let selectedCandidates: [WordImportCandidate]
+        switch curation {
+        case .curated(let assessments):
+            let recommendedIDs = Set(
+                assessments.filter(\.isRecommended).map(\.candidateID)
+            )
+            selectedCandidates = candidates.filter {
+                recommendedIDs.contains($0.normalizedKey)
+            }
+        case .failed:
+            // Foundation Models is optional. Extensions keep working with the
+            // original deterministic candidate set when it is unavailable.
+            selectedCandidates = candidates
+        }
+
+        return await advisedTranslationChips(
+            from: selectedCandidates,
+            source: source,
+            advisor: advisor
         )
-        let advisedWords = await advisor.chips(
-            from: candidates.filter { recommendedIDs.contains($0.normalizedKey) },
-            context: source
+    }
+
+    static func translationChips(
+        from source: String,
+        advisor: ImportWordAdvisor = .live()
+    ) async -> [ImportCandidateChip] {
+        if #available(iOS 26.0, *) {
+            return await translationChips(
+                from: source,
+                advisor: advisor,
+                curator: FoundationModelsCandidateCurator()
+            )
+        }
+        return await deterministicTranslationChips(
+            from: source,
+            advisor: advisor
         )
+    }
+
+    private static func deterministicTranslationChips(
+        from source: String,
+        advisor: ImportWordAdvisor
+    ) async -> [ImportCandidateChip] {
+        await advisedTranslationChips(
+            from: baseTranslationCandidates(from: source),
+            source: source,
+            advisor: advisor
+        )
+    }
+
+    private static func baseTranslationCandidates(
+        from source: String
+    ) -> [WordImportCandidate] {
+        ImportHighValueCandidateFilter.highValueCandidates(
+            from: EnglishWordCandidateSplitter.candidates(from: source)
+        )
+    }
+
+    private static func advisedTranslationChips(
+        from candidates: [WordImportCandidate],
+        source: String,
+        advisor: ImportWordAdvisor
+    ) async -> [ImportCandidateChip] {
+        let advisedWords = await advisor.chips(from: candidates, context: source)
         return ImportCandidateChip.uniquelyIdentified(
             advisedWords.map {
                 ImportCandidateChip(
@@ -327,18 +383,6 @@ enum ImportCandidatePipeline {
                     advice: $0.advice
                 )
             }
-        )
-    }
-
-    static func translationChips(
-        from source: String,
-        advisor: ImportWordAdvisor = .live()
-    ) async -> [ImportCandidateChip] {
-        guard #available(iOS 26.0, *) else { return [] }
-        return await translationChips(
-            from: source,
-            advisor: advisor,
-            curator: FoundationModelsCandidateCurator()
         )
     }
 }

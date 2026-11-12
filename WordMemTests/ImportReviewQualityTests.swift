@@ -173,7 +173,7 @@ final class ImportReviewQualityTests: XCTestCase {
     XCTAssertEqual(chips.map(\.text), ["fascinating"])
   }
 
-  func testTranslationProviderChipsStayEmptyWhenCurationFails() async {
+  func testTranslationProviderChipsFallBackWhenCurationFails() async {
     let advisor = ImportWordAdvisor(
       lemmaProvider: QualityNoopLemmaProvider(),
       spellingSuggester: QualityNoopSpellingSuggester(),
@@ -186,7 +186,23 @@ final class ImportReviewQualityTests: XCTestCase {
       curator: FailingQualityCurator()
     )
 
-    XCTAssertTrue(chips.isEmpty)
+    XCTAssertEqual(chips.filter(\.isOffered).map(\.text), ["fascinating"])
+  }
+
+  func testTranslationProviderFallbackStillExcludesFunctionWords() async {
+    let advisor = ImportWordAdvisor(
+      lemmaProvider: QualityNoopLemmaProvider(),
+      spellingSuggester: QualityNoopSpellingSuggester(),
+      availability: StubQualityDictionary(available: ["study", "am", "the"])
+    )
+
+    let chips = await ImportCandidatePipeline.translationChips(
+      from: "I am the study.",
+      advisor: advisor,
+      curator: FailingQualityCurator()
+    )
+
+    XCTAssertEqual(chips.map(\.text), ["study"])
   }
 
   func testFunctionWordOnlyInputCannotProduceChipsOrChipTranslation() async {
