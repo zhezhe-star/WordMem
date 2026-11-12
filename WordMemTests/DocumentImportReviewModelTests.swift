@@ -97,10 +97,116 @@ final class DocumentImportReviewModelTests: XCTestCase {
 
     await model.prepareText("The garden grows quickly.")
 
-    XCTAssertEqual(model.phase, .curatorUnavailable)
+    XCTAssertEqual(model.phase, .reviewing)
+    XCTAssertEqual(model.offeredChips.map(\.text), ["garden"])
     let session = try XCTUnwrap(model.documentSession)
     XCTAssertEqual(session.phase, .translating)
     XCTAssertNotNil(session.configuration)
+  }
+
+  func testCuratorFailureFallsBackToDeterministicFunctionWordFilter() async {
+    let advisor = ImportWordAdvisor(
+      lemmaProvider: NoopLemmaProvider(),
+      spellingSuggester: NoopSpellingSuggester(),
+      availability: StubAvailabilityDictionary(
+        available: ["study", "case", "chapter", "am", "the", "this"]
+      )
+    )
+    let model = DocumentImportReviewModel(
+      advisor: advisor,
+      curator: FailingDocumentCurator()
+    )
+    model.documentSessionFactory = { document in
+      ImportDocumentSession(
+        document: document,
+        engine: self.makeEngine(status: .installed)
+      )
+    }
+
+    await model.prepareText("I am the study. It is a case in this chapter.")
+
+    XCTAssertEqual(model.phase, .reviewing)
+    XCTAssertEqual(model.offeredChips.map(\.text), ["study", "case", "chapter"])
+  }
+
+  func testCuratorCannotIntroduceFunctionWordsOutsideDeterministicBaseline() async {
+    let model = DocumentImportReviewModel(
+      advisor: makeAdvisor(available: ["study", "am", "the"]),
+      curator: OversizedRecommendationCurator(ids: ["study", "am", "the"])
+    )
+    model.documentSessionFactory = { document in
+      ImportDocumentSession(
+        document: document,
+        engine: self.makeEngine(status: .installed)
+      )
+    }
+
+    await model.prepareText("I am the study.")
+
+    XCTAssertEqual(model.phase, .reviewing)
+    XCTAssertEqual(model.offeredChips.map(\.text), ["study"])
+  }
+
+  func testDeterministicFilterRemovesFunctionWordsFragmentsAndShortTokens() {
+    let candidates = EnglishWordCandidateSplitter.candidates(
+      from: "am is are com v AI study case chapter"
+    )
+
+    let filtered = ImportHighValueCandidateFilter.highValueCandidates(from: candidates)
+
+    XCTAssertEqual(filtered.map(\.text), ["study", "case", "chapter"])
+  }
+
+  func testDeterministicFallbackStillRequiresDictionaryAvailability() async {
+    let advisor = ImportWordAdvisor(
+      lemmaProvider: NoopLemmaProvider(),
+      spellingSuggester: NoopSpellingSuggester(),
+      availability: StubAvailabilityDictionary(available: ["study"])
+    )
+    let model = DocumentImportReviewModel(
+      advisor: advisor,
+      curator: FailingDocumentCurator()
+    )
+    model.documentSessionFactory = { document in
+      ImportDocumentSession(
+        document: document,
+        engine: self.makeEngine(status: .installed)
+      )
+    }
+
+    await model.prepareText("Study garden quickly.")
+
+    XCTAssertEqual(model.phase, .reviewing)
+    XCTAssertEqual(model.offeredChips.map(\.text), ["Study"])
+  }
+
+  func testTranslationAvailabilityDoesNotBlockCandidateChips() async {
+    let model = DocumentImportReviewModel(
+      advisor: makeAdvisor(available: ["garden"]),
+      curator: StubDocumentCurator(curatedIDs: ["garden"])
+    )
+    model.documentSessionFactory = { document in
+      ImportDocumentSession(
+        document: document,
+        engine: DocumentTranslationEngine(
+          availabilityChecker: HangingAvailabilityChecker(),
+          languageDetector: StubLanguageDetector(language: Locale.Language(identifier: "en"))
+        )
+      )
+    }
+
+    let preparation = Task { await model.prepareText("The garden grows quickly.") }
+
+    for _ in 0..<200 {
+      if model.phase == .reviewing { break }
+      await Task.yield()
+    }
+
+    XCTAssertEqual(model.phase, .reviewing)
+    XCTAssertEqual(model.offeredChips.map(\.text), ["garden"])
+
+    preparation.cancel()
+    await preparation.value
   }
 
   func testTranslatedTextJoinsCompletedDocumentBlocks() async {
@@ -553,6 +659,16 @@ private struct StubAvailabilityChecker: DocumentLanguageAvailabilityChecking {
   }
 }
 
+private struct HangingAvailabilityChecker: DocumentLanguageAvailabilityChecking {
+  func status(
+    from source: Locale.Language,
+    to target: Locale.Language
+  ) async throws -> DocumentLanguageAvailabilityStatus {
+    try await Task.sleep(for: .seconds(30))
+    return .installed
+  }
+}
+
 private struct StubAvailabilityDictionary: SystemDictionaryAuthorizing {
   let available: Set<String>
 
@@ -567,6 +683,27 @@ private struct FailingDocumentCurator: ImportCandidateCurating {
     context: ImportCandidateCurationContext
   ) async -> ImportCandidateCurationResult {
     .failed
+  }
+}
+
+private struct OversizedRecommendationCurator: ImportCandidateCurating {
+  let ids: [String]
+
+  func assess(
+    candidates: [WordImportCandidate],
+    context: ImportCandidateCurationContext
+  ) async -> ImportCandidateCurationResult {
+    .curated(
+      ids.map { id in
+        ImportCandidateAssessment(
+          candidateID: id,
+          isRecommended: true,
+          valueScore: 10,
+          shortReason: "测试",
+          contextualMeaning: nil
+        )
+      }
+    )
   }
 }
 

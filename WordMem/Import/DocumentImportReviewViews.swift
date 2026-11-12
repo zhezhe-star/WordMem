@@ -21,7 +21,7 @@ struct DocumentImportReviewScreen<Source: View>: View {
 
             source()
 
-            if let session = model.documentSession {
+            if let session = model.documentSession, session.phase != .idle {
               ImportDocumentTranslationCard(session: session)
             }
 

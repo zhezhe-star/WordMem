@@ -9,14 +9,30 @@ struct SystemDocumentLanguageAvailabilityChecker: DocumentLanguageAvailabilityCh
     from source: Locale.Language,
     to target: Locale.Language
   ) async throws -> DocumentLanguageAvailabilityStatus {
-    let availability = LanguageAvailability(preferredStrategy: .highFidelity)
-    let status = await availability.status(from: source, to: target)
+    // High-fidelity translation may depend on Apple Intelligence. When that
+    // strategy cannot serve the pair, fall back to the default system
+    // translation availability before declaring the pair unsupported.
+    let highFidelity = LanguageAvailability(preferredStrategy: .highFidelity)
+    let highFidelityStatus = await highFidelity.status(from: source, to: target)
+    if let mapped = Self.mappedStatus(highFidelityStatus) {
+      return mapped
+    }
+
+    let legacyStatus = await LanguageAvailability().status(from: source, to: target)
+    guard let mapped = Self.mappedStatus(legacyStatus) else {
+      throw DocumentLanguageAvailabilityError.unsupportedLanguagePair
+    }
+    return mapped
+  }
+
+  private static func mappedStatus(
+    _ status: LanguageAvailability.Status
+  ) -> DocumentLanguageAvailabilityStatus? {
     switch status {
     case .installed: return .installed
     case .supported: return .supportedNotInstalled
-    case .unsupported: return .unsupported
-    @unknown default:
-      throw DocumentLanguageAvailabilityError.unsupportedLanguagePair
+    case .unsupported: return nil
+    @unknown default: return nil
     }
   }
 }
@@ -85,6 +101,24 @@ enum DocumentTranslationSessionFactory {
       return configuration
     }
     return highFidelity(source: source, target: target)
+  }
+
+  /// Legacy fallback used when the high-fidelity strategy fails at runtime.
+  static func refreshedLowLatency(
+    _ configuration: TranslationSession.Configuration?,
+    source: Locale.Language,
+    target: Locale.Language
+  ) -> TranslationSession.Configuration {
+    if var configuration {
+      configuration.preferredStrategy = .lowLatency
+      configuration.invalidate()
+      return configuration
+    }
+    return TranslationSession.Configuration(
+      source: source,
+      target: target,
+      preferredStrategy: .lowLatency
+    )
   }
 }
 

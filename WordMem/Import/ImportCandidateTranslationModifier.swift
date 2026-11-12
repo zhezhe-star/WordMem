@@ -14,6 +14,7 @@ struct ImportCandidateTranslationModifier: ViewModifier {
   @Binding var phraseTranslation: String?
   @Binding var isTranslating: Bool
   @Binding var phase: DocumentTranslationPhase
+  @State private var usesLowLatency = false
 
   static func refreshedConfiguration(
     _ configuration: TranslationSession.Configuration?
@@ -82,6 +83,22 @@ struct ImportCandidateTranslationModifier: ViewModifier {
       phase = .completed
     } catch {
       guard !Task.isCancelled else { return }
+
+      // Match document translation: retry once with the legacy low-latency
+      // strategy when the high-fidelity path fails, so chip meanings still
+      // appear on devices without Apple Intelligence translation.
+      if !usesLowLatency {
+        usesLowLatency = true
+        configuration = DocumentTranslationSessionFactory.refreshedLowLatency(
+          configuration,
+          source: Locale.Language(identifier: "en"),
+          target: Locale.Language(identifier: "zh-Hans")
+        )
+        isTranslating = false
+        phase = .translating
+        return
+      }
+
       phase = DocumentTranslationStateMapper.phase(for: error)
     }
 

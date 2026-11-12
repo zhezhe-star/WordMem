@@ -11,6 +11,7 @@ final class ImportDocumentSession {
   let targetLanguage: Locale.Language
   private(set) var phase: DocumentTranslationPhase = .idle
   private(set) var translatedDocument: TranslatedDocument?
+  private(set) var usesLowLatencyTranslation = false
   var configuration: TranslationSession.Configuration?
 
   private let engine: DocumentTranslationEngine
@@ -52,11 +53,19 @@ final class ImportDocumentSession {
       (try? engine.sourceLanguage(in: document, preferredSource: preferredSourceLanguage))
       ?? Locale.Language(identifier: "en")
 
-    configuration = DocumentTranslationSessionFactory.refreshedHighFidelity(
-      configuration,
-      source: source,
-      target: targetLanguage
-    )
+    if usesLowLatencyTranslation {
+      configuration = DocumentTranslationSessionFactory.refreshedLowLatency(
+        configuration,
+        source: source,
+        target: targetLanguage
+      )
+    } else {
+      configuration = DocumentTranslationSessionFactory.refreshedHighFidelity(
+        configuration,
+        source: source,
+        target: targetLanguage
+      )
+    }
   }
 
   /// Receives the session supplied by SwiftUI's `.translationTask`.
@@ -86,6 +95,16 @@ final class ImportDocumentSession {
         configuration?.invalidate()
         return
       }
+
+      // High-fidelity translation can fail when Apple Intelligence is
+      // unavailable even though the system's base translation works. Retry
+      // once with the legacy low-latency strategy before surfacing failure.
+      if !usesLowLatencyTranslation {
+        usesLowLatencyTranslation = true
+        beginTranslation()
+        return
+      }
+
       phase = DocumentTranslationStateMapper.phase(for: error)
       configuration = nil
     }
@@ -104,6 +123,7 @@ final class ImportDocumentSession {
 
   func invalidate() {
     configuration = nil
+    usesLowLatencyTranslation = false
     phase = .idle
   }
 

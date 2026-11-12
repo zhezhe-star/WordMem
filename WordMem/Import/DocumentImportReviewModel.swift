@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 import Translation
 
 /// Semantic phases of the adaptive import review screen. The UI renders these
@@ -107,6 +108,10 @@ final class DocumentImportReviewModel {
 
   private let advisor: ImportWordAdvisor
   private let curator: any ImportCandidateCurating
+  private let logger = Logger(
+    subsystem: "com.zhezhe.wordmem",
+    category: "ImportCandidateCurator"
+  )
   private var preparationToken = UUID()
 
   init(
@@ -235,38 +240,54 @@ final class DocumentImportReviewModel {
     let token = preparationToken
 
     // Document translation is optional enrichment and never blocks selection.
+    // Availability is checked only after the deterministic/extended candidate
+    // path has produced chips, so a slow or unavailable translation framework
+    // cannot stall word preparation.
     let session = documentSessionFactory(document)
     documentSession = session
-    await session.checkAvailability()
-
-    guard preparationToken == token else { return }
 
     phase = .preparingWords
     preparedDisplayText = displayText
     reviewDocument = document
     let deterministicCandidates = EnglishWordCandidateSplitter.candidates(from: displayText)
+    // The deterministic filter is the baseline capability. Foundation Models
+    // may only narrow this set; it can never introduce function words or
+    // fragments that the original import flow would have excluded.
+    let baseCandidates = ImportHighValueCandidateFilter.highValueCandidates(
+      from: deterministicCandidates
+    )
     let context = ImportCandidateCurationContext(
       sourceText: displayText,
-      candidateIDs: deterministicCandidates.map(\.normalizedKey)
+      candidateIDs: baseCandidates.map(\.normalizedKey)
     )
     let curation = await curator.assess(
-      candidates: deterministicCandidates,
+      candidates: baseCandidates,
       context: context
     )
     guard preparationToken == token else { return }
 
-    guard case .curated(let assessments) = curation else {
-      phase = .curatorUnavailable
-      beginDocumentTranslationIfAvailable(session)
-      return
+    let candidates: [WordImportCandidate]
+    switch curation {
+    case .curated(let assessments):
+      let recommendedIDs = Set(
+        assessments.filter(\.isRecommended).map(\.candidateID)
+      )
+      candidates = baseCandidates.filter {
+        recommendedIDs.contains($0.normalizedKey)
+      }
+    case .failed:
+      // Foundation Models is an optional enhancement. When it is unavailable,
+      // times out, or errors, keep the original deterministic vocabulary set
+      // instead of blocking the import flow.
+      candidates = baseCandidates
+      logger.log(
+        """
+        fallback deterministic candidateCount=\(candidates.count, privacy: .public) \
+        tokenCount=\(deterministicCandidates.count, privacy: .public)
+        """
+      )
     }
 
-    let recommendedIDs = Set(
-      assessments.filter(\.isRecommended).map(\.candidateID)
-    )
-    let candidates = deterministicCandidates.filter {
-      recommendedIDs.contains($0.normalizedKey)
-    }
     let advisedChips = await advisor.chips(from: candidates, context: displayText)
     guard preparationToken == token else { return }
 
@@ -276,7 +297,8 @@ final class DocumentImportReviewModel {
 
     // Start the visible task after the structured source and chips reach their
     // stable layout; an earlier start can be cancelled by that layout change.
-    beginDocumentTranslationIfAvailable(session)
+    await beginDocumentTranslationIfAvailable(session)
+    guard preparationToken == token else { return }
 
     if !offeredChips.isEmpty {
       chipTranslationConfiguration =
@@ -286,7 +308,10 @@ final class DocumentImportReviewModel {
 
   // MARK: Selection
 
-  private func beginDocumentTranslationIfAvailable(_ session: ImportDocumentSession) {
+  private func beginDocumentTranslationIfAvailable(_ session: ImportDocumentSession) async {
+    let token = preparationToken
+    await session.checkAvailability()
+    guard preparationToken == token else { return }
     guard session.phase == .translating else { return }
     session.beginTranslation()
   }

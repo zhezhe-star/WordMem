@@ -179,9 +179,12 @@ final class DocumentTranslationEngineTests: XCTestCase {
 
     importSession.beginTranslation()
     await importSession.handle(session)
-    XCTAssertEqual(importSession.phase, .failed(.internalFailure("generic translation failure")))
 
-    await importSession.retry(with: session)
+    XCTAssertEqual(importSession.phase, .translating)
+    XCTAssertTrue(importSession.usesLowLatencyTranslation)
+    XCTAssertEqual(importSession.configuration?.preferredStrategy, .lowLatency)
+
+    await importSession.handle(session)
     XCTAssertEqual(importSession.phase, .completed)
     XCTAssertEqual(importSession.translatedDocument?.blocks.first?.text, "你好")
     XCTAssertEqual(importSession.translatedDocument?.blocks.first?.sourceBlockID, makeUUID(1))
@@ -189,6 +192,31 @@ final class DocumentTranslationEngineTests: XCTestCase {
 
     importSession.invalidate()
     XCTAssertEqual(importSession.phase, .idle)
+    XCTAssertFalse(importSession.usesLowLatencyTranslation)
+    XCTAssertNil(importSession.configuration)
+  }
+
+  @MainActor
+  func testRepeatedTranslationFailureStopsAfterLegacyFallback() async {
+    let document = makeDocument([makeBlock(id: makeUUID(1), text: "Hello")])
+    let engine = DocumentTranslationEngine(
+      availabilityChecker: FakeAvailability(status: .installed),
+      languageDetector: FakeDetector(language: Locale.Language(identifier: "en"))
+    )
+    let importSession = ImportDocumentSession(
+      document: document,
+      targetLanguage: Locale.Language(identifier: "zh-Hans"),
+      engine: engine
+    )
+    let session = ThrowingTranslationSession(throwable: GenericTranslationFailure())
+
+    importSession.beginTranslation()
+    await importSession.handle(session)
+    XCTAssertEqual(importSession.phase, .translating)
+    XCTAssertTrue(importSession.usesLowLatencyTranslation)
+
+    await importSession.handle(session)
+    XCTAssertEqual(importSession.phase, .failed(.internalFailure("generic translation failure")))
     XCTAssertNil(importSession.configuration)
   }
 
@@ -265,6 +293,21 @@ final class DocumentTranslationEngineTests: XCTestCase {
       target: target
     )
     XCTAssertEqual(refreshed.preferredStrategy, .highFidelity)
+    XCTAssertGreaterThan(refreshed.version, initial.version)
+  }
+
+  func testLowLatencyFallbackConfigurationIsInvalidatedForRetry() {
+    let source = Locale.Language(identifier: "en")
+    let target = Locale.Language(identifier: "zh-Hans")
+    let initial = DocumentTranslationSessionFactory.highFidelity(source: source, target: target)
+
+    let refreshed = DocumentTranslationSessionFactory.refreshedLowLatency(
+      initial,
+      source: source,
+      target: target
+    )
+
+    XCTAssertEqual(refreshed.preferredStrategy, .lowLatency)
     XCTAssertGreaterThan(refreshed.version, initial.version)
   }
 
@@ -449,8 +492,9 @@ private struct GenericTranslationFailure: Error, CustomStringConvertible {
 }
 
 private struct CancellingTranslationSession: DocumentTranslationSessionHandling {
-  func translate(_ requests: [DocumentTranslationRequest]) async throws
-    -> [DocumentTranslationResponse] {
+  func translate(
+    _ requests: [DocumentTranslationRequest]
+  ) async throws -> [DocumentTranslationResponse] {
     throw CancellationError()
   }
 }
