@@ -196,31 +196,28 @@ struct ImportCandidateSkeletonGrid: View {
         .font(.footnote.weight(.semibold))
         .foregroundStyle(.secondary)
 
-      LazyVGrid(
-        columns: [GridItem(.adaptive(minimum: 124), spacing: WordMemDesign.cardSpacing)],
-        spacing: WordMemDesign.cardSpacing
-      ) {
+      VStack(spacing: WordMemDesign.cardSpacing) {
         ForEach(0..<4, id: \.self) { _ in
-          VStack(alignment: .leading, spacing: 9) {
-            RoundedRectangle(cornerRadius: 4)
+          HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 9) {
+              RoundedRectangle(cornerRadius: 4)
+                .fill(Color(uiColor: .tertiarySystemFill))
+                .frame(width: 72, height: 15)
+              RoundedRectangle(cornerRadius: 4)
+                .fill(Color(uiColor: .quaternarySystemFill))
+                .frame(width: 48, height: 11)
+            }
+            Spacer(minLength: 12)
+            Circle()
               .fill(Color(uiColor: .tertiarySystemFill))
-              .frame(width: 72, height: 15)
-            RoundedRectangle(cornerRadius: 4)
-              .fill(Color(uiColor: .quaternarySystemFill))
-              .frame(width: 48, height: 11)
+              .frame(width: 20, height: 20)
           }
-          .frame(maxWidth: .infinity, minHeight: 92, alignment: .leading)
+          .frame(maxWidth: .infinity, minHeight: 60, alignment: .leading)
           .padding(WordMemDesign.cardPadding)
           .background(
             Color(.secondarySystemGroupedBackground),
             in: .rect(cornerRadius: WordMemDesign.cardRadius)
           )
-          .overlay(alignment: .topTrailing) {
-            Circle()
-              .fill(Color(uiColor: .tertiarySystemFill))
-              .frame(width: 20, height: 20)
-              .padding(12)
-          }
         }
       }
     }
