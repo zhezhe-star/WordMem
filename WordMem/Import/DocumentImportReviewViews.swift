@@ -10,7 +10,6 @@ struct DocumentImportReviewScreen<Source: View>: View {
   let subtitle: String
   let onCancel: () -> Void
   let onSubmit: () -> Void
-  var captureAction: DocumentImportCaptureAction? = nil
   var showsHeader = true
   @ViewBuilder var source: () -> Source
 
@@ -50,11 +49,7 @@ struct DocumentImportReviewScreen<Source: View>: View {
         .scrollBounceBehavior(.basedOnSize)
         .scrollDismissesKeyboard(.interactively)
 
-        primaryAction
-          .padding(.horizontal, 20)
-          .padding(.top, 10)
-          .padding(.bottom, 14)
-          .background(.bar)
+        bottomBar
       }
       .background(Color(.systemGroupedBackground).ignoresSafeArea())
       .interactiveDismissDisabled(model.isBusy || model.isSaving)
@@ -109,24 +104,8 @@ struct DocumentImportReviewScreen<Source: View>: View {
   }
 
   @ViewBuilder
-  private var primaryAction: some View {
-    if model.isBusy {
-      ImportPrimaryCTA(
-        title: "正在整理内容…",
-        systemImage: "text.magnifyingglass",
-        isLoading: true,
-        action: {}
-      )
-      .disabled(true)
-    } else if let captureAction, model.phase == .capturing {
-      ImportPrimaryCTA(
-        title: captureAction.title,
-        systemImage: "text.magnifyingglass",
-        isLoading: false,
-        action: captureAction.action
-      )
-      .disabled(!captureAction.isEnabled)
-    } else {
+  private var bottomBar: some View {
+    if model.phase.isReviewReady, !model.offeredChips.isEmpty {
       ImportPrimaryCTA(
         title: DocumentImportStatusPresenter.primaryButtonTitle(
           selectedCount: model.selectedWords.count,
@@ -136,6 +115,10 @@ struct DocumentImportReviewScreen<Source: View>: View {
         action: onSubmit
       )
       .disabled(!model.canSubmit)
+      .padding(.horizontal, 20)
+      .padding(.top, 10)
+      .padding(.bottom, 14)
+      .background(.bar)
     }
   }
 
@@ -177,12 +160,6 @@ struct DocumentImportReviewScreen<Source: View>: View {
       UIAccessibility.post(notification: .announcement, argument: announcement)
     }
   }
-}
-
-struct DocumentImportCaptureAction {
-  let title: String
-  let isEnabled: Bool
-  let action: () -> Void
 }
 
 /// Optional enrichment card fed by the canonical document translation session.

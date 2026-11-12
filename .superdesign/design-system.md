@@ -39,12 +39,15 @@ Avoid:
 One full-height sheet. Three user-visible stages:
 
 1. **输入** — paste or type English content.
-2. **整理** — the app extracts structure, translates when possible, and prepares
-   dictionary-backed candidate words.
+2. **整理** — dismissing the keyboard (the existing “完成” affordance) starts
+   preparation automatically. The app extracts structure, translates when
+   possible, and prepares dictionary-backed candidate words.
 3. **挑选** — review the source, optional translation, and candidate chips, then
    import the selected words.
 
 The sheet only closes when the user taps Cancel or after a successful import.
+Dismissing the keyboard is a preview step, not a save. It never closes the
+sheet and never adds words to the wordbook.
 
 ## Screen 1 — Empty input
 
@@ -53,19 +56,19 @@ The sheet only closes when the user taps Cancel or after a successful import.
 - One-line subtitle: “输入英文内容，挑选要加入单词本的词。”
 - Large paper card labeled “原文”, with placeholder “输入或粘贴英文内容。”
 - Helper line under the editor: “支持段落、列表、表格。”
-- Sticky bottom action: primary “整理内容”, disabled while the editor is empty.
+- No bottom action in the empty input state. There is no separate commit button.
 - No empty-state error copy before the user has entered anything.
 
 ## Screen 2 — Typing with keyboard
 
 - The editor card grows with the text; the sheet stays full height.
-- The primary “整理内容” button sits above the keyboard, not under it.
 - The keyboard toolbar contains only “完成”, which dismisses the keyboard. It
-  must not start processing.
-- A small “粘贴” affordance sits inside the editor card.
+  does not save anything.
+- Dismissing the keyboard starts preparation automatically; the sheet stays open
+  and the source remains editable.
+- A quiet caption under the editor explains: “收起键盘后自动整理。”
 - Optional character count appears only after the first line, in a quiet caption.
-- The source remains editable; nothing is confirmed until the user taps
-  “整理内容”.
+- There is no extra primary button in this state.
 
 ## Screen 3 — Organizing
 
@@ -100,9 +103,8 @@ The sheet only closes when the user taps Cancel or after a successful import.
 - Keep the source and translation cards visible.
 - Empty state inside the candidate area:
   - short title “没有可保存的单词”;
-  - body “可以换一段内容，或手动添加。”
+  - body “可以换一段内容后再整理。”
   - primary “编辑原文”;
-  - secondary “手动添加”.
 - Do not show a spinner. Do not auto-close the sheet.
 
 ## Screen 6 — Save success
@@ -167,16 +169,13 @@ Motion:
 - Subtitle: 输入英文内容，挑选要加入单词本的词。
 - Editor placeholder: 输入或粘贴英文内容。
 - Helper: 支持段落、列表、表格。
-- Primary, empty: 整理内容
-- Primary, busy: 正在整理内容…
 - Primary, review: 导入 N 个单词
 - Organizing: 正在整理内容…
 - Preparing words: 正在准备单词…
 - Translation unavailable: 翻译暂不可用，可以直接保存单词。
 - No candidates: 没有可保存的单词
-- No candidates body: 可以换一段内容，或手动添加。
+- No candidates body: 可以换一段内容后再整理。
 - Edit source: 编辑原文
-- Add manually: 手动添加
 - Select all: 全选
 - Clear: 清除
 - Saved: 已添加 N 个单词

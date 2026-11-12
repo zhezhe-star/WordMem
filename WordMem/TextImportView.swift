@@ -41,11 +41,6 @@ struct TextImportView: View {
       subtitle: "输入英文内容，挑选要加入单词本的词。",
       onCancel: { dismiss() },
       onSubmit: { importSelectedWords() },
-      captureAction: DocumentImportCaptureAction(
-        title: "整理内容",
-        isEnabled: !draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-        action: commitDraft
-      ),
       showsHeader: false
     ) {
       if let reviewDocument = model.reviewDocument, model.phase.isReviewReady {
@@ -76,10 +71,17 @@ struct TextImportView: View {
         isSourceFocused = false
       }
     }
+    .onChange(of: isSourceFocused) { wasFocused, isFocused in
+      // Dismissing the keyboard is the explicit "done typing" action. It starts
+      // preparation without adding another button or closing the sheet.
+      guard wasFocused, !isFocused else { return }
+      prepareDraftIfNeeded()
+    }
   }
 
-  private func commitDraft() {
-    isSourceFocused = false
+  private func prepareDraftIfNeeded() {
+    let trimmed = draftText.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty, model.phase == .capturing else { return }
     Task { await model.prepareText(draftText) }
   }
 

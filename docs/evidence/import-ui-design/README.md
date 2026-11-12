@@ -21,18 +21,18 @@ https://superdesign.dev/teams/e895d94f-bdd8-41b0-aaf2-d6ec07e75d72/projects/6929
 
 | # | Screen | Purpose |
 | --- | --- | --- |
-| 01 | 输入 · 空 | 全高 sheet，清楚的下一步「整理内容」 |
-| 02 | 输入 · 键盘 | CTA 在键盘上方；键盘「完成」只收键盘 |
-| 03 | 整理中 | 内联进度、骨架候选词，不出现空白转圈 |
+| 01 | 输入 · 空 | 全高 sheet，无额外主按钮；只保留取消 |
+| 02 | 输入 · 键盘 | 键盘「完成」收起键盘后自动整理，不新增按钮 |
+| 03 | 整理中 | 内联进度、骨架候选词；没有底部按钮 |
 | 04 | 挑选 · 有候选 | 原文、译文、候选词、已选计数、导入 CTA |
-| 05 | 挑选 · 无候选 | 可操作的兜底空状态 |
+| 05 | 挑选 · 无候选 | 只保留「编辑原文」的兜底空状态 |
 | 06 | 保存成功 | sheet 关闭，词书上的轻量 toast |
 
 ## Key interaction decisions
 
 1. **一个全高 sheet，不做多步向导。** 输入、整理、挑选在同一个 sheet 内切换。
-2. **键盘「完成」只收键盘，不提交。** 唯一提交入口是「整理内容」。
-3. **主按钮永远在键盘上方。** 输入态、整理态、挑选态各只有一个主操作。
+2. **不新增确认按钮。** 收起键盘（键盘「完成」）即开始整理；整理只是预览，不保存。
+3. **唯一保存入口是原有的「导入 N 个单词」。** 输入态和整理态没有底部按钮。
 4. **处理中不可下滑关闭。** 只有取消或保存成功才关闭 sheet。
 5. **AI 失败也必须出词。** 兜底候选来自系统词典；界面不出现模型名或技术阶段。
 6. **保存成功用 toast，不用阻塞 alert。**
@@ -50,8 +50,9 @@ https://superdesign.dev/teams/e895d94f-bdd8-41b0-aaf2-d6ec07e75d72/projects/6929
 
 - 01/02/03 可以直接映射到现有 `TextImportView` + `DocumentImportReviewScreen`：
   - `.presentationDetents([.large])`
-  - `captureAction` 显示「整理内容」
   - 键盘工具栏「完成」只设置 `isSourceFocused = false`
+  - focus 从 true 变为 false 时自动调用 `prepareText`
+  - 输入态和整理态不显示底部 CTA
   - 处理中 `.interactiveDismissDisabled(true)`
 - 04/05 对应 `DocumentImportReviewScreen` 的 review / noWords 状态。
 - 06 对应现有保存成功后的 toast/alert；建议把阻塞 alert 换成底部轻量 toast。
