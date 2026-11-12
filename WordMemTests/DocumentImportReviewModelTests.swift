@@ -55,6 +55,10 @@ final class DocumentImportReviewModelTests: XCTestCase {
       "Translation failure must not surface as a blocking error."
     )
     XCTAssertEqual(model.offeredChips.map(\.text), ["garden"])
+    XCTAssertNil(
+      model.chipTranslationConfiguration,
+      "Optional chip translation must not start when the pair is unsupported."
+    )
 
     model.toggleSelection(model.offeredChips[0])
 

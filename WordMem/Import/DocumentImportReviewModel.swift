@@ -300,7 +300,10 @@ final class DocumentImportReviewModel {
     await beginDocumentTranslationIfAvailable(session)
     guard preparationToken == token else { return }
 
-    if !offeredChips.isEmpty {
+    if !offeredChips.isEmpty,
+      let session = documentSession,
+      session.phase == .translating || session.phase == .completed
+    {
       chipTranslationConfiguration =
         ImportCandidateTranslationModifier.refreshedConfiguration(chipTranslationConfiguration)
     }
