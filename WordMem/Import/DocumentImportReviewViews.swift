@@ -10,6 +10,8 @@ struct DocumentImportReviewScreen<Source: View>: View {
   let subtitle: String
   let onCancel: () -> Void
   let onSubmit: () -> Void
+  var captureAction: DocumentImportCaptureAction? = nil
+  var showsHeader = true
   @ViewBuilder var source: () -> Source
 
   var body: some View {
@@ -17,7 +19,11 @@ struct DocumentImportReviewScreen<Source: View>: View {
       VStack(spacing: 0) {
         ScrollView {
           VStack(alignment: .leading, spacing: 18) {
-            header
+            if showsHeader {
+              header
+            } else if !model.phase.isReviewReady {
+              compactHeader
+            }
 
             source()
 
@@ -44,21 +50,14 @@ struct DocumentImportReviewScreen<Source: View>: View {
         .scrollBounceBehavior(.basedOnSize)
         .scrollDismissesKeyboard(.interactively)
 
-        ImportPrimaryCTA(
-          title: DocumentImportStatusPresenter.primaryButtonTitle(
-            selectedCount: model.selectedWords.count,
-            isSaving: model.isSaving
-          ),
-          isLoading: model.isSaving,
-          action: onSubmit
-        )
-        .padding(.horizontal, 20)
-        .padding(.top, 10)
-        .padding(.bottom, 14)
-        .background(.bar)
-        .disabled(!model.canSubmit)
+        primaryAction
+          .padding(.horizontal, 20)
+          .padding(.top, 10)
+          .padding(.bottom, 14)
+          .background(.bar)
       }
       .background(Color(.systemGroupedBackground).ignoresSafeArea())
+      .interactiveDismissDisabled(model.isBusy || model.isSaving)
       .navigationTitle(title)
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
@@ -102,6 +101,44 @@ struct DocumentImportReviewScreen<Source: View>: View {
     .accessibilityElement(children: .combine)
   }
 
+  private var compactHeader: some View {
+    Text(subtitle)
+      .font(.subheadline)
+      .foregroundStyle(.secondary)
+      .fixedSize(horizontal: false, vertical: true)
+  }
+
+  @ViewBuilder
+  private var primaryAction: some View {
+    if model.isBusy {
+      ImportPrimaryCTA(
+        title: "正在整理内容…",
+        systemImage: "text.magnifyingglass",
+        isLoading: true,
+        action: {}
+      )
+      .disabled(true)
+    } else if let captureAction, model.phase == .capturing {
+      ImportPrimaryCTA(
+        title: captureAction.title,
+        systemImage: "text.magnifyingglass",
+        isLoading: false,
+        action: captureAction.action
+      )
+      .disabled(!captureAction.isEnabled)
+    } else {
+      ImportPrimaryCTA(
+        title: DocumentImportStatusPresenter.primaryButtonTitle(
+          selectedCount: model.selectedWords.count,
+          isSaving: model.isSaving
+        ),
+        isLoading: model.isSaving,
+        action: onSubmit
+      )
+      .disabled(!model.canSubmit)
+    }
+  }
+
   private var reviewContent: some View {
     VStack(alignment: .leading, spacing: 14) {
       ImportSelectionToolbar(
@@ -140,6 +177,12 @@ struct DocumentImportReviewScreen<Source: View>: View {
       UIAccessibility.post(notification: .announcement, argument: announcement)
     }
   }
+}
+
+struct DocumentImportCaptureAction {
+  let title: String
+  let isEnabled: Bool
+  let action: () -> Void
 }
 
 /// Optional enrichment card fed by the canonical document translation session.

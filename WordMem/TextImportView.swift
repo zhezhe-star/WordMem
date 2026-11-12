@@ -40,7 +40,13 @@ struct TextImportView: View {
       title: "导入",
       subtitle: "输入英文内容，挑选要加入单词本的词。",
       onCancel: { dismiss() },
-      onSubmit: { importSelectedWords() }
+      onSubmit: { importSelectedWords() },
+      captureAction: DocumentImportCaptureAction(
+        title: "整理内容",
+        isEnabled: !draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+        action: commitDraft
+      ),
+      showsHeader: false
     ) {
       if let reviewDocument = model.reviewDocument, model.phase.isReviewReady {
         ImportStructuredReviewCard(
@@ -53,10 +59,9 @@ struct TextImportView: View {
           title: "原文",
           placeholder: "输入或粘贴英文内容。",
           text: $draftText,
-          isFocused: $isSourceFocused
-        ) {
-          commitDraft()
-        }
+          isFocused: $isSourceFocused,
+          onDismissKeyboard: { isSourceFocused = false }
+        )
       }
     }
     .onChange(of: draftText) { _, newValue in

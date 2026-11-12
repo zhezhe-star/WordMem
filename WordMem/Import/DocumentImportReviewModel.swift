@@ -377,7 +377,14 @@ final class DocumentImportReviewModel {
         selectedOffsets: selectedOffsets
       )
       model.preparedDisplayText = sourceText
-      model.phase = model.offeredChips.isEmpty ? .noWordsAvailable : .reviewing
+      let isEmpty =
+        sourceText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        && chips.isEmpty
+      if isEmpty {
+        model.phase = .capturing
+      } else {
+        model.phase = model.offeredChips.isEmpty ? .noWordsAvailable : .reviewing
+      }
       return model
     }
   }

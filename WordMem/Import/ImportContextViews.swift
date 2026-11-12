@@ -232,7 +232,7 @@ struct ImportSourceEditorCard: View {
   let placeholder: String
   @Binding var text: String
   let isFocused: FocusState<Bool>.Binding
-  let onCommit: () -> Void
+  let onDismissKeyboard: () -> Void
 
   var body: some View {
     VStack(alignment: .leading, spacing: 10) {
@@ -261,7 +261,7 @@ struct ImportSourceEditorCard: View {
             HStack {
               Spacer()
               Button("完成") {
-                onCommit()
+                onDismissKeyboard()
               }
             }
           }

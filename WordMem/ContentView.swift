@@ -150,7 +150,7 @@ struct WordbookView: View {
           TextImportView(dictionary: dictionary) { summary in
             alertMessage = summary.message
           }
-          .presentationDetents([.medium, .large])
+          .presentationDetents([.large])
         }
       }
       .alert(

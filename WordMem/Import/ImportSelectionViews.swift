@@ -145,7 +145,9 @@ private struct ImportCandidateChipButton: View {
           .foregroundStyle(detailColor)
           .fixedSize(horizontal: false, vertical: true)
 
-        if chip.lemmaBadgeText != nil || chip.spellingBadgeText != nil || chip.availabilityBadgeText != nil {
+        if chip.lemmaBadgeText != nil || chip.spellingBadgeText != nil
+          || chip.availabilityBadgeText != nil
+        {
           HStack(spacing: 5) {
             if let lemmaText = chip.lemmaBadgeText {
               adviceBadge(lemmaText, color: .indigo)
@@ -231,6 +233,7 @@ struct ImportSelectionToolbar: View {
 
 struct ImportPrimaryCTA: View {
   let title: String
+  var systemImage = "square.and.arrow.down"
   let isLoading: Bool
   let action: () -> Void
 
@@ -242,7 +245,7 @@ struct ImportPrimaryCTA: View {
             .controlSize(.small)
             .tint(.white)
         } else {
-          Image(systemName: "square.and.arrow.down")
+          Image(systemName: systemImage)
         }
 
         Text(title)

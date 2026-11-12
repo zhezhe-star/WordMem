@@ -10,6 +10,17 @@ import XCTest
 final class DocumentImportReviewModelTests: XCTestCase {
   // MARK: - Text preparation
 
+  func testEmptyPreviewStartsInCapturingState() {
+    let model = DocumentImportReviewModel.preview(
+      sourceText: "",
+      chips: [],
+      selectedOffsets: []
+    )
+
+    XCTAssertEqual(model.phase, .capturing)
+    XCTAssertNil(model.reviewStatusMessage)
+  }
+
   func testPrepareTextReachesReviewingWithOfferedChips() async {
     let model = makeModel(available: ["garden"], curatedIDs: ["garden"])
 
