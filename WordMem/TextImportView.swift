@@ -47,7 +47,9 @@ struct TextImportView: View {
         ImportStructuredReviewCard(
           title: "原文",
           formattedText: CanonicalReviewProjection.formattedText(for: reviewDocument),
-          onEditOriginal: { model.beginEditingOriginal() }
+          onEditOriginal: model.phase == .noWordsAvailable
+            ? nil
+            : { model.beginEditingOriginal() }
         )
       } else {
         ImportSourceEditorCard(

@@ -165,6 +165,7 @@ final class DocumentImportReviewModelTests: XCTestCase {
 
     XCTAssertEqual(model.phase, .reviewing)
     XCTAssertEqual(model.offeredChips.map(\.text), ["study", "case", "chapter"])
+    XCTAssertTrue(model.didUseDeterministicFallback)
   }
 
   func testCuratorCannotIntroduceFunctionWordsOutsideDeterministicBaseline() async {
@@ -269,7 +270,7 @@ final class DocumentImportReviewModelTests: XCTestCase {
     XCTAssertEqual(model.phase, .noWordsAvailable)
     XCTAssertEqual(
       model.reviewStatusMessage,
-      "没有可保存的单词。可以更换内容或手动添加。"
+      "没有可保存的单词。可以换一段内容后再整理。"
     )
     XCTAssertTrue(model.offeredChips.isEmpty)
     XCTAssertTrue(model.shouldReleaseFocus)

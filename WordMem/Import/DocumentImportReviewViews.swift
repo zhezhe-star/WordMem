@@ -11,6 +11,7 @@ struct DocumentImportReviewScreen<Source: View>: View {
   let onCancel: () -> Void
   let onSubmit: () -> Void
   var showsHeader = true
+  var noWordsActionTitle = "编辑原文"
   @ViewBuilder var source: () -> Source
 
   var body: some View {
@@ -30,7 +31,13 @@ struct DocumentImportReviewScreen<Source: View>: View {
               ImportDocumentTranslationCard(session: session)
             }
 
-            if let statusMessage = model.reviewStatusMessage {
+            if model.isBusy {
+              ImportCandidateSkeletonGrid()
+            }
+
+            if let statusMessage = model.reviewStatusMessage,
+              model.phase != .noWordsAvailable
+            {
               ImportInlineStatusView(
                 text: statusMessage,
                 isError: model.errorMessage != nil,
@@ -40,6 +47,11 @@ struct DocumentImportReviewScreen<Source: View>: View {
 
             if model.phase == .reviewing {
               reviewContent
+            } else if model.phase == .noWordsAvailable {
+              ImportNoWordsEmptyState(
+                actionTitle: noWordsActionTitle,
+                onAction: { model.beginEditingOriginal() }
+              )
             }
           }
           .padding(20)
@@ -57,8 +69,15 @@ struct DocumentImportReviewScreen<Source: View>: View {
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .topBarTrailing) {
-          Button("取消") { onCancel() }
-            .disabled(model.isSaving)
+          Button(action: onCancel) {
+            Text("取消")
+              .font(.subheadline.weight(.medium))
+              .padding(.horizontal, 14)
+              .padding(.vertical, 6)
+              .background(Color(uiColor: .tertiarySystemFill), in: .capsule)
+          }
+          .buttonStyle(.plain)
+          .disabled(model.isSaving)
         }
       }
       .importCandidateTranslations(
@@ -124,6 +143,12 @@ struct DocumentImportReviewScreen<Source: View>: View {
 
   private var reviewContent: some View {
     VStack(alignment: .leading, spacing: 14) {
+      if model.didUseDeterministicFallback {
+        Text("已为你准备词典候选。")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+      }
+
       ImportSelectionToolbar(
         selectedCount: model.selection.selectedCount,
         totalCount: model.offeredChips.count,
@@ -162,6 +187,84 @@ struct DocumentImportReviewScreen<Source: View>: View {
   }
 }
 
+/// Placeholder cards shown while the candidate pipeline is running, so the
+/// screen never collapses to a spinner-only blank state.
+struct ImportCandidateSkeletonGrid: View {
+  var body: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      Text("待选单词")
+        .font(.footnote.weight(.semibold))
+        .foregroundStyle(.secondary)
+
+      LazyVGrid(
+        columns: [GridItem(.adaptive(minimum: 124), spacing: WordMemDesign.cardSpacing)],
+        spacing: WordMemDesign.cardSpacing
+      ) {
+        ForEach(0..<4, id: \.self) { _ in
+          VStack(alignment: .leading, spacing: 9) {
+            RoundedRectangle(cornerRadius: 4)
+              .fill(Color(uiColor: .tertiarySystemFill))
+              .frame(width: 72, height: 15)
+            RoundedRectangle(cornerRadius: 4)
+              .fill(Color(uiColor: .quaternarySystemFill))
+              .frame(width: 48, height: 11)
+          }
+          .frame(maxWidth: .infinity, minHeight: 92, alignment: .leading)
+          .padding(WordMemDesign.cardPadding)
+          .background(
+            Color(.secondarySystemGroupedBackground),
+            in: .rect(cornerRadius: WordMemDesign.cardRadius)
+          )
+          .overlay(alignment: .topTrailing) {
+            Circle()
+              .fill(Color(uiColor: .tertiarySystemFill))
+              .frame(width: 20, height: 20)
+              .padding(12)
+          }
+        }
+      }
+    }
+    .accessibilityHidden(true)
+  }
+}
+
+/// Calm, actionable empty state for the no-candidates outcome.
+struct ImportNoWordsEmptyState: View {
+  let actionTitle: String
+  let onAction: () -> Void
+
+  var body: some View {
+    VStack(spacing: 12) {
+      Image(systemName: "text.magnifyingglass")
+        .font(.system(size: 30, weight: .regular))
+        .foregroundStyle(.tertiary)
+        .frame(width: 64, height: 64)
+        .background(Color(uiColor: .tertiarySystemFill), in: .circle)
+
+      VStack(spacing: 6) {
+        Text("没有可保存的单词")
+          .font(.headline)
+        Text("可以换一段内容后再整理。")
+          .font(.subheadline)
+          .foregroundStyle(.secondary)
+          .multilineTextAlignment(.center)
+      }
+
+      Button(action: onAction) {
+        Text(actionTitle)
+          .font(.subheadline.weight(.semibold))
+          .padding(.horizontal, 18)
+          .padding(.vertical, 10)
+      }
+      .buttonStyle(.borderedProminent)
+      .tint(WordMemDesign.accent)
+    }
+    .frame(maxWidth: .infinity)
+    .padding(.vertical, 20)
+    .accessibilityElement(children: .contain)
+  }
+}
+
 /// Optional enrichment card fed by the canonical document translation session.
 /// Its failure states stay actionable and never block word selection.
 struct ImportDocumentTranslationCard: View {
@@ -174,19 +277,33 @@ struct ImportDocumentTranslationCard: View {
     return blocks.map(\.text).joined(separator: "\n")
   }
 
-  var body: some View {
-    VStack(alignment: .leading, spacing: 10) {
-      Label("译文", systemImage: "text.badge.checkmark")
-        .font(.caption.weight(.semibold))
-        .foregroundStyle(.secondary)
+  private var languagePairLabel: String {
+    let sourceCode =
+      session.document.detectedLanguage?.languageCode?.identifier.uppercased() ?? "EN"
+    let targetCode = session.targetLanguage.languageCode?.identifier ?? "zh"
+    let targetLabel = targetCode == "zh" ? "中文" : targetCode.uppercased()
+    return "\(sourceCode) → \(targetLabel)"
+  }
 
-      content
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text(languagePairLabel)
+        .font(.caption2.weight(.semibold))
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, 7)
+        .padding(.vertical, 4)
+        .background(Color(uiColor: .tertiarySystemFill), in: .capsule)
+        .accessibilityLabel("英语到中文")
+
+      VStack(alignment: .leading, spacing: 10) {
+        content
+      }
+      .padding(16)
+      .background(
+        Color(.secondarySystemGroupedBackground),
+        in: .rect(cornerRadius: WordMemDesign.cardRadius)
+      )
     }
-    .padding(16)
-    .background(
-      Color(.secondarySystemGroupedBackground),
-      in: .rect(cornerRadius: WordMemDesign.cardRadius)
-    )
     .onChange(of: translatedText) { _, text in
       expansion = ImportContextExpansion(text: text)
     }

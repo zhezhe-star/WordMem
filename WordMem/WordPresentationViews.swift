@@ -14,6 +14,27 @@ enum WordMemDesign {
     })
 }
 
+struct WordMemToast: View {
+    let message: String
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(WordMemDesign.accent)
+
+            Text(message)
+                .font(.subheadline.weight(.semibold))
+                .lineLimit(2)
+        }
+        .foregroundStyle(Color(uiColor: .systemBackground))
+        .padding(.horizontal, 18)
+        .padding(.vertical, 12)
+        .background(Color(uiColor: .label), in: .capsule)
+        .shadow(color: .black.opacity(0.18), radius: 12, y: 6)
+        .accessibilityElement(children: .combine)
+    }
+}
+
 struct LanguageBadge: View {
     var body: some View {
         Text("EN")

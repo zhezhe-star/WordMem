@@ -65,6 +65,12 @@ struct WordImportSummary: Equatable {
         "已添加 \(addedCount) 个单词，已有 \(duplicateCount) 个单词。"
     }
 
+    var toastMessage: String {
+        duplicateCount == 0
+            ? "已添加 \(addedCount) 个单词"
+            : "已添加 \(addedCount) 个单词，\(duplicateCount) 个已存在"
+    }
+
     init(outcomes: [AddWordOutcome]) {
         addedCount = outcomes.filter(\.isAdded).count
         duplicateCount = outcomes.count - addedCount

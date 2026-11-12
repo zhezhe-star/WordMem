@@ -120,11 +120,7 @@ private struct ImportCandidateChipButton: View {
   }
 
   private var chipLabel: some View {
-    HStack(alignment: .center, spacing: 12) {
-      Capsule()
-        .fill(isSelected ? WordMemDesign.accent : Color(uiColor: .separator).opacity(0.45))
-        .frame(width: 4, height: 52)
-
+    HStack(alignment: .top, spacing: 12) {
       VStack(alignment: .leading, spacing: 7) {
         Text(chip.text)
           .font(.body.weight(isSelected ? .semibold : .medium))
@@ -132,11 +128,11 @@ private struct ImportCandidateChipButton: View {
           .lineLimit(1)
           .minimumScaleFactor(0.82)
 
-        if let sourceText = chip.sourceBadgeText {
-          Text(sourceText)
-            .font(.caption2.weight(.medium))
+        if let detailLineText = chip.detailLineText {
+          Text(detailLineText)
+            .font(.caption2.monospaced())
             .foregroundStyle(.secondary)
-            .lineLimit(1)
+            .lineLimit(2)
             .minimumScaleFactor(0.72)
         }
 
@@ -145,13 +141,8 @@ private struct ImportCandidateChipButton: View {
           .foregroundStyle(detailColor)
           .fixedSize(horizontal: false, vertical: true)
 
-        if chip.lemmaBadgeText != nil || chip.spellingBadgeText != nil
-          || chip.availabilityBadgeText != nil
-        {
+        if chip.spellingBadgeText != nil || chip.availabilityBadgeText != nil {
           HStack(spacing: 5) {
-            if let lemmaText = chip.lemmaBadgeText {
-              adviceBadge(lemmaText, color: .indigo)
-            }
             if let spellingText = chip.spellingBadgeText {
               adviceBadge(spellingText, color: .orange)
             }
@@ -163,8 +154,10 @@ private struct ImportCandidateChipButton: View {
       }
 
       Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-        .font(.footnote)
+        .font(.system(size: 20, weight: .regular))
         .foregroundStyle(iconColor)
+        .frame(width: 24, height: 24)
+        .padding(.top, 1)
     }
     .padding(WordMemDesign.cardPadding)
     .background(backgroundShape, in: .rect(cornerRadius: WordMemDesign.cardRadius))

@@ -90,6 +90,15 @@ struct ImportCandidateChip: Identifiable, Hashable, Sendable {
         guard let advice, !advice.isDictionaryAvailable, !canRestoreOriginal else { return nil }
         return "词典不可用"
     }
+
+    /// Compact provenance for the design's single monospaced detail line,
+    /// for example "原文 grows · 原形 grow".
+    var detailLineText: String? {
+        let parts = [sourceBadgeText, lemmaBadgeText]
+            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
 }
 
 /// Immutable provenance for one advised import candidate. Keeping the source

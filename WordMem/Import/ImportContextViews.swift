@@ -236,42 +236,58 @@ struct ImportSourceEditorCard: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 10) {
-      Text(title)
-        .font(.caption.weight(.semibold))
-        .foregroundStyle(.secondary)
+      VStack(alignment: .leading, spacing: 10) {
+        Text(title)
+          .font(.caption.weight(.semibold))
+          .foregroundStyle(.secondary)
 
-      TextEditor(text: $text)
-        .focused(isFocused)
-        .scrollContentBackground(.hidden)
-        .font(.body)
-        .frame(minHeight: 94)
-        .accessibilityLabel(title)
-        .accessibilityHint("输入英文内容后挑选单词")
-        .overlay(alignment: .topLeading) {
-          if text.isEmpty {
-            Text(placeholder)
-              .foregroundStyle(.tertiary)
-              .padding(.top, 8)
-              .allowsHitTesting(false)
-              .accessibilityHidden(true)
+        TextEditor(text: $text)
+          .focused(isFocused)
+          .scrollContentBackground(.hidden)
+          .font(.body)
+          .frame(minHeight: 94)
+          .accessibilityLabel(title)
+          .accessibilityHint("输入英文内容后挑选单词")
+          .overlay(alignment: .topLeading) {
+            if text.isEmpty {
+              Text(placeholder)
+                .foregroundStyle(.tertiary)
+                .padding(.top, 8)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+            }
           }
-        }
-        .toolbar {
-          ToolbarItem(placement: .keyboard) {
-            HStack {
-              Spacer()
-              Button("完成") {
-                onDismissKeyboard()
+          .toolbar {
+            ToolbarItem(placement: .keyboard) {
+              HStack {
+                Spacer()
+                Button("完成") {
+                  onDismissKeyboard()
+                }
               }
             }
           }
+      }
+      .padding(16)
+      .background(.regularMaterial, in: .rect(cornerRadius: 22))
+      .overlay {
+        RoundedRectangle(cornerRadius: 22)
+          .strokeBorder(.white.opacity(0.16), lineWidth: 0.5)
+      }
+
+      HStack(alignment: .firstTextBaseline, spacing: 12) {
+        Text("支持段落、列表、表格。")
+        Spacer(minLength: 12)
+        if !text.isEmpty {
+          Text("\(text.count) 字符")
         }
-    }
-    .padding(16)
-    .background(.regularMaterial, in: .rect(cornerRadius: 22))
-    .overlay {
-      RoundedRectangle(cornerRadius: 22)
-        .strokeBorder(.white.opacity(0.16), lineWidth: 0.5)
+      }
+      .font(.caption)
+      .foregroundStyle(.secondary)
+
+      Text("收起键盘后自动整理。")
+        .font(.caption)
+        .foregroundStyle(.tertiary)
     }
   }
 }

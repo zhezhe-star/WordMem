@@ -21,6 +21,13 @@ Device: iPhone Duo Test simulator, iOS 27.1
 | P2 | The empty editor showed "没有可保存的单词" before any content had been entered in Debug builds. | The preview model now starts in `.capturing` when the source and chips are empty. |
 | P2 | The sheet could be swiped away while processing or saving. | Interactive dismissal is disabled while busy or saving. |
 | P2 | Translation/unavailable states could start an optional translation task and show a blocking system sheet. | Translation availability is checked after chips are ready, and chip translation starts only when document translation is available. |
+| P2 | The no-candidates state was a single line of copy and still mentioned a non-existent "手动添加" action. | It now has an icon, title, body, one "编辑原文" action, and revised copy. |
+| P2 | The translation card had no language pair indicator. | It now shows an "EN → 中文" badge above the card. |
+| P2 | The input state had no helper copy or character count. | It now shows the supported-content hint, a live character count, and the keyboard-dismiss hint. |
+| P2 | The organizing state had no candidate placeholders. | It now shows skeleton candidate cards while preparing. |
+| P2 | Save success used a blocking alert. | It now uses a compact bottom toast. |
+| P3 | The cancel action was a plain toolbar text button. | It is now a pill button matching the design. |
+| P3 | Candidate cards used a vertical accent bar and separate badges. | They now use a top-right check and a single monospaced provenance line. |
 
 ## Behaviour after the fix
 
@@ -36,8 +43,10 @@ Device: iPhone Duo Test simulator, iOS 27.1
 - `01-before-empty-medium-sheet.png`: clipped medium sheet, duplicate title, misleading empty message.
 - `02-before-typed-keyboard-toolbar.png`: keyboard "完成" mixed with the import CTA.
 - `03-after-empty-no-extra-cta.png`: full-height sheet, compact subtitle, no extra bottom button.
-- `04-after-review-existing-import-cta.png`: review state with the existing import CTA only.
-- `05-after-review-fallback-chips.png`: review state with deterministic fallback chips; translation unavailable on the simulator.
+- `04-after-typed-keyboard-no-cta.png`: keyboard open, helper/character count, no extra CTA.
+- `05-after-review-existing-import-cta.png`: review state with the translation badge, polished chips, and the existing import CTA.
+- `06-after-no-candidates-empty-state.png`: no-candidates empty state with a single edit action.
+- `07-after-save-toast.png`: compact save-success toast over the wordbook.
 
 ## Verification
 

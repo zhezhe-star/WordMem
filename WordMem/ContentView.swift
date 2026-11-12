@@ -1,6 +1,7 @@
 import OSLog
 import SwiftData
 import SwiftUI
+import UIKit
 
 enum WordMemRoute: Hashable {
   case detail(UUID)
@@ -99,6 +100,7 @@ struct WordbookView: View {
   @State private var route: [WordMemRoute] = []
   @State private var activeImportSheet: WordImportSheet?
   @State private var alertMessage: String?
+  @State private var toastMessage: String?
   @State private var maintenance = WordImportMaintenanceCoordinator()
   @State private var importQueueSignal = WordImportQueueSignalCenter()
   @State private var dictionary = UIKitSystemDictionaryAuthorizer()
@@ -144,11 +146,11 @@ struct WordbookView: View {
         switch sheet {
         case .image:
           ImageImportView(dictionary: dictionary) { summary in
-            alertMessage = summary.message
+            showToast(summary.toastMessage)
           }
         case .text:
           TextImportView(dictionary: dictionary) { summary in
-            alertMessage = summary.message
+            showToast(summary.toastMessage)
           }
           .presentationDetents([.large])
         }
@@ -171,11 +173,33 @@ struct WordbookView: View {
         guard phase == .active else { return }
         Task { await processPendingImports() }
       }
+      .overlay(alignment: .bottom) {
+        if let toastMessage {
+          WordMemToast(message: toastMessage)
+            .padding(.horizontal, 20)
+            .padding(.bottom, 16)
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+        }
+      }
+      .task(id: toastMessage) {
+        guard toastMessage != nil else { return }
+        try? await Task.sleep(for: .seconds(2.4))
+        withAnimation(.easeOut(duration: 0.2)) {
+          toastMessage = nil
+        }
+      }
     }
   }
 
   private func processPendingImports() async {
     await maintenance.processPendingSubmissions(in: modelContext)
+  }
+
+  private func showToast(_ message: String) {
+    withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
+      toastMessage = message
+    }
+    UIAccessibility.post(notification: .announcement, argument: message)
   }
 
   private var emptyState: some View {

@@ -205,6 +205,28 @@ final class ImportReviewQualityTests: XCTestCase {
     XCTAssertEqual(chips.map(\.text), ["study"])
   }
 
+  func testCandidateDetailLineCombinesSourceAndLemma() {
+    let advice = ImportWordAdvice(
+      originalText: "grows",
+      originalKey: "grows",
+      context: nil,
+      lemma: "grow",
+      spellingCorrection: nil,
+      finalText: "grow",
+      finalKey: "grow",
+      isDictionaryAvailable: true,
+      isOriginalDictionaryAvailable: true
+    )
+    let chip = ImportCandidateChip(
+      id: "grow",
+      text: "grow",
+      sourceOrder: 0,
+      advice: advice
+    )
+
+    XCTAssertEqual(chip.detailLineText, "原文 grows · 原形 grow")
+  }
+
   func testFunctionWordOnlyInputCannotProduceChipsOrChipTranslation() async {
     let model = makeModel(available: [], curatedIDs: [])
 

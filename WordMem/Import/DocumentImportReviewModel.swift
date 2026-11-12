@@ -21,8 +21,8 @@ enum DocumentImportReviewPhase: Equatable, Sendable {
 /// design. Every string is actionable Simplified Chinese and hides the
 /// document pipeline, so failures stay usable instead of technical.
 enum DocumentImportStatusPresenter: Sendable {
-  static let noWordsMessage = "没有可保存的单词。可以更换内容或手动添加。"
-  static let curatorUnavailableMessage = "暂时无法整理候选词，可以更换内容或手动添加。"
+  static let noWordsMessage = "没有可保存的单词。可以换一段内容后再整理。"
+  static let curatorUnavailableMessage = "暂时无法整理候选词，可以换一段内容后再试。"
   static let saveFailureMessage = "批量导入失败，请重试。"
 
   static func reviewStatus(for phase: DocumentImportReviewPhase) -> String? {
@@ -93,6 +93,7 @@ final class DocumentImportReviewModel {
   private(set) var originalImageDocument: CanonicalDocument?
   private(set) var errorMessage: String?
   private(set) var isSaving = false
+  private(set) var didUseDeterministicFallback = false
 
   /// Chip-meaning façade state. The review screen binds these to the shared
   /// chip translation modifier; document translation lives in the session.
@@ -234,6 +235,7 @@ final class DocumentImportReviewModel {
     preparedDisplayText = ""
     reviewDocument = nil
     originalImageDocument = nil
+    didUseDeterministicFallback = false
   }
 
   private func prepare(from document: CanonicalDocument, displayText: String) async {
@@ -280,6 +282,7 @@ final class DocumentImportReviewModel {
       // times out, or errors, keep the original deterministic vocabulary set
       // instead of blocking the import flow.
       candidates = baseCandidates
+      didUseDeterministicFallback = true
       logger.log(
         """
         fallback deterministic candidateCount=\(candidates.count, privacy: .public) \
