@@ -67,8 +67,8 @@ final class DocumentImportReviewModelTests: XCTestCase {
     )
     XCTAssertEqual(model.offeredChips.map(\.text), ["garden"])
     XCTAssertNil(
-      model.chipTranslationConfiguration,
-      "Optional chip translation must not start when the pair is unsupported."
+      model.documentSession?.configuration,
+      "Translation must not start when the pair is unsupported."
     )
 
     model.toggleSelection(model.offeredChips[0])
@@ -77,7 +77,7 @@ final class DocumentImportReviewModelTests: XCTestCase {
     XCTAssertTrue(model.canSubmit)
   }
 
-  func testFailedTranslationCanRetryIntoTranslatingPhase() async {
+  func testUnsupportedTranslationRetryKeepsUnsupportedState() async {
     let model = makeModel(
       available: ["garden"],
       curatedIDs: ["garden"],
@@ -88,9 +88,87 @@ final class DocumentImportReviewModelTests: XCTestCase {
       return XCTFail("Document session should exist after preparation.")
     }
 
-    session.retry()
+    await session.retry(with: EchoDocumentTranslationSession())
 
-    XCTAssertEqual(session.phase, .translating)
+    XCTAssertEqual(session.phase, .unsupportedLanguagePair)
+  }
+
+  func testUnsupportedPairPresentsInformationalAlertWithoutRetry() async {
+    let model = makeModel(
+      available: ["garden"],
+      curatedIDs: ["garden"],
+      availabilityStatus: .unsupported
+    )
+
+    await model.prepareText("The garden grows quickly.")
+
+    XCTAssertEqual(model.failureAlert?.kind, .translation)
+    XCTAssertEqual(model.failureAlert?.title, "暂不支持翻译")
+    XCTAssertEqual(model.failureAlert?.showsRetry, false)
+  }
+
+  func testTranslationFailurePresentsSingleRetryableAlert() async throws {
+    let model = makeModel(available: ["garden"], curatedIDs: ["garden"])
+    await model.prepareText("The garden grows quickly.")
+    let session = try XCTUnwrap(model.documentSession)
+    let failing = FailingImportTranslationSession(failDocument: true, failChips: true)
+
+    await session.handle(failing)
+    await session.handle(failing)
+
+    XCTAssertEqual(model.failureAlert?.kind, .translation)
+    XCTAssertEqual(model.failureAlert?.title, "翻译暂时不可用")
+    XCTAssertEqual(model.failureAlert?.retryTitle, "重试")
+    XCTAssertEqual(model.failureAlert?.cancelTitle, "取消导入")
+    XCTAssertTrue(model.failureAlert?.showsRetry == true)
+  }
+
+  func testChipOnlyFailurePresentsPartialMeaningAlert() async throws {
+    let model = makeModel(available: ["garden"], curatedIDs: ["garden"])
+    await model.prepareText("The garden grows quickly.")
+    let session = try XCTUnwrap(model.documentSession)
+    let failing = FailingImportTranslationSession(failDocument: false, failChips: true)
+
+    await session.handle(failing)
+    await session.handle(failing)
+
+    XCTAssertEqual(session.phase, .completed)
+    XCTAssertEqual(model.failureAlert?.title, "部分单词释义暂不可用")
+    XCTAssertEqual(model.failureAlert?.retryTitle, "重试")
+    XCTAssertEqual(model.failureAlert?.cancelTitle, "取消导入")
+  }
+
+  func testCancelTranslationKeepingSourceReturnsToImagePreviewState() async {
+    let model = makeModel(available: ["garden"], curatedIDs: ["garden"])
+    await model.prepareText("The garden grows quickly.")
+
+    model.cancelTranslationKeepingSource()
+
+    XCTAssertEqual(model.phase, .capturing)
+    XCTAssertEqual(model.preparedDisplayText, "The garden grows quickly.")
+    XCTAssertTrue(model.chips.isEmpty)
+    XCTAssertNil(model.documentSession)
+    XCTAssertNil(model.failureAlert)
+  }
+
+  func testImageProcessingFailureUsesReselectAlert() {
+    let model = makeModel(available: ["garden"], curatedIDs: ["garden"])
+
+    model.failProcessing(with: WordImageImportError.noRecognizedText)
+
+    XCTAssertEqual(model.failureAlert?.kind, .imageProcessing)
+    XCTAssertEqual(model.failureAlert?.retryTitle, "重新选择")
+    XCTAssertEqual(model.failureAlert?.cancelTitle, "取消")
+  }
+
+  func testSaveFailureUsesRetryableAlert() {
+    let model = makeModel(available: ["garden"], curatedIDs: ["garden"])
+
+    model.failSaving()
+
+    XCTAssertEqual(model.failureAlert?.kind, .save)
+    XCTAssertEqual(model.failureAlert?.retryTitle, "重试")
+    XCTAssertEqual(model.failureAlert?.cancelTitle, "取消")
   }
 
   func testCuratorFailureKeepsDocumentTranslationRetryable() async throws {
@@ -762,6 +840,38 @@ private struct EchoDocumentTranslationSession: DocumentTranslationSessionHandlin
       DocumentTranslationResponse(
         clientIdentifier: request.clientIdentifier,
         targetText: "译文"
+      )
+    }
+  }
+}
+
+private struct FailingImportTranslationSession: DocumentTranslationSessionHandling {
+  let failDocument: Bool
+  let failChips: Bool
+
+  func translate(
+    _ requests: [DocumentTranslationRequest]
+  ) async throws -> [DocumentTranslationResponse] {
+    let isDocument = requests.contains { $0.sourceSpanID != nil }
+    if isDocument {
+      if failDocument {
+        throw DocumentTranslationServiceError.missingResponse(clientIdentifier: "document")
+      }
+      return requests.map {
+        DocumentTranslationResponse(
+          clientIdentifier: $0.clientIdentifier,
+          targetText: "译文"
+        )
+      }
+    }
+
+    if failChips {
+      throw DocumentTranslationServiceError.missingResponse(clientIdentifier: "chips")
+    }
+    return requests.map {
+      DocumentTranslationResponse(
+        clientIdentifier: $0.clientIdentifier,
+        targetText: "释义"
       )
     }
   }

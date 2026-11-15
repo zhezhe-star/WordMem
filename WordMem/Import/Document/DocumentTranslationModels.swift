@@ -14,6 +14,26 @@ enum DocumentTranslationPhase: Equatable, Sendable {
   case failed(DocumentTranslationFailure)
 }
 
+extension DocumentTranslationPhase {
+  var isRetryableTranslationFailure: Bool {
+    switch self {
+    case .failed, .needsLanguageDownload:
+      return true
+    default:
+      return false
+    }
+  }
+
+  var isTerminalTranslationFailure: Bool {
+    switch self {
+    case .failed, .needsLanguageDownload, .unsupportedLanguagePair:
+      return true
+    default:
+      return false
+    }
+  }
+}
+
 /// The subset of translation failures that the import UI needs to describe.
 /// Framework errors are normalized here so callers never erase their type.
 enum DocumentTranslationFailure: Equatable, Sendable {
@@ -65,8 +85,36 @@ struct DocumentTranslationResponse: Hashable, Sendable {
 }
 
 protocol DocumentTranslationSessionHandling: Sendable {
+  /// Prepares the underlying system session, including requesting a language
+  /// download when the pair is supported but not installed yet.
+  func prepare() async throws
+
   func translate(_ requests: [DocumentTranslationRequest]) async throws
     -> [DocumentTranslationResponse]
+}
+
+extension DocumentTranslationSessionHandling {
+  /// Test doubles and non-system sessions do not need preparation by default.
+  func prepare() async throws {}
+}
+
+/// One candidate word that should receive a Chinese meaning in the same
+/// translation session as the source document.
+struct ChipTranslationUnit: Identifiable, Hashable, Sendable {
+  let id: String
+  let text: String
+}
+
+/// Aggregated terminal state for a completed translation run. The UI uses this
+/// to present one alert instead of per-card retry buttons.
+struct TranslationFailureReport: Equatable, Sendable {
+  let documentPhase: DocumentTranslationPhase?
+  let chipPhase: DocumentTranslationPhase?
+
+  var requiresRetry: Bool {
+    documentPhase?.isRetryableTranslationFailure == true
+      || chipPhase?.isRetryableTranslationFailure == true
+  }
 }
 
 /// Stable provenance for a translated canonical document.

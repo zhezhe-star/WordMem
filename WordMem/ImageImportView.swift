@@ -54,7 +54,9 @@ struct ImageImportView: View {
       title: "导入",
       subtitle: hasImage ? "确认原图后，挑选要加入单词本的词。" : "选择图片，挑选要加入单词本的词。",
       onCancel: { dismiss() },
-      onSubmit: { importSelectedWords() }
+      onSubmit: { importSelectedWords() },
+      onRetryProcessing: { resetImageSelection() },
+      onCancelFailure: { model.cancelTranslationKeepingSource() }
     ) {
       ImageImportSourceCard(
         sourceText: model.preparedDisplayText,
@@ -178,6 +180,13 @@ struct ImageImportView: View {
     } else {
       cameraFallbackMessage = availability.fallbackMessage
     }
+  }
+
+  private func resetImageSelection() {
+    photoItem = nil
+    capturedImage = nil
+    imageData = nil
+    model.reset()
   }
 
   private func importSelectedWords() {

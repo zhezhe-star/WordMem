@@ -41,7 +41,8 @@ struct TextImportView: View {
       subtitle: "输入英文内容，挑选要加入单词本的词。",
       onCancel: { dismiss() },
       onSubmit: { importSelectedWords() },
-      showsHeader: false
+      showsHeader: false,
+      onCancelFailure: { model.beginEditingOriginal() }
     ) {
       if let reviewDocument = model.reviewDocument, model.phase.isReviewReady {
         ImportStructuredReviewCard(

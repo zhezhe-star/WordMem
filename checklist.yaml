@@ -1,0 +1,158 @@
+version: 1
+issue: 22
+branch: zhezhe-star/翻译流程-bug-修复
+plan: plan.md
+status: awaiting_approval
+milestones:
+- id: M1
+  title: 主 App 核心修复
+  tasks:
+  - T01
+  - T02
+  - T03
+  - T04
+  - T05
+- id: M2
+  title: 扩展侧一致性
+  tasks:
+  - T07
+  - T08
+  - T09
+- id: M3
+  title: 文档与端到端验证
+  tasks:
+  - T10
+  - T11
+  - T12
+tasks:
+- id: T01
+  milestone: M1
+  title: 为 Translation 会话协议增加 prepare 能力
+  status: complete
+  acceptance:
+  - DocumentTranslationSessionHandling 提供 prepare()，SystemDocumentTranslationSession
+    调 prepareTranslation()
+  - xcodebuild test -only-testing:WordMemTests/DocumentTranslationEngineTests 通过
+  - 新增测试证明 prepare 在 translate 之前被调用
+  evidence:
+  - '2026-11-15T18:06 +08:00 /tmp/wordmem-t03.log: 126 tests, 0 failures; prepare-before-translate
+    covered'
+- id: T02
+  milestone: M1
+  title: 将 chip 释义翻译并入 ImportDocumentSession，移除第二个 translationTask
+  status: complete
+  acceptance:
+  - ImportDocumentSession 持有 chipUnits/chipTranslations/chipPhase 并在同一 handle 内翻译
+  - DocumentImportReviewScreen 只剩一个 .translationTask 挂载点
+  - ImportCandidateTranslationModifier.swift 删除且 pbxproj 引用清理，WordMem Scheme 构建通过
+  - DocumentImportReviewModelTests / ImportReviewQualityTests 通过
+  evidence:
+  - ImportDocumentSession owns chips; single .translationTask; modifier removed; WordMem
+    Debug build succeeded
+- id: T03
+  milestone: M1
+  title: 重试语义与资源未安装自动启动
+  status: complete
+  acceptance:
+  - retry() 重新检查 availability 并一次性重启未完成的文档+全部缺失 chip 翻译
+  - 不新增第二重试入口
+  - .needsLanguageDownload 会启动会话并调用 prepare（系统下载确认）
+  - 测试证明一次重试保留已成功 chip 译文、不重做已完成文档
+  evidence:
+  - 'retry()/resumePendingWork restart pending document+chips; needsLanguageDownload
+    auto-starts; tests: document failure still translates chips, chip retry skips
+    completed document'
+- id: T04
+  milestone: M1
+  title: 统一导入失败弹窗（翻译）
+  status: complete
+  acceptance:
+  - DocumentImportReviewScreen 根部只有一个 .alert(item:)；模块内无重试按钮
+  - 翻译最终失败（文档失败或 chip 缺失）弹一次窗，主按钮“重试”一次性重启文档与全部缺失 chip，次按钮“取消导入”
+  - 不提供“暂不翻译”选项；取消导入不写入任何词条
+  - 取消路径：文字导入回到编辑器并保留草稿；图片导入回到已选图片+原文预览并保留图片；不关闭导入 sheet
+  - 取消路径：Translation Provider 退出组件；Share Extension 关闭扩展
+  - unsupported 弹信息型弹窗，只有“知道了”，无重试
+  - 用户点“取消导入”后退出流程且不重复弹；正常翻译中不弹
+  - 保存路径仍使用 model.chipTranslations，无 schema 变化
+  - 模型测试覆盖：单次弹窗、重试重启全流程、取消导入不落库
+  evidence:
+  - single .alert(item:); translation failure alert retry/cancel; unsupported info
+    alert; 31 model tests pass
+- id: T05
+  milestone: M1
+  title: 统一导入失败弹窗（图片处理与保存）
+  status: complete
+  acceptance:
+  - 图片处理失败弹窗：重新选择 / 取消；触发 ImageImportView 的重新选择动作
+  - 保存失败弹窗：重试 / 取消；重试重新提交同一批选中词
+  - 移除模块内重复的错误重试入口；静态状态文案保留
+  - 模型测试覆盖两类弹窗的动作分发
+  evidence:
+  - image processing / save failure alerts; cancel paths; tests pass
+- id: T06
+  milestone: M1
+  title: M1 验证与检查点提交
+  status: in_progress
+  acceptance:
+  - 全量 xcodebuild test 通过（115+ tests, 0 failures）；当前环境使用 iPhone Duo Test（iOS 27.1），iPhone
+    17 Pro 模拟器因 runtime 不兼容不可用
+  - WordMem Scheme Debug 构建通过
+  - run-log 记录 evidence + checkpoint commit
+  evidence: []
+- id: T07
+  milestone: M2
+  title: Share Extension prepare + 自动重试 + 失败弹窗
+  status: pending
+  acceptance:
+  - ShareViewController 翻译前调用 prepareTranslation()
+  - 首次失败后自动用 low-latency 重试一次（#available(iOS 26.4, *) 守卫）
+  - 最终失败用弹窗（重试 / 关闭扩展），移除模块内“重新翻译”按钮；不提供暂不翻译
+  - WordMemShareExtension Scheme Debug/Release 构建通过
+  evidence: []
+- id: T08
+  milestone: M2
+  title: Translation Provider 整句与拆解词 prepare + 自动重试 + 失败弹窗
+  status: pending
+  acceptance:
+  - TranslationCardView 与 WordPickerView 翻译前均 prepare
+  - 整句与拆解词首次失败后都自动 low-latency 重试一次
+  - 最终失败用弹窗（重试 / 退出组件）；模块内不新增按钮；拆解词失败不再静默吞掉
+  - WordMemTranslationProvider Scheme Debug/Release 构建通过
+  evidence: []
+- id: T09
+  milestone: M2
+  title: M2 验证与检查点提交
+  status: pending
+  acceptance:
+  - 两个扩展 Scheme Release 构建通过
+  - run-log 记录 evidence + checkpoint commit
+  evidence: []
+- id: T10
+  milestone: M3
+  title: 更新 Fallback Matrix 与真机验收清单
+  status: pending
+  acceptance:
+  - docs/design/import-pipeline/05-fallback-matrix.md 更新 prepare/单会话/弹窗重试语义
+  - docs/tasks/issue-22/real-device-checklist.md 包含首次导入、拒绝下载、文档失败、chip 失败、弹窗重试保留译文五项
+  evidence: []
+- id: T11
+  milestone: M3
+  title: 全量测试与三 Scheme Release 构建
+  status: pending
+  acceptance:
+  - xcodebuild test 全绿
+  - WordMem / WordMemShareExtension / WordMemTranslationProvider Release 构建均 BUILD
+    SUCCEEDED
+  - 构建日志写入 docs/tasks/issue-22/logs/
+  evidence: []
+- id: T12
+  milestone: M3
+  title: 模拟器冒烟与证据归档
+  status: pending
+  acceptance:
+  - 明确记录测试机型：当前环境为 iPhone Duo Test（iOS 27.1）；若用户提供兼容 runtime/真机，再切换 iPhone 17 Pro
+  - 文本导入：出词、选择、保存成功；翻译失败态弹窗只有“重试/取消导入”；无崩溃
+  - 截图存 docs/tasks/issue-22/screenshots/ 并同步 tmp-issue-22-screenshots/（未跟踪）
+  - run-log 披露模拟器不支持真实 Translation，真机能力待用户验证
+  evidence: []

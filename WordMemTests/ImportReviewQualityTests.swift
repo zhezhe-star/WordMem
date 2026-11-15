@@ -236,7 +236,7 @@ final class ImportReviewQualityTests: XCTestCase {
     XCTAssertTrue(model.chips.isEmpty)
     XCTAssertTrue(model.offeredChips.isEmpty)
     XCTAssertTrue(model.chipTranslations.isEmpty)
-    XCTAssertNil(model.chipTranslationConfiguration)
+    XCTAssertEqual(model.chipTranslationPhase, .completed)
   }
 
   func testImageReviewUsesSanitizedDocumentWhileKeepingOriginalEvidence() async {
