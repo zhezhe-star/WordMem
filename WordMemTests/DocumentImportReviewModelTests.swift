@@ -93,7 +93,7 @@ final class DocumentImportReviewModelTests: XCTestCase {
     XCTAssertEqual(session.phase, .unsupportedLanguagePair)
   }
 
-  func testUnsupportedPairPresentsInformationalAlertWithoutRetry() async {
+  func testUnsupportedPairPromptsLanguageDownloadAndRetry() async {
     let model = makeModel(
       available: ["garden"],
       curatedIDs: ["garden"],
@@ -103,8 +103,10 @@ final class DocumentImportReviewModelTests: XCTestCase {
     await model.prepareText("The garden grows quickly.")
 
     XCTAssertEqual(model.failureAlert?.kind, .translation)
-    XCTAssertEqual(model.failureAlert?.title, "暂不支持翻译")
-    XCTAssertEqual(model.failureAlert?.showsRetry, false)
+    XCTAssertEqual(model.failureAlert?.title, "需要下载翻译语言")
+    XCTAssertEqual(model.failureAlert?.retryTitle, "重试")
+    XCTAssertEqual(model.failureAlert?.cancelTitle, "取消导入")
+    XCTAssertTrue(model.failureAlert?.showsRetry == true)
   }
 
   func testTranslationFailurePresentsSingleRetryableAlert() async throws {
@@ -581,11 +583,11 @@ final class DocumentImportReviewModelTests: XCTestCase {
     )
     XCTAssertEqual(
       DocumentImportStatusPresenter.translationStatus(for: .needsLanguageDownload),
-      "需要下载翻译资源后才能翻译。"
+      "需要下载翻译语言后才能翻译。"
     )
     XCTAssertEqual(
       DocumentImportStatusPresenter.translationStatus(for: .unsupportedLanguagePair),
-      "当前设备暂不支持这对语言的翻译。"
+      "翻译语言未就绪，请下载后再试。"
     )
     XCTAssertEqual(
       DocumentImportStatusPresenter.translationStatus(for: .failed(.languageDetection)),

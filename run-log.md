@@ -27,3 +27,5 @@
 - [2026-11-15T18:30:00+08:00] evidence — iPhone 17 Pro 冒烟：单一“暂不支持翻译 / 知道了”弹窗，无模块内重试按钮（截图 04）。新建 iOS 27.0 runtime 系统词典资源未就绪，出词/保存冒烟由 iPhone Duo Test 完成（截图 01-03）；已在 evidence-manifest 披露。
 - [2026-11-15T18:30:00+08:00] checkpoint — 最终代码/文档待提交；M1 checkpoint `606076e`，M2 checkpoint `4297252`，M3 evidence `581dbb8`。所有 12 项任务 complete，进入最终验收（决策节点 4）。
 - [2026-11-15T18:40:00+08:00] checkpoint — 最终提交 `13857a4`。iPhone 17 Pro（iOS 27.0）126 tests / 0 failures；三 Scheme Release 构建通过；模拟器冒烟证据归档。所有 12 项任务 complete，状态 `awaiting_final_acceptance`，等待决策节点 4 最终验收。
+- [2026-11-15T18:45:00+08:00] decision — 用户评审：系统“暂不支持”应提示去系统设置下载对应翻译语言。已区分 API 语义（`.supported` 未下载 vs `.unsupported` 不受支持），并将 `.unsupportedLanguagePair` 弹窗改为“需要下载翻译语言”：正文指引「设置 > App > 翻译 > 语言」下载「英语 → 简体中文」，按钮“重试 / 取消导入”；同时更新卡片状态与文档文案。
+- [2026-11-15T18:45:00+08:00] evidence — 文案修改后重跑：iPhone 17 Pro 126 tests / 0 failures；三 Scheme Release 构建通过；17 Pro 冒烟截图 `05-iphone17pro-language-download-alert.jpg` 已归档。

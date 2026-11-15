@@ -39,7 +39,8 @@ Logs: `docs/tasks/issue-22/logs/` (`tests-iphone17pro.log`).
 ## Simulator smoke
 
 1. On iPhone 17 Pro (iOS 27.0), text import + dismiss keyboard shows the single
-   informational alert “暂不支持翻译 / 知道了”. No inline retry button exists.
+   alert “需要下载翻译语言”，正文指引「设置 > App > 翻译 > 语言」，按钮为
+   “重试 / 取消导入”。No inline retry button exists.
 2. The fresh iOS 27.0 runtime has no system dictionary assets yet, so it reports
    “没有可保存的单词”; this is an environment limitation, not the import flow.
 3. Save-path smoke was therefore completed on iPhone Duo Test (iOS 27.1):
@@ -52,6 +53,7 @@ Screenshots:
 - `screenshots/02-review-no-inline-retry.jpg`
 - `screenshots/03-saved-words.jpg`
 - `screenshots/04-iphone17pro-unsupported-alert.jpg`
+- `screenshots/05-iphone17pro-language-download-alert.jpg`
 
 A copy for remote review lives in the untracked `tmp-issue-22-screenshots/`.
 

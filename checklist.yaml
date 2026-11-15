@@ -155,7 +155,8 @@ tasks:
   - 构建日志写入 docs/tasks/issue-22/logs/
   evidence:
   - 'tests-iphone17pro.log: 126 tests / 0 failures on iPhone 17 Pro (iOS 27.0); three
-    Release builds BUILD SUCCEEDED'
+    Release builds on iPhone 17 Pro destination BUILD SUCCEEDED (after alert copy
+    change)'
 - id: T12
   milestone: M3
   title: 模拟器冒烟与证据归档
@@ -166,5 +167,6 @@ tasks:
   - 截图存 docs/tasks/issue-22/screenshots/ 并同步 tmp-issue-22-screenshots/（未跟踪）
   - run-log 披露模拟器不支持真实 Translation，真机能力待用户验证
   evidence:
-  - 'iPhone 17 Pro smoke: unsupported alert screenshot 04; Duo save smoke screenshots
-    01-03; fresh 27.0 runtime dictionary assets unavailable (disclosed)'
+  - 'iPhone 17 Pro smoke: “需要下载翻译语言” alert screenshot 05 (Settings path + retry/cancel);
+    Duo save smoke screenshots 01-03; fresh 27.0 runtime dictionary assets unavailable
+    (disclosed)'

@@ -50,9 +50,9 @@ enum DocumentImportStatusPresenter: Sendable {
     case .completed:
       nil
     case .needsLanguageDownload:
-      "需要下载翻译资源后才能翻译。"
+      "需要下载翻译语言后才能翻译。"
     case .unsupportedLanguagePair:
-      "当前设备暂不支持这对语言的翻译。"
+      "翻译语言未就绪，请下载后再试。"
     case .failed(.languageDetection):
       "无法识别语言，请重试或取消导入。"
     case .failed:
@@ -104,10 +104,11 @@ extension ImportFailureAlert {
     guard documentRetryable || chipRetryable else {
       return ImportFailureAlert(
         kind: .translation,
-        title: "暂不支持翻译",
-        message: "当前设备暂不支持英语到中文的翻译，仍可保存单词。",
-        retryTitle: nil,
-        cancelTitle: nil
+        title: "需要下载翻译语言",
+        message:
+          "请前往「设置 > App > 翻译 > 语言」下载「英语 → 简体中文」后再试。如果已下载仍不可用，说明当前设备暂不支持该语言对。",
+        retryTitle: "重试",
+        cancelTitle: "取消导入"
       )
     }
 
@@ -118,8 +119,9 @@ extension ImportFailureAlert {
     if needsDownload {
       return ImportFailureAlert(
         kind: .translation,
-        title: "需要翻译资源",
-        message: "下载语言资源后才能翻译。",
+        title: "需要下载翻译语言",
+        message:
+          "请前往「设置 > App > 翻译 > 语言」下载「英语 → 简体中文」，或点“重试”让系统准备语言资源。",
         retryTitle: "重试",
         cancelTitle: "取消导入"
       )
