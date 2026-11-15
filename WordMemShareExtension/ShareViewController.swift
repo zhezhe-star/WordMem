@@ -51,6 +51,8 @@ private struct ShareCardView: View {
     @State private var pendingText = ""
     @State private var sourceText = ""
     @State private var translatedText = ""
+    @State private var usesLowLatency = false
+    @State private var showsTranslationFailureAlert = false
     @State private var noteText = ""
     @State private var wordText = ""
     @State private var advisedChip: ImportCandidateChip?
@@ -107,14 +109,10 @@ private struct ShareCardView: View {
                             .frame(minHeight: 76)
                             .accessibilityLabel("编辑中文释义")
 
-                        Button("重新翻译") {
-                            startTranslation()
-                        }
-                        .disabled(sourceText.isEmpty)
                     }
 
                     if status == .translationFailed {
-                        Label("翻译不可用，请手动输入释义。", systemImage: "exclamationmark.triangle")
+                        Label("翻译不可用，请重试。", systemImage: "exclamationmark.triangle")
                             .font(.footnote)
                             .foregroundStyle(.orange)
                     }
@@ -196,6 +194,12 @@ private struct ShareCardView: View {
             .translationTask(configuration) { session in
                 await translate(with: session)
             }
+            .alert("翻译暂时不可用", isPresented: $showsTranslationFailureAlert) {
+                Button("重试") { startTranslation() }
+                Button("取消", role: .cancel) { onClose() }
+            } message: {
+                Text("请重试；取消会关闭本次分享。")
+            }
         }
         .navigationViewStyle(.stack)
     }
@@ -227,6 +231,8 @@ private struct ShareCardView: View {
         }
 
         status = .translating
+        usesLowLatency = false
+        showsTranslationFailureAlert = false
         configuration = TranslationSession.Configuration(
             source: Locale.Language(identifier: "en"),
             target: Locale.Language(identifier: "zh-Hans")
@@ -236,14 +242,36 @@ private struct ShareCardView: View {
     private func translate(with session: TranslationSession) async {
         guard status == .translating else { return }
         do {
+            try await session.prepareTranslation()
             let response = try await session.translate(pendingText)
             translatedText = response.targetText
             status = .ready
             configuration = nil
         } catch {
+            guard !Task.isCancelled else { return }
+            if !usesLowLatency {
+                usesLowLatency = true
+                status = .translating
+                configuration = lowLatencyConfiguration()
+                return
+            }
             status = .translationFailed
             configuration = nil
+            showsTranslationFailureAlert = true
         }
+    }
+
+    private func lowLatencyConfiguration() -> TranslationSession.Configuration {
+        let source = Locale.Language(identifier: "en")
+        let target = Locale.Language(identifier: "zh-Hans")
+        if #available(iOS 26.4, *) {
+            return TranslationSession.Configuration(
+                source: source,
+                target: target,
+                preferredStrategy: .lowLatency
+            )
+        }
+        return TranslationSession.Configuration(source: source, target: target)
     }
 
     private func refreshAdvice() {

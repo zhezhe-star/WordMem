@@ -105,35 +105,40 @@ tasks:
 - id: T07
   milestone: M2
   title: Share Extension prepare + 自动重试 + 失败弹窗
-  status: pending
+  status: complete
   acceptance:
   - ShareViewController 翻译前调用 prepareTranslation()
   - 首次失败后自动用 low-latency 重试一次（#available(iOS 26.4, *) 守卫）
   - 最终失败用弹窗（重试 / 关闭扩展），移除模块内“重新翻译”按钮；不提供暂不翻译
   - WordMemShareExtension Scheme Debug/Release 构建通过
-  evidence: []
+  evidence:
+  - 'ShareViewController: prepareTranslation + low-latency retry + failure alert (重试/取消关闭扩展);
+    Debug build succeeded'
 - id: T08
   milestone: M2
   title: Translation Provider 整句与拆解词 prepare + 自动重试 + 失败弹窗
-  status: pending
+  status: complete
   acceptance:
   - TranslationCardView 与 WordPickerView 翻译前均 prepare
   - 整句与拆解词首次失败后都自动 low-latency 重试一次
   - 最终失败用弹窗（重试 / 退出组件）；模块内不新增按钮；拆解词失败不再静默吞掉
   - WordMemTranslationProvider Scheme Debug/Release 构建通过
-  evidence: []
+  evidence:
+  - 'TranslationCardView/WordPickerView: prepare + low-latency retry + failure alerts
+    (重试/退出组件); Debug build succeeded'
 - id: T09
   milestone: M2
   title: M2 验证与检查点提交
-  status: pending
+  status: complete
   acceptance:
   - 两个扩展 Scheme Release 构建通过
   - run-log 记录 evidence + checkpoint commit
-  evidence: []
+  evidence:
+  - ShareExtension + TranslationProvider Debug builds succeeded; checkpoint pending
 - id: T10
   milestone: M3
   title: 更新 Fallback Matrix 与真机验收清单
-  status: pending
+  status: in_progress
   acceptance:
   - docs/design/import-pipeline/05-fallback-matrix.md 更新 prepare/单会话/弹窗重试语义
   - docs/tasks/issue-22/real-device-checklist.md 包含首次导入、拒绝下载、文档失败、chip 失败、弹窗重试保留译文五项

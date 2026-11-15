@@ -18,3 +18,4 @@
 - [2026-11-15T18:06:00+08:00] evidence — T01–T05 核心实现完成。`xcodebuild test ...` → **TEST SUCCEEDED**，126 tests / 0 failures（新增 prepare 顺序、单会话、文档失败仍翻 chip、chip 重试不重做文档、重试只补缺失 chip、翻译/图片/保存弹窗、取消路径等 11 个测试）。WordMem / WordMemShareExtension / WordMemTranslationProvider Debug 构建均 **BUILD SUCCEEDED**。
 - [2026-11-15T18:06:00+08:00] decision — M1 代码改动：`ImportDocumentSession` 统一文档+chip 翻译并新增 prepare/重试状态机；`DocumentImportReviewModel` 改为单一 `ImportFailureAlert`；删除 `ImportCandidateTranslationModifier.swift` 及 pbxproj 引用；文字/图片取消路径已接线。
 - [2026-11-15T18:07:00+08:00] checkpoint — M1 提交 `606076e`（15 files）。126 tests / 0 failures；WordMem / ShareExtension / TranslationProvider Debug 构建通过。T01–T06 complete。
+- [2026-11-15T18:20:00+08:00] evidence — M2 扩展侧完成：Share Extension / Translation Provider 均在翻译前 prepare，首次失败自动 low-latency 重试；最终失败用弹窗（Share: 重试/取消关闭扩展；Provider: 重试/退出组件），模块内无手动重试按钮。两个扩展 Debug 构建 **BUILD SUCCEEDED**。
