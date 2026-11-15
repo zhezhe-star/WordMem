@@ -93,13 +93,15 @@ tasks:
 - id: T06
   milestone: M1
   title: M1 验证与检查点提交
-  status: in_progress
+  status: complete
   acceptance:
   - 全量 xcodebuild test 通过（115+ tests, 0 failures）；当前环境使用 iPhone Duo Test（iOS 27.1），iPhone
     17 Pro 模拟器因 runtime 不兼容不可用
   - WordMem Scheme Debug 构建通过
   - run-log 记录 evidence + checkpoint commit
-  evidence: []
+  evidence:
+  - checkpoint 606076e; 126 tests / 0 failures; WordMem Debug + ShareExtension Debug
+    + TranslationProvider Debug build succeeded
 - id: T07
   milestone: M2
   title: Share Extension prepare + 自动重试 + 失败弹窗
