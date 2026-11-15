@@ -29,3 +29,4 @@
 - [2026-11-15T18:40:00+08:00] checkpoint — 最终提交 `13857a4`。iPhone 17 Pro（iOS 27.0）126 tests / 0 failures；三 Scheme Release 构建通过；模拟器冒烟证据归档。所有 12 项任务 complete，状态 `awaiting_final_acceptance`，等待决策节点 4 最终验收。
 - [2026-11-15T18:45:00+08:00] decision — 用户评审：系统“暂不支持”应提示去系统设置下载对应翻译语言。已区分 API 语义（`.supported` 未下载 vs `.unsupported` 不受支持），并将 `.unsupportedLanguagePair` 弹窗改为“需要下载翻译语言”：正文指引「设置 > App > 翻译 > 语言」下载「英语 → 简体中文」，按钮“重试 / 取消导入”；同时更新卡片状态与文档文案。
 - [2026-11-15T18:45:00+08:00] evidence — 文案修改后重跑：iPhone 17 Pro 126 tests / 0 failures；三 Scheme Release 构建通过；17 Pro 冒烟截图 `05-iphone17pro-language-download-alert.jpg` 已归档。
+- [2026-11-15T18:50:00+08:00] milestone — 用户最终验收通过（“确认没什么问题”）。临时截图目录 `tmp-issue-22-screenshots/` 已按协议删除；权威证据保留在 `docs/tasks/issue-22/`。等待用户指示创建 PR 或合并。

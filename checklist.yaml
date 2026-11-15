@@ -2,7 +2,7 @@ version: 1
 issue: 22
 branch: zhezhe-star/翻译流程-bug-修复
 plan: plan.md
-status: awaiting_final_acceptance
+status: accepted
 milestones:
 - id: M1
   title: 主 App 核心修复
