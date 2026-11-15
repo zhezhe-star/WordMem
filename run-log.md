@@ -19,3 +19,6 @@
 - [2026-11-15T18:06:00+08:00] decision — M1 代码改动：`ImportDocumentSession` 统一文档+chip 翻译并新增 prepare/重试状态机；`DocumentImportReviewModel` 改为单一 `ImportFailureAlert`；删除 `ImportCandidateTranslationModifier.swift` 及 pbxproj 引用；文字/图片取消路径已接线。
 - [2026-11-15T18:07:00+08:00] checkpoint — M1 提交 `606076e`（15 files）。126 tests / 0 failures；WordMem / ShareExtension / TranslationProvider Debug 构建通过。T01–T06 complete。
 - [2026-11-15T18:20:00+08:00] evidence — M2 扩展侧完成：Share Extension / Translation Provider 均在翻译前 prepare，首次失败自动 low-latency 重试；最终失败用弹窗（Share: 重试/取消关闭扩展；Provider: 重试/退出组件），模块内无手动重试按钮。两个扩展 Debug 构建 **BUILD SUCCEEDED**。
+- [2026-11-15T18:25:00+08:00] evidence — T10 文档完成：Fallback Matrix 更新 prepare/单会话/统一弹窗/取消路径；新增 `docs/tasks/issue-22/real-device-checklist.md`。
+- [2026-11-15T18:25:00+08:00] evidence — T11 全量验证：`docs/tasks/issue-22/logs/tests.log` → 126 tests / 0 failures；WordMem、ShareExtension、TranslationProvider Release 三个 `BUILD SUCCEEDED`，日志在 `docs/tasks/issue-22/logs/`。
+- [2026-11-15T18:25:00+08:00] evidence — T12 模拟器冒烟（iPhone Duo Test / iOS 27.1）：文本导入出现单一“暂不支持翻译 / 知道了”弹窗，无模块内重试按钮；选择 2 个词并保存成功。截图 `docs/tasks/issue-22/screenshots/01-03`，副本在未跟踪 `tmp-issue-22-screenshots/`。**披露**：模拟器不能运行真实 Translation，可重试失败/取消路径仅由单元测试覆盖；真机待按清单验证。

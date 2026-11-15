@@ -138,28 +138,33 @@ tasks:
 - id: T10
   milestone: M3
   title: 更新 Fallback Matrix 与真机验收清单
-  status: in_progress
+  status: complete
   acceptance:
   - docs/design/import-pipeline/05-fallback-matrix.md 更新 prepare/单会话/弹窗重试语义
   - docs/tasks/issue-22/real-device-checklist.md 包含首次导入、拒绝下载、文档失败、chip 失败、弹窗重试保留译文五项
-  evidence: []
+  evidence:
+  - Fallback Matrix updated; real-device checklist added at docs/tasks/issue-22/real-device-checklist.md
 - id: T11
   milestone: M3
   title: 全量测试与三 Scheme Release 构建
-  status: pending
+  status: complete
   acceptance:
   - xcodebuild test 全绿
   - WordMem / WordMemShareExtension / WordMemTranslationProvider Release 构建均 BUILD
     SUCCEEDED
   - 构建日志写入 docs/tasks/issue-22/logs/
-  evidence: []
+  evidence:
+  - 'docs/tasks/issue-22/logs/tests.log: 126 tests / 0 failures; three Release builds
+    BUILD SUCCEEDED'
 - id: T12
   milestone: M3
   title: 模拟器冒烟与证据归档
-  status: pending
+  status: complete
   acceptance:
   - 明确记录测试机型：当前环境为 iPhone Duo Test（iOS 27.1）；若用户提供兼容 runtime/真机，再切换 iPhone 17 Pro
   - 文本导入：出词、选择、保存成功；翻译失败态弹窗只有“重试/取消导入”；无崩溃
   - 截图存 docs/tasks/issue-22/screenshots/ 并同步 tmp-issue-22-screenshots/（未跟踪）
   - run-log 披露模拟器不支持真实 Translation，真机能力待用户验证
-  evidence: []
+  evidence:
+  - 'iPhone Duo Test smoke: unsupported alert + chip selection + save; screenshots
+    01-03 + evidence-manifest; real Translation discloses simulator limitation'

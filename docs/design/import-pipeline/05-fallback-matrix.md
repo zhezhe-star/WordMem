@@ -1,7 +1,8 @@
 # Import Fallback Matrix
 
 Status: active
-Date: 2026-11-12
+Date: 2026-11-15
+Related issue: [#22 翻译流程 bug 修复](https://github.com/zhezhe-star/WordMem/issues/22)
 Related retrospective:
 `docs/superpowers/reports/2026-11-12-apple-intelligence-import-retrospective.md`
 
@@ -15,18 +16,25 @@ The deterministic import path must remain usable without any optional
 capability. Optional capabilities may only remove low-value candidates; they
 must never be the only way to produce candidates or save words.
 
+Translation is the one deliberate exception: a **retryable** translation
+failure no longer offers a "save without Chinese" bypass. The user must retry
+successfully or cancel the import. An unsupported language pair is the only
+non-retryable translation terminal state and still allows saving.
+
 ## Matrix
 
 | Capability | Failure mode | User-visible fallback | Must not happen | Evidence |
 | --- | --- | --- | --- | --- |
 | Foundation Models candidate curation | unavailable, timeout, error, empty result | Use the deterministic candidate set: tokenizer + function-word/short-fragment filter + Apple Dictionary gate | Blank review screen; `.curatorUnavailable` without candidates; model-invented words | `testSimulatorFoundationModelFailureFallsBackToDeterministicChips`, `testCuratorFailureFallsBackToDeterministicFunctionWordFilter` |
 | Foundation Models recommendation quality | model recommends function words or out-of-set IDs | Baseline filter removes function words/short fragments; unknown IDs are discarded | Function words become selectable; model introduces new candidates | `testCuratorCannotIntroduceFunctionWordsOutsideDeterministicBaseline`, `testValidatesOnlyRecommendedIDsFromFoundationModels` |
-| High-fidelity document translation | strategy unavailable or runtime failure | Retry once with `.lowLatency`; if that fails, show an actionable translation card and keep words usable | Translation failure blocks chips or save | `testRetrySucceedsAfterInternalFailureAndInvalidateResetsLifecycle`, `testRepeatedTranslationFailureStopsAfterLegacyFallback` |
-| Translation availability | unsupported pair, language pack missing | Show `当前设备暂不支持这对语言的翻译` or `需要下载翻译资源` with retry; keep chips and import CTA | Full-screen blank state; blocking alert | `testDocumentTranslationFailureKeepsWordsSelectable` |
-| Chip translation | unavailable or partial failure | Show `暂无翻译` per chip; selection and save continue | Chip translation blocks selection | `testDocumentTranslationFailureKeepsWordsSelectable` |
+| Translation session preparation | language assets not installed, Apple Intelligence model not ready, transient runtime failure | Call `prepareTranslation()` before every run; auto-start when availability is `.needsLanguageDownload`; retry once with `.lowLatency`; only then present one alert | First attempt fails and requires the user to manually retry; two translation sessions run concurrently | `testHandlePreparesSessionThenTranslatesDocumentAndChipsInOneTask`, `testPrepareFailureMapsToDownloadStateWithoutRetryingTranslation` |
+| High-fidelity document translation | strategy unavailable or runtime failure | Retry once with `.lowLatency`; if that fails, present the single failure alert with retry/cancel; chip translation still runs in the same session | Document failure suppresses chip translation; inline retry buttons | `testDocumentFailureStillTranslatesChipsAndPublishesReport`, `testTranslationFailurePresentsSingleRetryableAlert` |
+| Translation availability | unsupported pair, language pack missing | Missing pack auto-starts `prepareTranslation()` (system download prompt); unsupported pair shows an informational alert with only “知道了” | “Need retry before download”; retry button for unsupported pairs | `testUnsupportedPairPresentsInformationalAlertWithoutRetry`, `testPrepareFailureMapsToDownloadStateWithoutRetryingTranslation` |
+| Chip translation | unavailable or partial failure | Same session as the document; on final failure show “部分单词释义暂不可用” alert with retry/cancel; retry only requests missing chips | Silent `try?`; saving without meanings; a second translation session | `testChipFailureRetriesWithoutRedoingCompletedDocument`, `testChipOnlyFailurePresentsPartialMeaningAlert`, `testRetryAfterFinalChipFailureOnlyRequestsMissingChips` |
 | Apple Dictionary | word unavailable | Hide unoffered chips; keep import flow usable | Unavailable word enters submission | `ImportCandidateChip.isImportable` + existing repository tests |
-| Vision document reader | invalid image or no text | Show actionable image error; restore capture state | Technical OCR error copy; stuck processing | `testFailedImageProcessingRestoresCapturingState` |
+| Vision document reader | invalid image or no text | Alert with “重新选择 / 取消”; restore capture state | Technical OCR error copy; stuck processing; inline retry button | `testFailedImageProcessingRestoresCapturingState`, `testImageProcessingFailureUsesReselectAlert` |
 | Candidate preparation | slow or unavailable | Keep the editor usable; show inline progress; never auto-close the sheet | Spinner-only blank page; swipe-to-dismiss during processing | `testTranslationAvailabilityDoesNotBlockCandidateChips` |
+| Saving | persistence failure | Alert with “重试 / 取消”; retry resubmits the same selection | Silent failure; inline retry button | `testSaveFailureUsesRetryableAlert`, `testSavingLifecycleShowsConciseFailureAndRecovers` |
 
 ## Interaction contract
 
@@ -35,8 +43,16 @@ must never be the only way to produce candidates or save words.
 - The only save action is the existing `导入 N 个单词` button.
 - No new primary button may be added when an existing gesture or CTA can do the
   same job.
-- A terminal state must render visible copy, an icon or skeleton where useful,
-  and at least one actionable next step.
+- All terminal errors use one system alert at the review-screen root. Modules
+  do not render their own retry buttons.
+- The alert's retry action restarts the whole failed step: translation retry
+  covers document + all missing chip meanings; save retry resubmits the same
+  selection.
+- Cancel paths return to the pre-import state: text import → editor with draft;
+  image import → selected image + recognized text preview; Translation
+  Provider → exit component; Share Extension → close extension.
+- A terminal state must render visible copy and at least one actionable next
+  step (the alert).
 
 ## Definition of done for a new enrichment
 
