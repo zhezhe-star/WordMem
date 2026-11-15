@@ -1,0 +1,427 @@
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test -project WordMem.xcodeproj -scheme WordMem -destination "platform=iOS Simulator,id=55DBFA05-48DE-453C-8871-288A22D251F3"
+
+ComputePackagePrebuildTargetDependencyGraph
+
+Prepare packages
+
+CreateBuildRequest
+
+SendProjectDescription
+
+CreateBuildOperation
+
+ComputeTargetDependencyGraph
+note: Building targets in dependency order
+note: Target dependency graph (4 targets)
+    Target 'WordMemTests' in project 'WordMem'
+        ➜ Explicit dependency on target 'WordMem' in project 'WordMem'
+    Target 'WordMem' in project 'WordMem'
+        ➜ Explicit dependency on target 'WordMemShareExtension' in project 'WordMem'
+        ➜ Explicit dependency on target 'WordMemTranslationProvider' in project 'WordMem'
+    Target 'WordMemTranslationProvider' in project 'WordMem' (no dependencies)
+    Target 'WordMemShareExtension' in project 'WordMem' (no dependencies)
+
+GatherProvisioningInputs
+
+CreateBuildDescription
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc --version
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --print-asset-tag-combinations --output-format xml1 /Users/zhezhu/orca/workspaces/WordMem/翻译流程-bug-修复/WordMem/Assets.xcassets
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator27.1.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --version --output-format xml1
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld -version_details
+
+Build description signature: bcc1dbf62123e44147306108603b9bad
+Build description path: /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Intermediates.noindex/XCBuildData/bcc1dbf62123e44147306108603b9bad.xcbuilddata
+ClangStatCache /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator27.1.sdk /Users/zhezhu/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator27.1-24A94232-35d3147121984ba087c28d913653d626.sdkstatcache
+    cd /Users/zhezhu/orca/workspaces/WordMem/翻译流程-bug-修复/WordMem.xcodeproj
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator27.1.sdk -o /Users/zhezhu/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator27.1-24A94232-35d3147121984ba087c28d913653d626.sdkstatcache
+
+ProcessInfoPlistFile /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Products/Debug-iphonesimulator/WordMemShareExtension.appex/Info.plist /Users/zhezhu/orca/workspaces/WordMem/翻译流程-bug-修复/WordMemShareExtension/Info.plist (in target 'WordMemShareExtension' from project 'WordMem')
+    cd /Users/zhezhu/orca/workspaces/WordMem/翻译流程-bug-修复
+    builtin-infoPlistUtility /Users/zhezhu/orca/workspaces/WordMem/翻译流程-bug-修复/WordMemShareExtension/Info.plist -producttype com.apple.product-type.app-extension -expandbuildsettings -format binary -platform iphonesimulator -o /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Products/Debug-iphonesimulator/WordMemShareExtension.appex/Info.plist
+
+ProcessInfoPlistFile /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Products/Debug-iphonesimulator/WordMemTranslationProvider.appex/Info.plist /Users/zhezhu/orca/workspaces/WordMem/翻译流程-bug-修复/WordMemTranslationProvider/Info.plist (in target 'WordMemTranslationProvider' from project 'WordMem')
+    cd /Users/zhezhu/orca/workspaces/WordMem/翻译流程-bug-修复
+    builtin-infoPlistUtility /Users/zhezhu/orca/workspaces/WordMem/翻译流程-bug-修复/WordMemTranslationProvider/Info.plist -producttype com.apple.product-type.extensionkit-extension -expandbuildsettings -format binary -platform iphonesimulator -additionalcontentfile /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Intermediates.noindex/WordMem.build/Debug-iphonesimulator/WordMemTranslationProvider.build/WordMemTranslationProvider-appextension-generated-info.plist -o /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Products/Debug-iphonesimulator/WordMemTranslationProvider.appex/Info.plist
+
+CompileAssetCatalogVariant thinned /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Products/Debug-iphonesimulator/WordMem.app /Users/zhezhu/orca/workspaces/WordMem/翻译流程-bug-修复/WordMem/Assets.xcassets (in target 'WordMem' from project 'WordMem')
+    cd /Users/zhezhu/orca/workspaces/WordMem/翻译流程-bug-修复
+    /Applications/Xcode.app/Contents/Developer/usr/bin/actool /Users/zhezhu/orca/workspaces/WordMem/翻译流程-bug-修复/WordMem/Assets.xcassets --compile /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Intermediates.noindex/WordMem.build/Debug-iphonesimulator/WordMem.build/assetcatalog_output/thinned --output-format human-readable-text --notices --warnings --export-dependency-info /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Intermediates.noindex/WordMem.build/Debug-iphonesimulator/WordMem.build/assetcatalog_dependencies_thinned --output-partial-info-plist /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Intermediates.noindex/WordMem.build/Debug-iphonesimulator/WordMem.build/assetcatalog_generated_info.plist_thinned --app-icon AppIcon --compress-pngs --enable-on-demand-resources YES --filter-for-thinning-device-configuration iPhone18,1 --filter-for-device-os-version 27.0 --development-region en --target-device iphone --target-device ipad --minimum-deployment-target 27.0 --platform iphonesimulator
+/* com.apple.actool.compilation-results */
+/Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Intermediates.noindex/WordMem.build/Debug-iphonesimulator/WordMem.build/assetcatalog_generated_info.plist_thinned
+/Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Intermediates.noindex/WordMem.build/Debug-iphonesimulator/WordMem.build/assetcatalog_output/thinned/AppIcon60x60@2x.png
+/Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Intermediates.noindex/WordMem.build/Debug-iphonesimulator/WordMem.build/assetcatalog_output/thinned/AppIcon76x76@2x~ipad.png
+/Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Intermediates.noindex/WordMem.build/Debug-iphonesimulator/WordMem.build/assetcatalog_output/thinned/Assets.car
+
+
+LinkAssetCatalog /Users/zhezhu/orca/workspaces/WordMem/翻译流程-bug-修复/WordMem/Assets.xcassets (in target 'WordMem' from project 'WordMem')
+    cd /Users/zhezhu/orca/workspaces/WordMem/翻译流程-bug-修复
+    builtin-linkAssetCatalog --thinned /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Intermediates.noindex/WordMem.build/Debug-iphonesimulator/WordMem.build/assetcatalog_output/thinned --thinned-dependencies /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Intermediates.noindex/WordMem.build/Debug-iphonesimulator/WordMem.build/assetcatalog_dependencies_thinned --thinned-info-plist-content /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Intermediates.noindex/WordMem.build/Debug-iphonesimulator/WordMem.build/assetcatalog_generated_info.plist_thinned --unthinned /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Intermediates.noindex/WordMem.build/Debug-iphonesimulator/WordMem.build/assetcatalog_output/unthinned --unthinned-dependencies /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Intermediates.noindex/WordMem.build/Debug-iphonesimulator/WordMem.build/assetcatalog_dependencies_unthinned --unthinned-info-plist-content /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Intermediates.noindex/WordMem.build/Debug-iphonesimulator/WordMem.build/assetcatalog_generated_info.plist_unthinned --output /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Products/Debug-iphonesimulator/WordMem.app --plist-output /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Intermediates.noindex/WordMem.build/Debug-iphonesimulator/WordMem.build/assetcatalog_generated_info.plist
+note: Emplaced /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Products/Debug-iphonesimulator/WordMem.app/AppIcon60x60@2x.png (in target 'WordMem' from project 'WordMem')
+note: Emplaced /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Products/Debug-iphonesimulator/WordMem.app/Assets.car (in target 'WordMem' from project 'WordMem')
+note: Emplaced /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Products/Debug-iphonesimulator/WordMem.app/AppIcon76x76@2x~ipad.png (in target 'WordMem' from project 'WordMem')
+
+ProcessInfoPlistFile /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Products/Debug-iphonesimulator/WordMem.app/Info.plist /Users/zhezhu/orca/workspaces/WordMem/翻译流程-bug-修复/WordMem/Info.plist (in target 'WordMem' from project 'WordMem')
+    cd /Users/zhezhu/orca/workspaces/WordMem/翻译流程-bug-修复
+    builtin-infoPlistUtility /Users/zhezhu/orca/workspaces/WordMem/翻译流程-bug-修复/WordMem/Info.plist -producttype com.apple.product-type.application -genpkginfo /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Products/Debug-iphonesimulator/WordMem.app/PkgInfo -expandbuildsettings -format binary -platform iphonesimulator -additionalcontentfile /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Intermediates.noindex/WordMem.build/Debug-iphonesimulator/WordMem.build/assetcatalog_generated_info.plist -scanforprivacyfile /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Products/Debug-iphonesimulator/WordMem.app/Extensions/WordMemTranslationProvider.appex -scanforprivacyfile /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Products/Debug-iphonesimulator/WordMem.app/PlugIns/WordMemShareExtension.appex -o /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Products/Debug-iphonesimulator/WordMem.app/Info.plist
+
+CopySwiftLibs /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Products/Debug-iphonesimulator/WordMem.app (in target 'WordMem' from project 'WordMem')
+    cd /Users/zhezhu/orca/workspaces/WordMem/翻译流程-bug-修复
+    builtin-swiftStdLibTool --copy --verbose --sign - --scan-executable /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Products/Debug-iphonesimulator/WordMem.app/WordMem.debug.dylib --scan-folder /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Products/Debug-iphonesimulator/WordMem.app/Frameworks --scan-folder /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Products/Debug-iphonesimulator/WordMem.app/PlugIns --scan-folder /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Products/Debug-iphonesimulator/WordMem.app/SystemExtensions --scan-folder /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Products/Debug-iphonesimulator/WordMem.app/Extensions --platform iphonesimulator --toolchain /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Products/Debug-iphonesimulator/WordMem.app/Frameworks --strip-bitcode --strip-bitcode-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Intermediates.noindex/WordMem.build/Debug-iphonesimulator/WordMem.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os
+
+ProcessInfoPlistFile /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Products/Debug-iphonesimulator/WordMem.app/PlugIns/WordMemTests.xctest/Info.plist /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Intermediates.noindex/WordMem.build/Debug-iphonesimulator/WordMemTests.build/empty-WordMemTests.plist (in target 'WordMemTests' from project 'WordMem')
+    cd /Users/zhezhu/orca/workspaces/WordMem/翻译流程-bug-修复
+    builtin-infoPlistUtility /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Intermediates.noindex/WordMem.build/Debug-iphonesimulator/WordMemTests.build/empty-WordMemTests.plist -producttype com.apple.product-type.bundle.unit-test -expandbuildsettings -format binary -platform iphonesimulator -o /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Products/Debug-iphonesimulator/WordMem.app/PlugIns/WordMemTests.xctest/Info.plist
+
+CopySwiftLibs /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Products/Debug-iphonesimulator/WordMem.app/PlugIns/WordMemTests.xctest (in target 'WordMemTests' from project 'WordMem')
+    cd /Users/zhezhu/orca/workspaces/WordMem/翻译流程-bug-修复
+    builtin-swiftStdLibTool --copy --verbose --sign - --scan-executable /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Products/Debug-iphonesimulator/WordMem.app/PlugIns/WordMemTests.xctest/WordMemTests --scan-folder /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Products/Debug-iphonesimulator/WordMem.app/PlugIns/WordMemTests.xctest/Frameworks --scan-folder /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Products/Debug-iphonesimulator/WordMem.app/PlugIns/WordMemTests.xctest/PlugIns --scan-folder /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Products/Debug-iphonesimulator/WordMem.app/PlugIns/WordMemTests.xctest/SystemExtensions --scan-folder /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Products/Debug-iphonesimulator/WordMem.app/PlugIns/WordMemTests.xctest/Extensions --platform iphonesimulator --toolchain /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Products/Debug-iphonesimulator/WordMem.app/PlugIns/WordMemTests.xctest/Frameworks --strip-bitcode --scan-executable /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib/libXCTestSwiftSupport.dylib --strip-bitcode-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Intermediates.noindex/WordMem.build/Debug-iphonesimulator/WordMemTests.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os
+
+PruneExplicitPrecompiledModules /Users/zhezhu/Library/Developer/Xcode/DerivedData/SDKExplicitPrecompiledModules
+
+PruneExplicitPrecompiledModules /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules
+
+PruneExplicitPrecompiledModules /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Intermediates.noindex/ExplicitPrecompiledModules
+
+2026-11-15 18:15:46.997 xcodebuild[51005:79133653] [MT] IDESchemeActionSDKRecord: operatingSystemBuild = <DVTBuildVersion 24A94232>, error = invalidDigitCount(94232).
+2026-11-15 18:16:26.848704+0800 WordMem[51603:79139735] [VoiceDBClient] Error fetching voices: DecodingError.dataCorrupted: Data was corrupted. Debug description: Invalid container metadata for _UnkeyedDecodingContainer, found keyedGraphEncodingNodeID. Using fallback voices.
+2026-11-15 18:16:29.436031+0800 WordMem[51603:79139739] [General] Failed to send CA Event for app launch measurements for ca_event_type: 0 event_name: com.apple.app_launch_measurement.FirstFramePresentationMetric
+2026-11-15 18:16:29.538729+0800 WordMem[51603:79139146] [XPCErrors] non-launching port is incompatible with service identifier "com.apple.PointerUI.pointeruid.default-service"
+2026-11-15 18:16:29.559695+0800 WordMem[51603:79139146] [API] cannot add handler to 0 from 0 - dropping
+2026-11-15 18:16:29.563004+0800 WordMem[51603:79139146] [API] cannot add handler to 0 from 0 - dropping
+2026-11-15 18:16:29.572993+0800 WordMem[51603:79139146] [API] cannot add handler to 0 from 0 - dropping
+2026-11-15 18:16:29.573052+0800 WordMem[51603:79139146] [API] cannot add handler to 0 from 0 - dropping
+2026-11-15 18:16:30.040738+0800 WordMem[51603:79139739] [General] Failed to send CA Event for app launch measurements for ca_event_type: 1 event_name: com.apple.app_launch_measurement.ExtendedLaunchMetrics
+Test Suite 'All tests' started at 2026-11-15 18:16:32.595.
+Test Suite 'WordMemTests.xctest' started at 2026-11-15 18:16:32.600.
+Test Suite 'CanonicalCleanResetTests' started at 2026-11-15 18:16:32.600.
+Test Case '-[WordMemTests.CanonicalCleanResetTests testAdvisorCanonicalKeysSurviveAndRevalidateAgainstSystemDictionary]' started.
+Test Case '-[WordMemTests.CanonicalCleanResetTests testAdvisorCanonicalKeysSurviveAndRevalidateAgainstSystemDictionary]' passed (2.328 seconds).
+Test Case '-[WordMemTests.CanonicalCleanResetTests testCalendarUsesOnlyEntriesWithTranslation]' started.
+Test Case '-[WordMemTests.CanonicalCleanResetTests testCalendarUsesOnlyEntriesWithTranslation]' passed (0.025 seconds).
+Test Case '-[WordMemTests.CanonicalCleanResetTests testCandidatePayloadOmitsDerivedDictionaryAvailability]' started.
+Test Case '-[WordMemTests.CanonicalCleanResetTests testCandidatePayloadOmitsDerivedDictionaryAvailability]' passed (0.004 seconds).
+Test Case '-[WordMemTests.CanonicalCleanResetTests testCandidateSelectionDefaultsToNone]' started.
+Test Case '-[WordMemTests.CanonicalCleanResetTests testCandidateSelectionDefaultsToNone]' passed (0.001 seconds).
+Test Case '-[WordMemTests.CanonicalCleanResetTests testCMUDictionaryPhoneticProviderMapsCommonWords]' started.
+Test Case '-[WordMemTests.CanonicalCleanResetTests testCMUDictionaryPhoneticProviderMapsCommonWords]' passed (0.002 seconds).
+Test Case '-[WordMemTests.CanonicalCleanResetTests testConfirmedSpellingDoesNotRepeatLemmaBadge]' started.
+Test Case '-[WordMemTests.CanonicalCleanResetTests testConfirmedSpellingDoesNotRepeatLemmaBadge]' passed (0.001 seconds).
+Test Case '-[WordMemTests.CanonicalCleanResetTests testCustomStoreResetDoesNotDeleteProductionDefaultStore]' started.
+Test Case '-[WordMemTests.CanonicalCleanResetTests testCustomStoreResetDoesNotDeleteProductionDefaultStore]' passed (0.011 seconds).
+Test Case '-[WordMemTests.CanonicalCleanResetTests testDefaultTranslationSelectionStartsWithNoWordsSelected]' started.
+Test Case '-[WordMemTests.CanonicalCleanResetTests testDefaultTranslationSelectionStartsWithNoWordsSelected]' passed (0.001 seconds).
+Test Case '-[WordMemTests.CanonicalCleanResetTests testDeleteRemovesOrphanedPhraseContexts]' started.
+Test Case '-[WordMemTests.CanonicalCleanResetTests testDeleteRemovesOrphanedPhraseContexts]' passed (0.030 seconds).
+Test Case '-[WordMemTests.CanonicalCleanResetTests testDestructiveResetRemovesHistoricalStoreFilesAndQueueDefaults]' started.
+Test Case '-[WordMemTests.CanonicalCleanResetTests testDestructiveResetRemovesHistoricalStoreFilesAndQueueDefaults]' passed (0.008 seconds).
+Test Case '-[WordMemTests.CanonicalCleanResetTests testDifferentLocalesDoNotCollide]' started.
+Test Case '-[WordMemTests.CanonicalCleanResetTests testDifferentLocalesDoNotCollide]' passed (0.024 seconds).
+Test Case '-[WordMemTests.CanonicalCleanResetTests testFailedProviderSaveDoesNotCallCloseCallback]' started.
+Test Case '-[WordMemTests.CanonicalCleanResetTests testFailedProviderSaveDoesNotCallCloseCallback]' passed (0.001 seconds).
+Test Case '-[WordMemTests.CanonicalCleanResetTests testFreshStoreStartsEmptyAndUsesLocalePlusKeyIdentity]' started.
+Test Case '-[WordMemTests.CanonicalCleanResetTests testFreshStoreStartsEmptyAndUsesLocalePlusKeyIdentity]' passed (0.021 seconds).
+Test Case '-[WordMemTests.CanonicalCleanResetTests testIdentityNeutralSuggestionIsNotReportedAsSpellingCorrection]' started.
+Test Case '-[WordMemTests.CanonicalCleanResetTests testIdentityNeutralSuggestionIsNotReportedAsSpellingCorrection]' passed (0.001 seconds).
+Test Case '-[WordMemTests.CanonicalCleanResetTests testImportPayloadsAttachCandidateTranslations]' started.
+Test Case '-[WordMemTests.CanonicalCleanResetTests testImportPayloadsAttachCandidateTranslations]' passed (0.001 seconds).
+Test Case '-[WordMemTests.CanonicalCleanResetTests testImportQueueSignalDeliversToObserver]' started.
+Test Case '-[WordMemTests.CanonicalCleanResetTests testImportQueueSignalDeliversToObserver]' passed (0.003 seconds).
+Test Case '-[WordMemTests.CanonicalCleanResetTests testImportSheetMergesManualAddIntoTextImport]' started.
+Test Case '-[WordMemTests.CanonicalCleanResetTests testImportSheetMergesManualAddIntoTextImport]' passed (0.001 seconds).
+Test Case '-[WordMemTests.CanonicalCleanResetTests testImportStoresConfirmedTranslationAsLocalMetadata]' started.
+Test Case '-[WordMemTests.CanonicalCleanResetTests testImportStoresConfirmedTranslationAsLocalMetadata]' passed (0.025 seconds).
+Test Case '-[WordMemTests.CanonicalCleanResetTests testLegacySwiftDataStorePathIsSeparatedFromNativeV3Store]' started.
+Test Case '-[WordMemTests.CanonicalCleanResetTests testLegacySwiftDataStorePathIsSeparatedFromNativeV3Store]' passed (0.001 seconds).
+Test Case '-[WordMemTests.CanonicalCleanResetTests testLemmaCardKeepsSourceTokenAndShowsMeaningfulLemma]' started.
+Test Case '-[WordMemTests.CanonicalCleanResetTests testLemmaCardKeepsSourceTokenAndShowsMeaningfulLemma]' passed (0.001 seconds).
+Test Case '-[WordMemTests.CanonicalCleanResetTests testNativeStoreFilenameMatchesCurrentSchemaEpoch]' started.
+Test Case '-[WordMemTests.CanonicalCleanResetTests testNativeStoreFilenameMatchesCurrentSchemaEpoch]' passed (0.001 seconds).
+Test Case '-[WordMemTests.CanonicalCleanResetTests testOCRFormatterCreatesReadableParagraphs]' started.
+Test Case '-[WordMemTests.CanonicalCleanResetTests testOCRFormatterCreatesReadableParagraphs]' passed (0.006 seconds).
+Test Case '-[WordMemTests.CanonicalCleanResetTests testOCRSanitizerRemovesStatusBarAndSymbolOnlyLines]' started.
+Test Case '-[WordMemTests.CanonicalCleanResetTests testOCRSanitizerRemovesStatusBarAndSymbolOnlyLines]' passed (0.002 seconds).
+Test Case '-[WordMemTests.CanonicalCleanResetTests testOptionalPhoneticIsLocalWordMetadata]' started.
+Test Case '-[WordMemTests.CanonicalCleanResetTests testOptionalPhoneticIsLocalWordMetadata]' passed (0.016 seconds).
+Test Case '-[WordMemTests.CanonicalCleanResetTests testPersistentModelSurfaceContainsOnlyUserAndIdentityFields]' started.
+Test Case '-[WordMemTests.CanonicalCleanResetTests testPersistentModelSurfaceContainsOnlyUserAndIdentityFields]' passed (0.002 seconds).
+Test Case '-[WordMemTests.CanonicalCleanResetTests testPhraseContextIsStoredSeparatelyFromWordEntry]' started.
+2026-11-15 18:16:35.124562+0800 WordMem[51603:79140458] [logging] BUG IN CLIENT OF libsqlite3.dylib: database integrity compromised by API violation: vnode unlinked while in use: /Users/zhezhu/Library/Developer/CoreSimulator/DevicesLocal/55DBFA05-48DE-453C-8871-288A22D251F3/data/Containers/Data/Application/7E6E96C8-A7F0-44BD-8681-F59F1B205A06/tmp/CanonicalCleanReset-BA4712D0-D5C5-4C78-8909-C14557B1947B/v4.store
+2026-11-15 18:16:35.124588+0800 WordMem[51603:79139873] [logging] BUG IN CLIENT OF libsqlite3.dylib: database integrity compromised by API violation: vnode unlinked while in use: /Users/zhezhu/Library/Developer/CoreSimulator/DevicesLocal/55DBFA05-48DE-453C-8871-288A22D251F3/data/Containers/Data/Application/7E6E96C8-A7F0-44BD-8681-F59F1B205A06/tmp/CanonicalCleanReset-BA4712D0-D5C5-4C78-8909-C14557B1947B/v4.store-shm
+2026-11-15 18:16:35.124630+0800 WordMem[51603:79139726] [logging] BUG IN CLIENT OF libsqlite3.dylib: database integrity compromised by API violation: vnode unlinked while in use: /Users/zhezhu/Library/Developer/CoreSimulator/DevicesLocal/55DBFA05-48DE-453C-8871-288A22D251F3/data/Containers/Data/Application/7E6E96C8-A7F0-44BD-8681-F59F1B205A06/tmp/CanonicalCleanReset-BA4712D0-D5C5-4C78-8909-C14557B1947B/v4.store-wal
+2026-11-15 18:16:35.127327+0800 WordMem[51603:79140458] [logging] invalidated open fd: 15 (0x11)
+2026-11-15 18:16:35.128436+0800 WordMem[51603:79139873] [logging] invalidated open fd: 17 (0x11)
+2026-11-15 18:16:35.128158+0800 WordMem[51603:79139726] [logging] invalidated open fd: 16 (0x11)
+2026-11-15 18:16:35.140940+0800 WordMem[51603:79140461] [logging] BUG IN CLIENT OF libsqlite3.dylib: database integrity compromised by API violation: vnode unlinked while in use: /Users/zhezhu/Library/Developer/CoreSimulator/DevicesLocal/55DBFA05-48DE-453C-8871-288A22D251F3/data/Containers/Data/Application/7E6E96C8-A7F0-44BD-8681-F59F1B205A06/tmp/CanonicalCleanReset-7EDF09BF-8356-41E2-B0B1-9560315F6DAD/v4.store
+2026-11-15 18:16:35.140968+0800 WordMem[51603:79140458] [logging] BUG IN CLIENT OF libsqlite3.dylib: database integrity compromised by API violation: vnode unlinked while in use: /Users/zhezhu/Library/Developer/CoreSimulator/DevicesLocal/55DBFA05-48DE-453C-8871-288A22D251F3/data/Containers/Data/Application/7E6E96C8-A7F0-44BD-8681-F59F1B205A06/tmp/CanonicalCleanReset-7EDF09BF-8356-41E2-B0B1-9560315F6DAD/v4.store-shm
+2026-11-15 18:16:35.141055+0800 WordMem[51603:79140458] [logging] invalidated open fd: 17 (0x11)
+2026-11-15 18:16:35.141072+0800 WordMem[51603:79140461] [logging] invalidated open fd: 15 (0x11)
+2026-11-15 18:16:35.141164+0800 WordMem[51603:79140463] [logging] BUG IN CLIENT OF libsqlite3.dylib: database integrity compromised by API violation: vnode unlinked while in use: /Users/zhezhu/Library/Developer/CoreSimulator/DevicesLocal/55DBFA05-48DE-453C-8871-288A22D251F3/data/Containers/Data/Application/7E6E96C8-A7F0-44BD-8681-F59F1B205A06/tmp/CanonicalCleanReset-7EDF09BF-8356-41E2-B0B1-9560315F6DAD/v4.store-wal
+2026-11-15 18:16:35.141338+0800 WordMem[51603:79140463] [logging] invalidated open fd: 16 (0x11)
+Test Case '-[WordMemTests.CanonicalCleanResetTests testPhraseContextIsStoredSeparatelyFromWordEntry]' passed (0.015 seconds).
+Test Case '-[WordMemTests.CanonicalCleanResetTests testPhraseTranslationMetadataReachesImportContext]' started.
+2026-11-15 18:16:35.157721+0800 WordMem[51603:79140030] [logging] BUG IN CLIENT OF libsqlite3.dylib: database integrity compromised by API violation: vnode unlinked while in use: /Users/zhezhu/Library/Developer/CoreSimulator/DevicesLocal/55DBFA05-48DE-453C-8871-288A22D251F3/data/Containers/Data/Application/7E6E96C8-A7F0-44BD-8681-F59F1B205A06/tmp/CanonicalCleanReset-DE66525C-F500-4843-955F-036957B52F2C/v4.store-shm
+2026-11-15 18:16:35.157723+0800 WordMem[51603:79140458] [logging] BUG IN CLIENT OF libsqlite3.dylib: database integrity compromised by API violation: vnode unlinked while in use: /Users/zhezhu/Library/Developer/CoreSimulator/DevicesLocal/55DBFA05-48DE-453C-8871-288A22D251F3/data/Containers/Data/Application/7E6E96C8-A7F0-44BD-8681-F59F1B205A06/tmp/CanonicalCleanReset-DE66525C-F500-4843-955F-036957B52F2C/v4.store
+2026-11-15 18:16:35.157750+0800 WordMem[51603:79140462] [logging] BUG IN CLIENT OF libsqlite3.dylib: database integrity compromised by API violation: vnode unlinked while in use: /Users/zhezhu/Library/Developer/CoreSimulator/DevicesLocal/55DBFA05-48DE-453C-8871-288A22D251F3/data/Containers/Data/Application/7E6E96C8-A7F0-44BD-8681-F59F1B205A06/tmp/CanonicalCleanReset-DE66525C-F500-4843-955F-036957B52F2C/v4.store-wal
+Test Case '-[WordMemTests.CanonicalCleanResetTests testPhraseTranslationMetadataReachesImportContext]' passed (0.016 seconds).
+Test Case '-[WordMemTests.CanonicalCleanResetTests testRepeatedProviderSaveAfterSuccessDoesNotSaveOrClose]' started.
+Test Case '-[WordMemTests.CanonicalCleanResetTests testRepeatedProviderSaveAfterSuccessDoesNotSaveOrClose]' passed (0.001 seconds).
+Test Case '-[WordMemTests.CanonicalCleanResetTests testSameCanonicalKeyAddsThenDeduplicatesWithStableReplay]' started.
+2026-11-15 18:16:35.157845+0800 WordMem[51603:79140030] [logging] invalidated open fd: 17 (0x11)
+2026-11-15 18:16:35.157927+0800 WordMem[51603:79140462] [logging] invalidated open fd: 16 (0x11)
+2026-11-15 18:16:35.160037+0800 WordMem[51603:79140458] [logging] invalidated open fd: 15 (0x11)
+Test Case '-[WordMemTests.CanonicalCleanResetTests testSameCanonicalKeyAddsThenDeduplicatesWithStableReplay]' passed (0.019 seconds).
+Test Case '-[WordMemTests.CanonicalCleanResetTests testSavedProviderCompletionDoesNotReplaceWithEmptyText]' started.
+2026-11-15 18:16:35.177847+0800 WordMem[51603:79139873] [logging] BUG IN CLIENT OF libsqlite3.dylib: database integrity compromised by API violation: vnode unlinked while in use: /Users/zhezhu/Library/Developer/CoreSimulator/DevicesLocal/55DBFA05-48DE-453C-8871-288A22D251F3/data/Containers/Data/Application/7E6E96C8-A7F0-44BD-8681-F59F1B205A06/tmp/CanonicalCleanReset-B22D6686-8851-40ED-B7C1-279116BC7544/v4.store
+2026-11-15 18:16:35.178101+0800 WordMem[51603:79140462] [logging] BUG IN CLIENT OF libsqlite3.dylib: database integrity compromised by API violation: vnode unlinked while in use: /Users/zhezhu/Library/Developer/CoreSimulator/DevicesLocal/55DBFA05-48DE-453C-8871-288A22D251F3/data/Containers/Data/Application/7E6E96C8-A7F0-44BD-8681-F59F1B205A06/tmp/CanonicalCleanReset-B22D6686-8851-40ED-B7C1-279116BC7544/v4.store-shm
+2026-11-15 18:16:35.178306+0800 WordMem[51603:79140463] [logging] BUG IN CLIENT OF libsqlite3.dylib: database integrity compromised by API violation: vnode unlinked while in use: /Users/zhezhu/Library/Developer/CoreSimulator/DevicesLocal/55DBFA05-48DE-453C-8871-288A22D251F3/data/Containers/Data/Application/7E6E96C8-A7F0-44BD-8681-F59F1B205A06/tmp/CanonicalCleanReset-B22D6686-8851-40ED-B7C1-279116BC7544/v4.store-wal
+2026-11-15 18:16:35.178876+0800 WordMem[51603:79139873] [logging] invalidated open fd: 15 (0x11)
+Test Case '-[WordMemTests.CanonicalCleanResetTests testSavedProviderCompletionDoesNotReplaceWithEmptyText]' passed (0.003 seconds).
+Test Case '-[WordMemTests.CanonicalCleanResetTests testSavedProviderCompletionReturnsNonEmptyOriginalText]' started.
+Test Case '-[WordMemTests.CanonicalCleanResetTests testSavedProviderCompletionReturnsNonEmptyOriginalText]' passed (0.001 seconds).
+Test Case '-[WordMemTests.CanonicalCleanResetTests testSchemaResetDeletesStoresCompletedByPreviousReset]' started.
+2026-11-15 18:16:35.180218+0800 WordMem[51603:79140463] [logging] invalidated open fd: 16 (0x11)
+2026-11-15 18:16:35.180515+0800 WordMem[51603:79140462] [logging] invalidated open fd: 17 (0x11)
+Test Case '-[WordMemTests.CanonicalCleanResetTests testSchemaResetDeletesStoresCompletedByPreviousReset]' passed (0.008 seconds).
+Test Case '-[WordMemTests.CanonicalCleanResetTests testSuccessfulProviderSaveCallsCloseCallbackExactlyOnce]' started.
+Test Case '-[WordMemTests.CanonicalCleanResetTests testSuccessfulProviderSaveCallsCloseCallbackExactlyOnce]' passed (0.001 seconds).
+Test Case '-[WordMemTests.CanonicalCleanResetTests testTokenizerPickerChipsExcludeWholePhrase]' started.
+Test Case '-[WordMemTests.CanonicalCleanResetTests testTokenizerPickerChipsExcludeWholePhrase]' passed (0.001 seconds).
+Test Case '-[WordMemTests.CanonicalCleanResetTests testTranslationProviderBuilderMatchesSelectedChipIDs]' started.
+Test Case '-[WordMemTests.CanonicalCleanResetTests testTranslationProviderBuilderMatchesSelectedChipIDs]' passed (0.001 seconds).
+Test Case '-[WordMemTests.CanonicalCleanResetTests testTranslationProviderSubmissionPreservesPhraseTranslationMetadata]' started.
+Test Case '-[WordMemTests.CanonicalCleanResetTests testTranslationProviderSubmissionPreservesPhraseTranslationMetadata]' passed (0.001 seconds).
+Test Case '-[WordMemTests.CanonicalCleanResetTests testUnavailableCandidatesAreNotOfferedAndRestoreOptionsHideUnavailableBadge]' started.
+Test Case '-[WordMemTests.CanonicalCleanResetTests testUnavailableCandidatesAreNotOfferedAndRestoreOptionsHideUnavailableBadge]' passed (0.001 seconds).
+Test Case '-[WordMemTests.CanonicalCleanResetTests testUnavailableFinalAndRestoredCandidatesAreSkippedWithoutRecomputingAdvisorKey]' started.
+Test Case '-[WordMemTests.CanonicalCleanResetTests testUnavailableFinalAndRestoredCandidatesAreSkippedWithoutRecomputingAdvisorKey]' passed (0.019 seconds).
+Test Suite 'CanonicalCleanResetTests' passed at 2026-11-15 18:16:35.215.
+	 Executed 38 tests, with 0 failures (0 unexpected) in 2.601 (2.615) seconds
+Test Suite 'DocumentImportReviewModelTests' started at 2026-11-15 18:16:35.215.
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testCancelTranslationKeepingSourceReturnsToImagePreviewState]' started.
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testCancelTranslationKeepingSourceReturnsToImagePreviewState]' passed (0.008 seconds).
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testChipOnlyFailurePresentsPartialMeaningAlert]' started.
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testChipOnlyFailurePresentsPartialMeaningAlert]' passed (0.001 seconds).
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testClearingTextResetsReviewState]' started.
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testClearingTextResetsReviewState]' passed (0.001 seconds).
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testCuratorCannotIntroduceFunctionWordsOutsideDeterministicBaseline]' started.
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testCuratorCannotIntroduceFunctionWordsOutsideDeterministicBaseline]' passed (0.001 seconds).
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testCuratorFailureFallsBackToDeterministicFunctionWordFilter]' started.
+2026-11-15 18:16:35.226943+0800 WordMem[51603:79139146] [ImportCandidateCurator] fallback deterministic candidateCount=3 tokenCount=11
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testCuratorFailureFallsBackToDeterministicFunctionWordFilter]' passed (0.001 seconds).
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testCuratorFailureKeepsDocumentTranslationRetryable]' started.
+2026-11-15 18:16:35.227769+0800 WordMem[51603:79139146] [ImportCandidateCurator] fallback deterministic candidateCount=3 tokenCount=4
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testCuratorFailureKeepsDocumentTranslationRetryable]' passed (0.018 seconds).
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testDeterministicFallbackStillRequiresDictionaryAvailability]' started.
+2026-11-15 18:16:35.245997+0800 WordMem[51603:79139146] [ImportCandidateCurator] fallback deterministic candidateCount=3 tokenCount=3
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testDeterministicFallbackStillRequiresDictionaryAvailability]' passed (0.001 seconds).
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testDeterministicFilterRemovesFunctionWordsFragmentsAndShortTokens]' started.
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testDeterministicFilterRemovesFunctionWordsFragmentsAndShortTokens]' passed (0.000 seconds).
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testDocumentTranslationFailureKeepsWordsSelectable]' started.
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testDocumentTranslationFailureKeepsWordsSelectable]' passed (0.001 seconds).
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testEmptyPreviewStartsInCapturingState]' started.
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testEmptyPreviewStartsInCapturingState]' passed (0.031 seconds).
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testFailedImageProcessingRestoresCapturingState]' started.
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testFailedImageProcessingRestoresCapturingState]' passed (0.001 seconds).
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testImageProcessingErrorsUseActionableSemanticCopy]' started.
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testImageProcessingErrorsUseActionableSemanticCopy]' passed (0.002 seconds).
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testImageProcessingFailureUsesReselectAlert]' started.
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testImageProcessingFailureUsesReselectAlert]' passed (0.001 seconds).
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testImageProcessingMovesFromOrganizingToReviewing]' started.
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testImageProcessingMovesFromOrganizingToReviewing]' passed (0.001 seconds).
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testNoOfferedWordsShowsSemanticNoWordsState]' started.
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testNoOfferedWordsShowsSemanticNoWordsState]' passed (0.001 seconds).
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testPreparationRunsThroughOrganizingStateBeforeCandidates]' started.
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testPreparationRunsThroughOrganizingStateBeforeCandidates]' passed (0.001 seconds).
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testPrepareTextReachesReviewingWithOfferedChips]' started.
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testPrepareTextReachesReviewingWithOfferedChips]' passed (0.007 seconds).
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testPrimaryButtonTitleAlwaysShowsSelectedCount]' started.
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testPrimaryButtonTitleAlwaysShowsSelectedCount]' passed (0.000 seconds).
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testRapidReprocessingKeepsOnlyLatestPreparation]' started.
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testRapidReprocessingKeepsOnlyLatestPreparation]' passed (0.001 seconds).
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testSaveFailureUsesRetryableAlert]' started.
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testSaveFailureUsesRetryableAlert]' passed (0.000 seconds).
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testSavingLifecycleShowsConciseFailureAndRecovers]' started.
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testSavingLifecycleShowsConciseFailureAndRecovers]' passed (0.001 seconds).
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testSelectionUpdatesTrackOfferedChipsOnly]' started.
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testSelectionUpdatesTrackOfferedChipsOnly]' passed (0.000 seconds).
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testSimulatorFoundationModelFailureFallsBackToDeterministicChips]' started.
+2026-11-15 18:16:35.302338+0800 WordMem[51603:79139146] [ImportCandidateCurator] availability=modelNotReady
+2026-11-15 18:16:35.302415+0800 WordMem[51603:79139146] [ImportCandidateCurator] fallback deterministic candidateCount=3 tokenCount=4
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testSimulatorFoundationModelFailureFallsBackToDeterministicChips]' passed (0.004 seconds).
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testTerminalStatusViewRendersMessageWithoutProgress]' started.
+IOSurfaceClientSetSurfaceNotify failed e00002c7
+2026-11-15 18:16:35.404449+0800 WordMem[51603:79139738] fopen failed for data file: errno = 2 (No such file or directory)
+2026-11-15 18:16:35.661921+0800 WordMem[51603:79139738] fopen failed for data file: errno = 2 (No such file or directory)
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testTerminalStatusViewRendersMessageWithoutProgress]' passed (0.417 seconds).
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testTranslatedTextJoinsCompletedDocumentBlocks]' started.
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testTranslatedTextJoinsCompletedDocumentBlocks]' passed (0.001 seconds).
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testTranslationAvailabilityDoesNotBlockCandidateChips]' started.
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testTranslationAvailabilityDoesNotBlockCandidateChips]' passed (0.007 seconds).
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testTranslationFailurePresentsSingleRetryableAlert]' started.
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testTranslationFailurePresentsSingleRetryableAlert]' passed (0.001 seconds).
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testTranslationStatusesMapToDesignCopy]' started.
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testTranslationStatusesMapToDesignCopy]' passed (0.000 seconds).
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testUnsupportedPairPresentsInformationalAlertWithoutRetry]' started.
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testUnsupportedPairPresentsInformationalAlertWithoutRetry]' passed (0.001 seconds).
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testUnsupportedTranslationRetryKeepsUnsupportedState]' started.
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testUnsupportedTranslationRetryKeepsUnsupportedState]' passed (0.001 seconds).
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testUserCopyHidesPipelineTerminology]' started.
+Test Case '-[WordMemTests.DocumentImportReviewModelTests testUserCopyHidesPipelineTerminology]' passed (0.001 seconds).
+Test Suite 'DocumentImportReviewModelTests' passed at 2026-11-15 18:16:35.733.
+	 Executed 31 tests, with 0 failures (0 unexpected) in 0.511 (0.518) seconds
+Test Suite 'DocumentTranslationEngineTests' started at 2026-11-15 18:16:35.734.
+Test Case '-[WordMemTests.DocumentTranslationEngineTests testAvailabilityCheckDoesNotStartFirstTranslationTask]' started.
+Test Case '-[WordMemTests.DocumentTranslationEngineTests testAvailabilityCheckDoesNotStartFirstTranslationTask]' passed (0.002 seconds).
+Test Case '-[WordMemTests.DocumentTranslationEngineTests testCancelledTranslationTaskSchedulesARetryableConfiguration]' started.
+Test Case '-[WordMemTests.DocumentTranslationEngineTests testCancelledTranslationTaskSchedulesARetryableConfiguration]' passed (0.001 seconds).
+Test Case '-[WordMemTests.DocumentTranslationEngineTests testChipFailureRetriesWithoutRedoingCompletedDocument]' started.
+Test Case '-[WordMemTests.DocumentTranslationEngineTests testChipFailureRetriesWithoutRedoingCompletedDocument]' passed (0.002 seconds).
+Test Case '-[WordMemTests.DocumentTranslationEngineTests testDocumentFailureStillTranslatesChipsAndPublishesReport]' started.
+Test Case '-[WordMemTests.DocumentTranslationEngineTests testDocumentFailureStillTranslatesChipsAndPublishesReport]' passed (0.000 seconds).
+Test Case '-[WordMemTests.DocumentTranslationEngineTests testHandlePreparesSessionThenTranslatesDocumentAndChipsInOneTask]' started.
+Test Case '-[WordMemTests.DocumentTranslationEngineTests testHandlePreparesSessionThenTranslatesDocumentAndChipsInOneTask]' passed (0.000 seconds).
+Test Case '-[WordMemTests.DocumentTranslationEngineTests testHighFidelityConfigurationIsInvalidatedForRetry]' started.
+Test Case '-[WordMemTests.DocumentTranslationEngineTests testHighFidelityConfigurationIsInvalidatedForRetry]' passed (0.000 seconds).
+Test Case '-[WordMemTests.DocumentTranslationEngineTests testInitialTranslationConfigurationIsReadyForFirstTask]' started.
+Test Case '-[WordMemTests.DocumentTranslationEngineTests testInitialTranslationConfigurationIsReadyForFirstTask]' passed (0.001 seconds).
+Test Case '-[WordMemTests.DocumentTranslationEngineTests testInstalledAvailabilityTranslatesCanonicalBlocksAndRetainsIdentifiers]' started.
+Test Case '-[WordMemTests.DocumentTranslationEngineTests testInstalledAvailabilityTranslatesCanonicalBlocksAndRetainsIdentifiers]' passed (0.001 seconds).
+Test Case '-[WordMemTests.DocumentTranslationEngineTests testInternalSessionFailureMapsToFailedPhase]' started.
+Test Case '-[WordMemTests.DocumentTranslationEngineTests testInternalSessionFailureMapsToFailedPhase]' passed (0.000 seconds).
+Test Case '-[WordMemTests.DocumentTranslationEngineTests testLowLatencyFallbackConfigurationIsInvalidatedForRetry]' started.
+Test Case '-[WordMemTests.DocumentTranslationEngineTests testLowLatencyFallbackConfigurationIsInvalidatedForRetry]' passed (0.000 seconds).
+Test Case '-[WordMemTests.DocumentTranslationEngineTests testMissingBatchResponseFailsInsteadOfBeingDropped]' started.
+Test Case '-[WordMemTests.DocumentTranslationEngineTests testMissingBatchResponseFailsInsteadOfBeingDropped]' passed (0.000 seconds).
+Test Case '-[WordMemTests.DocumentTranslationEngineTests testMissingDetectedLanguageFailsExplicitlyWithoutSession]' started.
+Test Case '-[WordMemTests.DocumentTranslationEngineTests testMissingDetectedLanguageFailsExplicitlyWithoutSession]' passed (0.000 seconds).
+Test Case '-[WordMemTests.DocumentTranslationEngineTests testNoCandidateDocumentCompletesWithNoTranslatedBlocks]' started.
+Test Case '-[WordMemTests.DocumentTranslationEngineTests testNoCandidateDocumentCompletesWithNoTranslatedBlocks]' passed (0.000 seconds).
+Test Case '-[WordMemTests.DocumentTranslationEngineTests testPrepareFailureMapsToDownloadStateWithoutRetryingTranslation]' started.
+Test Case '-[WordMemTests.DocumentTranslationEngineTests testPrepareFailureMapsToDownloadStateWithoutRetryingTranslation]' passed (0.000 seconds).
+Test Case '-[WordMemTests.DocumentTranslationEngineTests testRepeatedTranslationFailureStopsAfterLegacyFallback]' started.
+Test Case '-[WordMemTests.DocumentTranslationEngineTests testRepeatedTranslationFailureStopsAfterLegacyFallback]' passed (0.000 seconds).
+Test Case '-[WordMemTests.DocumentTranslationEngineTests testRetryAfterFinalChipFailureOnlyRequestsMissingChips]' started.
+Test Case '-[WordMemTests.DocumentTranslationEngineTests testRetryAfterFinalChipFailureOnlyRequestsMissingChips]' passed (0.000 seconds).
+Test Case '-[WordMemTests.DocumentTranslationEngineTests testRetrySucceedsAfterInternalFailureAndInvalidateResetsLifecycle]' started.
+Test Case '-[WordMemTests.DocumentTranslationEngineTests testRetrySucceedsAfterInternalFailureAndInvalidateResetsLifecycle]' passed (0.002 seconds).
+Test Case '-[WordMemTests.DocumentTranslationEngineTests testSupportedNotInstalledAvailabilityEntersDownloadPhaseWithoutSession]' started.
+Test Case '-[WordMemTests.DocumentTranslationEngineTests testSupportedNotInstalledAvailabilityEntersDownloadPhaseWithoutSession]' passed (0.000 seconds).
+Test Case '-[WordMemTests.DocumentTranslationEngineTests testUnsupportedPairEntersUnsupportedPhaseWithoutSession]' started.
+Test Case '-[WordMemTests.DocumentTranslationEngineTests testUnsupportedPairEntersUnsupportedPhaseWithoutSession]' passed (0.000 seconds).
+Test Case '-[WordMemTests.DocumentTranslationEngineTests testUserEditedTranslationHasPrecedenceOnRetry]' started.
+Test Case '-[WordMemTests.DocumentTranslationEngineTests testUserEditedTranslationHasPrecedenceOnRetry]' passed (0.000 seconds).
+Test Suite 'DocumentTranslationEngineTests' passed at 2026-11-15 18:16:35.752.
+	 Executed 20 tests, with 0 failures (0 unexpected) in 0.014 (0.018) seconds
+Test Suite 'FoundationModelsCuratorTests' started at 2026-11-15 18:16:35.752.
+Test Case '-[WordMemTests.FoundationModelsCuratorTests testCuratedAssessmentCannotExposeNewWordsInModel]' started.
+Test Case '-[WordMemTests.FoundationModelsCuratorTests testCuratedAssessmentCannotExposeNewWordsInModel]' passed (0.000 seconds).
+Test Case '-[WordMemTests.FoundationModelsCuratorTests testCurationContextTrimsAndFiltersEmptyIDs]' started.
+Test Case '-[WordMemTests.FoundationModelsCuratorTests testCurationContextTrimsAndFiltersEmptyIDs]' passed (0.000 seconds).
+Test Case '-[WordMemTests.FoundationModelsCuratorTests testCurationDeadlineReturnsBeforeAnUncancellableOperation]' started.
+Test Case '-[WordMemTests.FoundationModelsCuratorTests testCurationDeadlineReturnsBeforeAnUncancellableOperation]' passed (0.050 seconds).
+Test Case '-[WordMemTests.FoundationModelsCuratorTests testCurationDeadlineReturnsCompletedOperation]' started.
+Test Case '-[WordMemTests.FoundationModelsCuratorTests testCurationDeadlineReturnsCompletedOperation]' passed (0.000 seconds).
+Test Case '-[WordMemTests.FoundationModelsCuratorTests testEmptyContextDetection]' started.
+Test Case '-[WordMemTests.FoundationModelsCuratorTests testEmptyContextDetection]' passed (0.000 seconds).
+Test Case '-[WordMemTests.FoundationModelsCuratorTests testEmptyContextReturnsFailedWithoutCallingModel]' started.
+2026-11-15 18:16:35.805763+0800 WordMem[51603:79139737] [ImportCandidateCurator] availability=modelNotReady
+2026-11-15 18:16:35.805812+0800 WordMem[51603:79139737] [ImportCandidateCurator] availability=modelNotReady
+Test Case '-[WordMemTests.FoundationModelsCuratorTests testEmptyContextReturnsFailedWithoutCallingModel]' passed (0.001 seconds).
+Test Case '-[WordMemTests.FoundationModelsCuratorTests testEmptyRecommendationListFailsInsteadOfUnfiltering]' started.
+Test Case '-[WordMemTests.FoundationModelsCuratorTests testEmptyRecommendationListFailsInsteadOfUnfiltering]' passed (0.000 seconds).
+Test Case '-[WordMemTests.FoundationModelsCuratorTests testFailedResultIsEquatableAndNeverCarriesWords]' started.
+Test Case '-[WordMemTests.FoundationModelsCuratorTests testFailedResultIsEquatableAndNeverCarriesWords]' passed (0.000 seconds).
+Test Case '-[WordMemTests.FoundationModelsCuratorTests testRecommendationSchemaRequestsACompactIDList]' started.
+Test Case '-[WordMemTests.FoundationModelsCuratorTests testRecommendationSchemaRequestsACompactIDList]' passed (0.000 seconds).
+Test Case '-[WordMemTests.FoundationModelsCuratorTests testValidatesOnlyRecommendedIDsFromFoundationModels]' started.
+Test Case '-[WordMemTests.FoundationModelsCuratorTests testValidatesOnlyRecommendedIDsFromFoundationModels]' passed (0.000 seconds).
+Test Suite 'FoundationModelsCuratorTests' passed at 2026-11-15 18:16:35.808.
+	 Executed 10 tests, with 0 failures (0 unexpected) in 0.054 (0.056) seconds
+Test Suite 'ImportReviewQualityTests' started at 2026-11-15 18:16:35.808.
+Test Case '-[WordMemTests.ImportReviewQualityTests testCandidateDetailLineCombinesSourceAndLemma]' started.
+Test Case '-[WordMemTests.ImportReviewQualityTests testCandidateDetailLineCombinesSourceAndLemma]' passed (0.000 seconds).
+Test Case '-[WordMemTests.ImportReviewQualityTests testEditingOriginalClearsDerivedReviewAndReturnsToEditableCapture]' started.
+Test Case '-[WordMemTests.ImportReviewQualityTests testEditingOriginalClearsDerivedReviewAndReturnsToEditableCapture]' passed (0.012 seconds).
+Test Case '-[WordMemTests.ImportReviewQualityTests testFilteredFunctionWordsNeverBecomeSelectableChips]' started.
+Test Case '-[WordMemTests.ImportReviewQualityTests testFilteredFunctionWordsNeverBecomeSelectableChips]' passed (0.001 seconds).
+Test Case '-[WordMemTests.ImportReviewQualityTests testFunctionWordOnlyInputCannotProduceChipsOrChipTranslation]' started.
+2026-11-15 18:16:35.822888+0800 WordMem[51603:79139146] [ImportCandidateCurator] fallback deterministic candidateCount=0 tokenCount=8
+Test Case '-[WordMemTests.ImportReviewQualityTests testFunctionWordOnlyInputCannotProduceChipsOrChipTranslation]' passed (0.001 seconds).
+Test Case '-[WordMemTests.ImportReviewQualityTests testImageProjectionDoesNotDuplicateListItemsOrTableCells]' started.
+Test Case '-[WordMemTests.ImportReviewQualityTests testImageProjectionDoesNotDuplicateListItemsOrTableCells]' passed (0.002 seconds).
+Test Case '-[WordMemTests.ImportReviewQualityTests testImageReviewUsesSanitizedDocumentWhileKeepingOriginalEvidence]' started.
+Test Case '-[WordMemTests.ImportReviewQualityTests testImageReviewUsesSanitizedDocumentWhileKeepingOriginalEvidence]' passed (0.003 seconds).
+Test Case '-[WordMemTests.ImportReviewQualityTests testImageSanitizerKeepsTopTitleButRemovesShortTopChrome]' started.
+Test Case '-[WordMemTests.ImportReviewQualityTests testImageSanitizerKeepsTopTitleButRemovesShortTopChrome]' passed (0.000 seconds).
+Test Case '-[WordMemTests.ImportReviewQualityTests testImageSanitizerRemovesScreenshotNoiseAndPreservesCanonicalEvidence]' started.
+Test Case '-[WordMemTests.ImportReviewQualityTests testImageSanitizerRemovesScreenshotNoiseAndPreservesCanonicalEvidence]' passed (0.001 seconds).
+Test Case '-[WordMemTests.ImportReviewQualityTests testRapidImagePreparationKeepsOnlyLatestOriginalEvidence]' started.
+Test Case '-[WordMemTests.ImportReviewQualityTests testRapidImagePreparationKeepsOnlyLatestOriginalEvidence]' passed (0.001 seconds).
+Test Case '-[WordMemTests.ImportReviewQualityTests testSaveSubmissionPayloadCompatibilityIsUnchanged]' started.
+Test Case '-[WordMemTests.ImportReviewQualityTests testSaveSubmissionPayloadCompatibilityIsUnchanged]' passed (0.000 seconds).
+Test Case '-[WordMemTests.ImportReviewQualityTests testTextProjectionRendersCanonicalStructureWithoutClaimingStorageFormat]' started.
+Test Case '-[WordMemTests.ImportReviewQualityTests testTextProjectionRendersCanonicalStructureWithoutClaimingStorageFormat]' passed (0.000 seconds).
+Test Case '-[WordMemTests.ImportReviewQualityTests testTextProjectionRendersTableRowsWithoutDuplicatingCells]' started.
+Test Case '-[WordMemTests.ImportReviewQualityTests testTextProjectionRendersTableRowsWithoutDuplicatingCells]' passed (0.001 seconds).
+Test Case '-[WordMemTests.ImportReviewQualityTests testTranslationProviderChipsApplyFoundationModelRecommendations]' started.
+Test Case '-[WordMemTests.ImportReviewQualityTests testTranslationProviderChipsApplyFoundationModelRecommendations]' passed (0.001 seconds).
+Test Case '-[WordMemTests.ImportReviewQualityTests testTranslationProviderChipsFallBackWhenCurationFails]' started.
+Test Case '-[WordMemTests.ImportReviewQualityTests testTranslationProviderChipsFallBackWhenCurationFails]' passed (0.001 seconds).
+Test Case '-[WordMemTests.ImportReviewQualityTests testTranslationProviderFallbackStillExcludesFunctionWords]' started.
+Test Case '-[WordMemTests.ImportReviewQualityTests testTranslationProviderFallbackStillExcludesFunctionWords]' passed (0.000 seconds).
+Test Suite 'ImportReviewQualityTests' passed at 2026-11-15 18:16:35.835.
+	 Executed 15 tests, with 0 failures (0 unexpected) in 0.024 (0.027) seconds
+Test Suite 'TextDocumentCanonicalizerTests' started at 2026-11-15 18:16:35.835.
+Test Case '-[WordMemTests.TextDocumentCanonicalizerTests testCanonicalizationUsesDeterministicAndUniqueIdentifiers]' started.
+Test Case '-[WordMemTests.TextDocumentCanonicalizerTests testCanonicalizationUsesDeterministicAndUniqueIdentifiers]' passed (0.001 seconds).
+Test Case '-[WordMemTests.TextDocumentCanonicalizerTests testDetectsHeadingsListItemsQuotesAndFencedCode]' started.
+Test Case '-[WordMemTests.TextDocumentCanonicalizerTests testDetectsHeadingsListItemsQuotesAndFencedCode]' passed (0.000 seconds).
+Test Case '-[WordMemTests.TextDocumentCanonicalizerTests testEmptyAndWhitespaceOnlyInputProducesValidEmptyDocument]' started.
+Test Case '-[WordMemTests.TextDocumentCanonicalizerTests testEmptyAndWhitespaceOnlyInputProducesValidEmptyDocument]' passed (0.000 seconds).
+Test Case '-[WordMemTests.TextDocumentCanonicalizerTests testParagraphsSplitOnBlankLinesAndKeepUTF16SpanRange]' started.
+Test Case '-[WordMemTests.TextDocumentCanonicalizerTests testParagraphsSplitOnBlankLinesAndKeepUTF16SpanRange]' passed (0.000 seconds).
+Test Case '-[WordMemTests.TextDocumentCanonicalizerTests testVeryLongMarkdownLikeArticleRemainsDeterministicAndStructured]' started.
+Test Case '-[WordMemTests.TextDocumentCanonicalizerTests testVeryLongMarkdownLikeArticleRemainsDeterministicAndStructured]' passed (0.011 seconds).
+Test Suite 'TextDocumentCanonicalizerTests' passed at 2026-11-15 18:16:35.849.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.013 (0.014) seconds
+Test Suite 'VisionDocumentReaderTests' started at 2026-11-15 18:16:35.849.
+Test Case '-[WordMemTests.VisionDocumentReaderTests testConfidenceIsPreservedWithoutArtificialInflation]' started.
+Test Case '-[WordMemTests.VisionDocumentReaderTests testConfidenceIsPreservedWithoutArtificialInflation]' passed (0.001 seconds).
+Test Case '-[WordMemTests.VisionDocumentReaderTests testFakeProviderFeedsMapperThroughImageDocumentService]' started.
+Test Case '-[WordMemTests.VisionDocumentReaderTests testFakeProviderFeedsMapperThroughImageDocumentService]' passed (0.083 seconds).
+Test Case '-[WordMemTests.VisionDocumentReaderTests testMappingIsDeterministicAcrossRepeatedObservations]' started.
+Test Case '-[WordMemTests.VisionDocumentReaderTests testMappingIsDeterministicAcrossRepeatedObservations]' passed (0.001 seconds).
+Test Case '-[WordMemTests.VisionDocumentReaderTests testReadingOrderUsesGeometryWhilePreservingEvidence]' started.
+Test Case '-[WordMemTests.VisionDocumentReaderTests testReadingOrderUsesGeometryWhilePreservingEvidence]' passed (0.000 seconds).
+Test Case '-[WordMemTests.VisionDocumentReaderTests testSanitizerFiltersDisplayAndCandidateTextWithoutMutatingCanonicalEvidence]' started.
+Test Case '-[WordMemTests.VisionDocumentReaderTests testSanitizerFiltersDisplayAndCandidateTextWithoutMutatingCanonicalEvidence]' passed (0.001 seconds).
+Test Case '-[WordMemTests.VisionDocumentReaderTests testTitleParagraphListAndTableMappingUsesStableCanonicalEvidence]' started.
+Test Case '-[WordMemTests.VisionDocumentReaderTests testTitleParagraphListAndTableMappingUsesStableCanonicalEvidence]' passed (0.000 seconds).
+Test Case '-[WordMemTests.VisionDocumentReaderTests testTranslationMetadataUsesChildUnitsWithoutDuplicatingContainers]' started.
+Test Case '-[WordMemTests.VisionDocumentReaderTests testTranslationMetadataUsesChildUnitsWithoutDuplicatingContainers]' passed (0.001 seconds).
+Test Suite 'VisionDocumentReaderTests' passed at 2026-11-15 18:16:35.938.
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.088 (0.089) seconds
+Test Suite 'WordMemTests.xctest' passed at 2026-11-15 18:16:35.938.
+	 Executed 126 tests, with 0 failures (0 unexpected) in 3.304 (3.339) seconds
+Test Suite 'All tests' passed at 2026-11-15 18:16:35.939.
+	 Executed 126 tests, with 0 failures (0 unexpected) in 3.304 (3.344) seconds
+2026-11-15 18:16:35.989 xcodebuild[51005:79133653] [MT] IDESchemeActionSDKRecord: operatingSystemBuild = <DVTBuildVersion 24A94232>, error = invalidDigitCount(94232).
+2026-11-15 18:16:35.998 xcodebuild[51005:79133653] [MT] IDESchemeActionSDKRecord: operatingSystemBuild = <DVTBuildVersion 24A94232>, error = invalidDigitCount(94232).
+2026-11-15 18:16:36.015 xcodebuild[51005:79133653] [MT] IDESchemeActionSDKRecord: operatingSystemBuild = <DVTBuildVersion 24A94232>, error = invalidDigitCount(94232).
+2026-11-15 18:16:36.317 xcodebuild[51005:79133653] [MT] IDETestOperationsObserverDebug: 60.833 elapsed -- Testing started completed.
+2026-11-15 18:16:36.317 xcodebuild[51005:79133653] [MT] IDETestOperationsObserverDebug: 0.001 sec, +0.001 sec -- start
+2026-11-15 18:16:36.317 xcodebuild[51005:79133653] [MT] IDETestOperationsObserverDebug: 60.833 sec, +60.832 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Logs/Test/Test-WordMem-2026.11.15_18-15-21-+0800.xcresult
+
+** TEST SUCCEEDED **
+
+Testing started

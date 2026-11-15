@@ -22,3 +22,7 @@
 - [2026-11-15T18:25:00+08:00] evidence — T10 文档完成：Fallback Matrix 更新 prepare/单会话/统一弹窗/取消路径；新增 `docs/tasks/issue-22/real-device-checklist.md`。
 - [2026-11-15T18:25:00+08:00] evidence — T11 全量验证：`docs/tasks/issue-22/logs/tests.log` → 126 tests / 0 failures；WordMem、ShareExtension、TranslationProvider Release 三个 `BUILD SUCCEEDED`，日志在 `docs/tasks/issue-22/logs/`。
 - [2026-11-15T18:25:00+08:00] evidence — T12 模拟器冒烟（iPhone Duo Test / iOS 27.1）：文本导入出现单一“暂不支持翻译 / 知道了”弹窗，无模块内重试按钮；选择 2 个词并保存成功。截图 `docs/tasks/issue-22/screenshots/01-03`，副本在未跟踪 `tmp-issue-22-screenshots/`。**披露**：模拟器不能运行真实 Translation，可重试失败/取消路径仅由单元测试覆盖；真机待按清单验证。
+- [2026-11-15T18:30:00+08:00] decision — 独立 agent 完成环境安装：iOS 27.0 (24A434) runtime + iPhone 17 Pro 模拟器 UDID `55DBFA05-48DE-453C-8871-288A22D251F3`（Booted）。旧 iOS 26.4 设备未改动。
+- [2026-11-15T18:30:00+08:00] evidence — 测试切换到 iPhone 17 Pro：`tests-iphone17pro.log` → 126 tests / 0 failures。Release 三 Scheme 最终代码重跑均 BUILD SUCCEEDED。
+- [2026-11-15T18:30:00+08:00] evidence — iPhone 17 Pro 冒烟：单一“暂不支持翻译 / 知道了”弹窗，无模块内重试按钮（截图 04）。新建 iOS 27.0 runtime 系统词典资源未就绪，出词/保存冒烟由 iPhone Duo Test 完成（截图 01-03）；已在 evidence-manifest 披露。
+- [2026-11-15T18:30:00+08:00] checkpoint — 最终代码/文档待提交；M1 checkpoint `606076e`，M2 checkpoint `4297252`，M3 evidence `581dbb8`。所有 12 项任务 complete，进入最终验收（决策节点 4）。

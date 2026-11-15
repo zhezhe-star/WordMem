@@ -2,7 +2,7 @@ version: 1
 issue: 22
 branch: zhezhe-star/翻译流程-bug-修复
 plan: plan.md
-status: awaiting_approval
+status: awaiting_final_acceptance
 milestones:
 - id: M1
   title: 主 App 核心修复
@@ -100,8 +100,8 @@ tasks:
   - WordMem Scheme Debug 构建通过
   - run-log 记录 evidence + checkpoint commit
   evidence:
-  - checkpoint 606076e; 126 tests / 0 failures; WordMem Debug + ShareExtension Debug
-    + TranslationProvider Debug build succeeded
+  - checkpoint 606076e; 126 tests / 0 failures on iPhone Duo Test and iPhone 17 Pro;
+    Debug builds succeeded
 - id: T07
   milestone: M2
   title: Share Extension prepare + 自动重试 + 失败弹窗
@@ -134,7 +134,7 @@ tasks:
   - 两个扩展 Scheme Release 构建通过
   - run-log 记录 evidence + checkpoint commit
   evidence:
-  - ShareExtension + TranslationProvider Debug builds succeeded; checkpoint pending
+  - checkpoint 4297252; ShareExtension + TranslationProvider Debug builds succeeded
 - id: T10
   milestone: M3
   title: 更新 Fallback Matrix 与真机验收清单
@@ -154,8 +154,8 @@ tasks:
     SUCCEEDED
   - 构建日志写入 docs/tasks/issue-22/logs/
   evidence:
-  - 'docs/tasks/issue-22/logs/tests.log: 126 tests / 0 failures; three Release builds
-    BUILD SUCCEEDED'
+  - 'tests-iphone17pro.log: 126 tests / 0 failures on iPhone 17 Pro (iOS 27.0); three
+    Release builds BUILD SUCCEEDED'
 - id: T12
   milestone: M3
   title: 模拟器冒烟与证据归档
@@ -166,5 +166,5 @@ tasks:
   - 截图存 docs/tasks/issue-22/screenshots/ 并同步 tmp-issue-22-screenshots/（未跟踪）
   - run-log 披露模拟器不支持真实 Translation，真机能力待用户验证
   evidence:
-  - 'iPhone Duo Test smoke: unsupported alert + chip selection + save; screenshots
-    01-03 + evidence-manifest; real Translation discloses simulator limitation'
+  - 'iPhone 17 Pro smoke: unsupported alert screenshot 04; Duo save smoke screenshots
+    01-03; fresh 27.0 runtime dictionary assets unavailable (disclosed)'

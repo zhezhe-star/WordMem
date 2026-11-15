@@ -202,23 +202,20 @@ Issue 描述的三个现象都能在代码里定位到确定原因：
 - 当前机器只有 iOS 模拟器（iPhone 17 Pro / iPhone Duo Test），没有可用真机；模拟器不支持 Translation API。
 - 因此“真机上首次导入是否还需要重试”只能由用户按 `docs/tasks/issue-22/real-device-checklist.md` 验证；本轮不会把模拟器结果冒充真机证据。
 
-## 11. 测试环境与机型（2026-11-15 核实）
+## 11. 测试环境与机型（2026-11-15 18:30 更新）
 
 | 项 | 现状 |
 | --- | --- |
 | Xcode | 27.1 (27A9275) |
-| 已安装 iOS Runtime | **仅 iOS 27.1**（`com.apple.CoreSimulator.SimRuntime.iOS-27-1`） |
-| iOS 27.1 支持的设备类型 | **仅 iPhone Duo**（runtime `supportedDeviceTypes` 只有 `iPhone Duo`） |
-| 当前可用模拟器 | **iPhone Duo Test**，UDID `987CB4F0-4DB9-478B-99AF-AF2E45C0B4A0`（已启动） |
-| 本机 iPhone 17 Pro 模拟器 | 存在：UDID `30FBCCE6-5CC0-422A-A001-DC9E358BA188`，但绑定 **iOS 26.4** runtime；该 runtime 未安装/不可用 |
-| 在 iOS 27.1 上创建 iPhone 17 Pro | 失败：`Incompatible device`（runtime 不支持该 device type） |
-| 项目 Deployment Target | 27.0；即使 iOS 26.4 runtime 可用，App 也不能安装到 iOS 26.4 |
+| 已安装 iOS Runtime | 初始仅 iOS 27.1；**现已安装 iOS 27.0 (24A434)** |
+| iOS 27.0 支持的设备类型 | 包含 `iPhone 17 Pro` |
+| 当前可用模拟器 | **iPhone 17 Pro**，UDID `55DBFA05-48DE-453C-8871-288A22D251F3`，iOS 27.0（Booted）；iPhone Duo Test，iOS 27.1（Booted） |
+| 本机旧 iPhone 17 Pro 模拟器 | UDID `30FBCCE6-...` 仍绑定 iOS 26.4 runtime（未改动）；用新建的同名 iOS 27.0 设备替代 |
+| 项目 Deployment Target | 27.0；可运行在 iOS 27.0 / 27.1 模拟器 |
 
 结论：
 
-- 目前自动化测试、构建、模拟器冒烟**只能使用 iPhone Duo Test**；`xcodebuild -destination 'platform=iOS Simulator,name=iPhone 17 Pro'` 返回 “requested device could not be found”。
-- 如果必须在 iPhone 17 Pro 上验证，需要满足其一：
-  1. 安装一个支持 iPhone 17 Pro 的 iOS 27.x runtime；或
-  2. 连接一台物理 iPhone 17 Pro；或
-  3. 临时把 Deployment Target 降到 26.4（不推荐，会改变产品支持范围，且不是本轮 bug 修复的一部分）。
+- 独立 agent 已通过 `xcodebuild -downloadPlatform iOS -buildVersion 27.0` 安装 iOS 27.0 runtime，并创建 iPhone 17 Pro 模拟器。
+- 自动化测试已切换到 iPhone 17 Pro（iOS 27.0）：126 tests / 0 failures。
+- 模拟器冒烟在 iPhone 17 Pro 上确认单一“暂不支持翻译 / 知道了”弹窗、无模块内重试按钮；由于新建 iOS 27.0 runtime 的系统词典资源尚未就绪，出词/保存冒烟仍由 iPhone Duo Test（iOS 27.1）覆盖。
 - 真机 Translation 能力仍以 `docs/tasks/issue-22/real-device-checklist.md` 为准；模拟器不验证真实翻译。

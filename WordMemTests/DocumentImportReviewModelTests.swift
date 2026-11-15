@@ -589,13 +589,13 @@ final class DocumentImportReviewModelTests: XCTestCase {
     )
     XCTAssertEqual(
       DocumentImportStatusPresenter.translationStatus(for: .failed(.languageDetection)),
-      "无法识别语言，可以直接保存单词。"
+      "无法识别语言，请重试或取消导入。"
     )
     XCTAssertEqual(
       DocumentImportStatusPresenter.translationStatus(
         for: .failed(.internalFailure("missing response"))
       ),
-      "翻译暂时不可用，可以直接保存单词。"
+      "翻译暂时不可用，请重试或取消导入。"
     )
     XCTAssertNil(DocumentImportStatusPresenter.translationStatus(for: .idle))
     XCTAssertNil(DocumentImportStatusPresenter.translationStatus(for: .completed))
