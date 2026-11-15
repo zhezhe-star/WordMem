@@ -58,7 +58,7 @@ SwiftEmitModule normal arm64 Emitting\ module\ for\ WordMem (in target 'WordMem'
 
 SwiftCompile normal arm64 (in target 'WordMem' from project 'WordMem')
     cd /Users/zhezhu/orca/workspaces/WordMem/翻译流程-bug-修复
-    
+
 
 SwiftCompile normal arm64 Compiling\ DocumentImportReviewModel.swift /Users/zhezhu/orca/workspaces/WordMem/翻译流程-bug-修复/WordMem/Import/DocumentImportReviewModel.swift (in target 'WordMem' from project 'WordMem')
 
@@ -98,7 +98,7 @@ SwiftEmitModule normal arm64 Emitting\ module\ for\ WordMemTests (in target 'Wor
 
 SwiftCompile normal arm64 (in target 'WordMemTests' from project 'WordMem')
     cd /Users/zhezhu/orca/workspaces/WordMem/翻译流程-bug-修复
-    
+
 
 SwiftCompile normal arm64 Compiling\ DocumentImportReviewModelTests.swift /Users/zhezhu/orca/workspaces/WordMem/翻译流程-bug-修复/WordMemTests/DocumentImportReviewModelTests.swift (in target 'WordMemTests' from project 'WordMem')
 
@@ -169,31 +169,31 @@ ExtractAppIntentsMetadata (in target 'WordMemTests' from project 'WordMem')
 
 CodeSign /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Products/Debug-iphonesimulator/WordMem.app/PlugIns/WordMemTests.xctest (in target 'WordMemTests' from project 'WordMem')
     cd /Users/zhezhu/orca/workspaces/WordMem/翻译流程-bug-修复
-    
+
     Signing Identity:     "Sign to Run Locally"
-    
+
     /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Products/Debug-iphonesimulator/WordMem.app/PlugIns/WordMemTests.xctest
 
 CodeSign /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Products/Debug-iphonesimulator/WordMem.app/WordMem.debug.dylib (in target 'WordMem' from project 'WordMem')
     cd /Users/zhezhu/orca/workspaces/WordMem/翻译流程-bug-修复
-    
+
     Signing Identity:     "Sign to Run Locally"
-    
+
     /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Products/Debug-iphonesimulator/WordMem.app/WordMem.debug.dylib
 
 CodeSign /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Products/Debug-iphonesimulator/WordMem.app/__preview.dylib (in target 'WordMem' from project 'WordMem')
     cd /Users/zhezhu/orca/workspaces/WordMem/翻译流程-bug-修复
-    
+
     Signing Identity:     "Sign to Run Locally"
-    
+
     /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Products/Debug-iphonesimulator/WordMem.app/__preview.dylib
 /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Products/Debug-iphonesimulator/WordMem.app/__preview.dylib: replacing existing signature
 
 CodeSign /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Products/Debug-iphonesimulator/WordMem.app (in target 'WordMem' from project 'WordMem')
     cd /Users/zhezhu/orca/workspaces/WordMem/翻译流程-bug-修复
-    
+
     Signing Identity:     "Sign to Run Locally"
-    
+
     /usr/bin/codesign --force --sign - --entitlements /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Intermediates.noindex/WordMem.build/Debug-iphonesimulator/WordMem.build/WordMem.app.xcent --timestamp\=none --generate-entitlement-der /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Products/Debug-iphonesimulator/WordMem.app
 
 Validate /Users/zhezhu/Library/Developer/Xcode/DerivedData/WordMem-epdtyyhmxcqojrcbiueiqncrjaii/Build/Products/Debug-iphonesimulator/WordMem.app (in target 'WordMem' from project 'WordMem')

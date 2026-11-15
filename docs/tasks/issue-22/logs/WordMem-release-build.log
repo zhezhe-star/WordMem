@@ -904,7 +904,7 @@ SwiftCompile normal x86_64 Compiling\ ShareViewController.swift,\ ShareTextExtra
 
 SwiftCompile normal x86_64 (in target 'WordMemShareExtension' from project 'WordMem')
     cd /Users/zhezhu/orca/workspaces/WordMem/翻译流程-bug-修复
-    
+
 
 /Users/zhezhu/orca/workspaces/WordMem/翻译流程-bug-修复/WordMem/Import/ImportCandidateCurator.swift:236:58: warning: left side of nil coalescing operator '??' has non-optional type 'Int64', so the right side is never used
 234 |       logger.error(
@@ -927,7 +927,7 @@ SwiftCompile normal arm64 Compiling\ ShareViewController.swift,\ ShareTextExtrac
 
 SwiftCompile normal arm64 (in target 'WordMemShareExtension' from project 'WordMem')
     cd /Users/zhezhu/orca/workspaces/WordMem/翻译流程-bug-修复
-    
+
 
 /Users/zhezhu/orca/workspaces/WordMem/翻译流程-bug-修复/WordMem/Import/ImportCandidateCurator.swift:236:58: warning: left side of nil coalescing operator '??' has non-optional type 'Int64', so the right side is never used
 234 |       logger.error(
@@ -950,7 +950,7 @@ SwiftCompile normal x86_64 Compiling\ TranslationProviderMain.swift,\ Translatio
 
 SwiftCompile normal x86_64 (in target 'WordMemTranslationProvider' from project 'WordMem')
     cd /Users/zhezhu/orca/workspaces/WordMem/翻译流程-bug-修复
-    
+
 
 /Users/zhezhu/orca/workspaces/WordMem/翻译流程-bug-修复/WordMem/Import/ImportCandidateCurator.swift:236:58: warning: left side of nil coalescing operator '??' has non-optional type 'Int64', so the right side is never used
 234 |       logger.error(
@@ -973,7 +973,7 @@ SwiftCompile normal arm64 Compiling\ TranslationProviderMain.swift,\ Translation
 
 SwiftCompile normal arm64 (in target 'WordMemTranslationProvider' from project 'WordMem')
     cd /Users/zhezhu/orca/workspaces/WordMem/翻译流程-bug-修复
-    
+
 
 /Users/zhezhu/orca/workspaces/WordMem/翻译流程-bug-修复/WordMem/Import/ImportCandidateCurator.swift:236:58: warning: left side of nil coalescing operator '??' has non-optional type 'Int64', so the right side is never used
 234 |       logger.error(
@@ -1558,10 +1558,10 @@ SwiftCompile normal x86_64 Compiling\ WordMemApp.swift,\ WordMemStore.swift,\ Co
 
 SwiftCompile normal x86_64 (in target 'WordMem' from project 'WordMem')
     cd /Users/zhezhu/orca/workspaces/WordMem/翻译流程-bug-修复
-    
+
 
 /Users/zhezhu/orca/workspaces/WordMem/翻译流程-bug-修复/WordMem/Import/Document/VisionDocumentReader.swift:532:11: warning: variable 'block' was never mutated; consider changing to 'let' constant [#VariableNeverMutated]
-530 | 
+530 |
 531 |     return sorted.enumerated().map { order, sortedDraft in
 532 |       var block = sortedDraft.element.block
     |           `- warning: variable 'block' was never mutated; consider changing to 'let' constant [#VariableNeverMutated]
@@ -1585,7 +1585,7 @@ SwiftCompile normal x86_64 (in target 'WordMem' from project 'WordMem')
 436 |         }
 
 /Users/zhezhu/orca/workspaces/WordMem/翻译流程-bug-修复/WordMem/SystemDictionaryView.swift:6:42: warning: call to main actor-isolated class method 'dictionaryHasDefinition(forTerm:)' in a synchronous nonisolated context [#ActorIsolatedCall]
- 3 | 
+ 3 |
  4 | enum SystemDictionaryPresentation {
  5 |     static func canPresent(_ term: String) -> Bool {
    |                 `- note: add '@MainActor' to make static method 'canPresent' part of global actor 'MainActor'
@@ -1599,7 +1599,7 @@ SwiftCompile normal x86_64 (in target 'WordMem' from project 'WordMem')
 18 |  */
 19 | + (BOOL)dictionaryHasDefinitionForTerm:(NSString *)term;
    | `- note: calls to class method 'dictionaryHasDefinition(forTerm:)' from outside of its actor context are implicitly asynchronous
-20 | 
+20 |
 21 | /*! Initializes an instance of a UIReferenceLibraryViewController with the term provided.
 
 [#ActorIsolatedCall]: <https://docs.swift.org/compiler/documentation/diagnostics/actor-isolated-call>
@@ -1613,10 +1613,10 @@ SwiftCompile normal arm64 Compiling\ WordMemApp.swift,\ WordMemStore.swift,\ Con
 
 SwiftCompile normal arm64 (in target 'WordMem' from project 'WordMem')
     cd /Users/zhezhu/orca/workspaces/WordMem/翻译流程-bug-修复
-    
+
 
 /Users/zhezhu/orca/workspaces/WordMem/翻译流程-bug-修复/WordMem/Import/Document/VisionDocumentReader.swift:532:11: warning: variable 'block' was never mutated; consider changing to 'let' constant [#VariableNeverMutated]
-530 | 
+530 |
 531 |     return sorted.enumerated().map { order, sortedDraft in
 532 |       var block = sortedDraft.element.block
     |           `- warning: variable 'block' was never mutated; consider changing to 'let' constant [#VariableNeverMutated]
@@ -1640,7 +1640,7 @@ SwiftCompile normal arm64 (in target 'WordMem' from project 'WordMem')
 436 |         }
 
 /Users/zhezhu/orca/workspaces/WordMem/翻译流程-bug-修复/WordMem/SystemDictionaryView.swift:6:42: warning: call to main actor-isolated class method 'dictionaryHasDefinition(forTerm:)' in a synchronous nonisolated context [#ActorIsolatedCall]
- 3 | 
+ 3 |
  4 | enum SystemDictionaryPresentation {
  5 |     static func canPresent(_ term: String) -> Bool {
    |                 `- note: add '@MainActor' to make static method 'canPresent' part of global actor 'MainActor'
@@ -1654,7 +1654,7 @@ SwiftCompile normal arm64 (in target 'WordMem' from project 'WordMem')
 18 |  */
 19 | + (BOOL)dictionaryHasDefinitionForTerm:(NSString *)term;
    | `- note: calls to class method 'dictionaryHasDefinition(forTerm:)' from outside of its actor context are implicitly asynchronous
-20 | 
+20 |
 21 | /*! Initializes an instance of a UIReferenceLibraryViewController with the term provided.
 
 [#ActorIsolatedCall]: <https://docs.swift.org/compiler/documentation/diagnostics/actor-isolated-call>
