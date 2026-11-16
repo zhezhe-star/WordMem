@@ -32,3 +32,4 @@
 - [2026-11-15T18:50:00+08:00] milestone — 用户最终验收通过（“确认没什么问题”）。临时截图目录 `tmp-issue-22-screenshots/` 已按协议删除；权威证据保留在 `docs/tasks/issue-22/`。等待用户指示创建 PR 或合并。
 - [2026-11-16T09:05:00+08:00] release — 修复分支已推送，PR #23 已创建：https://github.com/zhezhe-star/WordMem/pull/23（base main，OPEN，未合并）。等待用户决定是否合并。
 - [2026-11-16T10:20:00+08:00] decision — 用户要求提交 TestFlight。按 `docs/testflight-release.md`：不合并 PR #23 到 main，直接将 `release/testflight` 快进到当前修复提交并推送，触发 Xcode Cloud `TestFlight Beta` workflow。
+- [2026-11-16T10:25:00+08:00] release — `release/testflight` 已从 `c889bbe` 快进到 `f095107` 并推送成功，按 `docs/testflight-release.md` 触发 Xcode Cloud `TestFlight Beta`。本机无 App Store Connect API 凭据，无法查询 Xcode Cloud 构建状态；需在 App Store Connect > Xcode Cloud / TestFlight 确认。PR #23 仍未合并到 main。
