@@ -35,3 +35,6 @@
 - [2026-11-16T10:25:00+08:00] release — `release/testflight` 已从 `c889bbe` 快进到 `f095107` 并推送成功，按 `docs/testflight-release.md` 触发 Xcode Cloud `TestFlight Beta`。本机无 App Store Connect API 凭据，无法查询 Xcode Cloud 构建状态；需在 App Store Connect > Xcode Cloud / TestFlight 确认。PR #23 仍未合并到 main。
 - [2026-11-16T19:06:18+08:00] decision — 用户指示：先等待 TestFlight 构建结果，PR #23 暂不合并；Xcode Cloud 状态由用户在 App Store Connect 确认。
 - [2026-11-18T09:52:51+08:00] decision — 通过 ASC API（新配置密钥 3783P2JX27）确认：11-13 之后 Xcode Cloud 零构建记录，11-16 推送 f095107 未触发 TestFlight Beta workflow；TestFlight build 54（11-12 上传）为修复前代码。原因疑似 webhook 丢失。现重推 release/testflight 触发构建。
+- [2026-11-18T10:25:00+08:00] release — ASC API 确认手动 ciBuildRuns 端点不支持指定分支（sourceBranchOrTagName/inputs 均被拒，手动构建固定打默认分支 main@c889bbe，即构建 56，不含修复）。改用 push 触发：为 release/testflight 创建空提交 c014fbe（仅触发用，无代码改动）并推送。
+- [2026-11-18T10:15:00+08:00] evidence — Xcode Cloud 构建 57（GIT_REF_CHANGE，commit c014fbe = release/testflight 含全部 Issue #22 修复）SUCCEEDED，约 35 分钟；TestFlight build 0.1.0 (57) 上传完成，处理状态 VALID。
+- [2026-11-18T10:40:00+08:00] milestone — 用户真机验收通过（TestFlight 0.1.0 (57)，图片导入翻译不再出现本地翻译失败）。Issue #22 修复在真机确认生效。待用户决定合并 PR #23 与 /orca-wrapup。
