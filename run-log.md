@@ -39,3 +39,4 @@
 - [2026-11-18T10:15:00+08:00] evidence — Xcode Cloud 构建 57（GIT_REF_CHANGE，commit c014fbe = release/testflight 含全部 Issue #22 修复）SUCCEEDED，约 35 分钟；TestFlight build 0.1.0 (57) 上传完成，处理状态 VALID。
 - [2026-11-18T10:40:00+08:00] milestone — 用户真机验收通过（TestFlight 0.1.0 (57)，图片导入翻译不再出现本地翻译失败）。Issue #22 修复在真机确认生效。待用户决定合并 PR #23 与 /orca-wrapup。
 - [2026-11-18T10:55:00+08:00] evidence — wrap-up 全量重跑（干净环境）：`xcodebuild test -scheme WordMem -destination iPhone 17 Pro (iOS 27.0)` → **TEST SUCCEEDED**，126 tests / 0 failures；WordMem / WordMemShareExtension / WordMemTranslationProvider 三个 Scheme Release archive 全部成功产出。PR #23 已由用户指示合并（merge commit 1854431），release/testflight 已同步至 1854431。TestFlight 0.1.0 (57) 真机验收通过。
+- [2026-11-18T11:05:00+08:00] milestone — 决策节点 4 最终验收通过（“验收通过”）。PR #23 已合并（1854431），release/testflight 已同步，TestFlight 0.1.0 (57) 真机验证通过。Issue #22 devflow 闭环。
