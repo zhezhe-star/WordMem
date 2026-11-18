@@ -1,6 +1,5 @@
 import Foundation
 import OSLog
-import Translation
 
 /// Semantic phases of the adaptive import review screen. The UI renders these
 /// states only; pipeline frameworks and stage numbers never reach the screen.
@@ -51,13 +50,13 @@ enum DocumentImportStatusPresenter: Sendable {
     case .completed:
       nil
     case .needsLanguageDownload:
-      "需要下载翻译资源后才能翻译。"
+      "需要下载翻译语言后才能翻译。"
     case .unsupportedLanguagePair:
-      "当前设备暂不支持这对语言的翻译。"
+      "翻译语言未就绪，请下载后再试。"
     case .failed(.languageDetection):
-      "无法识别语言，可以直接保存单词。"
+      "无法识别语言，请重试或取消导入。"
     case .failed:
-      "翻译暂时不可用，可以直接保存单词。"
+      "翻译暂时不可用，请重试或取消导入。"
     }
   }
 
@@ -78,6 +77,96 @@ enum DocumentImportStatusPresenter: Sendable {
   }
 }
 
+/// One terminal import failure. The review screen presents exactly one alert
+/// and owns the retry/cancel actions; modules never render their own buttons.
+struct ImportFailureAlert: Identifiable, Equatable {
+  enum Kind: Equatable {
+    case translation
+    case imageProcessing
+    case save
+  }
+
+  let id = UUID()
+  let kind: Kind
+  let title: String
+  let message: String
+  let retryTitle: String?
+  let cancelTitle: String?
+
+  var showsRetry: Bool { retryTitle != nil }
+}
+
+extension ImportFailureAlert {
+  static func translation(_ report: TranslationFailureReport) -> ImportFailureAlert? {
+    let documentRetryable = report.documentPhase?.isRetryableTranslationFailure == true
+    let chipRetryable = report.chipPhase?.isRetryableTranslationFailure == true
+
+    guard documentRetryable || chipRetryable else {
+      return ImportFailureAlert(
+        kind: .translation,
+        title: "需要下载翻译语言",
+        message:
+          "请前往「设置 > App > 翻译 > 语言」下载「英语 → 简体中文」后再试。如果已下载仍不可用，说明当前设备暂不支持该语言对。",
+        retryTitle: "重试",
+        cancelTitle: "取消导入"
+      )
+    }
+
+    let needsDownload =
+      report.documentPhase == .needsLanguageDownload
+      || report.chipPhase == .needsLanguageDownload
+
+    if needsDownload {
+      return ImportFailureAlert(
+        kind: .translation,
+        title: "需要下载翻译语言",
+        message:
+          "请前往「设置 > App > 翻译 > 语言」下载「英语 → 简体中文」，或点“重试”让系统准备语言资源。",
+        retryTitle: "重试",
+        cancelTitle: "取消导入"
+      )
+    }
+
+    if documentRetryable {
+      return ImportFailureAlert(
+        kind: .translation,
+        title: "翻译暂时不可用",
+        message: "请重试；也可以取消本次导入。",
+        retryTitle: "重试",
+        cancelTitle: "取消导入"
+      )
+    }
+
+    return ImportFailureAlert(
+      kind: .translation,
+      title: "部分单词释义暂不可用",
+      message: "原文已翻译，请重试补齐释义。",
+      retryTitle: "重试",
+      cancelTitle: "取消导入"
+    )
+  }
+
+  static func imageProcessing(message: String) -> ImportFailureAlert {
+    ImportFailureAlert(
+      kind: .imageProcessing,
+      title: "无法处理这张图片",
+      message: message,
+      retryTitle: "重新选择",
+      cancelTitle: "取消"
+    )
+  }
+
+  static func saveFailure() -> ImportFailureAlert {
+    ImportFailureAlert(
+      kind: .save,
+      title: "导入失败",
+      message: "单词还没有写入，请重试。",
+      retryTitle: "重试",
+      cancelTitle: "取消"
+    )
+  }
+}
+
 /// View model behind the adaptive import review screen. It coordinates the
 /// canonical document, candidate chips, and document translation while the
 /// interface shows only semantic states.
@@ -95,12 +184,8 @@ final class DocumentImportReviewModel {
   private(set) var isSaving = false
   private(set) var didUseDeterministicFallback = false
 
-  /// Chip-meaning façade state. The review screen binds these to the shared
-  /// chip translation modifier; document translation lives in the session.
-  var chipTranslationConfiguration: TranslationSession.Configuration?
-  var chipTranslations: [String: String] = [:]
-  var isChipTranslating = false
-  var chipTranslationPhase = DocumentTranslationPhase.idle
+  /// The single alert surface for every terminal import failure.
+  var failureAlert: ImportFailureAlert?
 
   /// Replaceable for tests so document translation stays hermetic.
   var documentSessionFactory: (CanonicalDocument) -> ImportDocumentSession = {
@@ -125,6 +210,18 @@ final class DocumentImportReviewModel {
 
   var offeredChips: [ImportCandidateChip] {
     ImportCandidateChip.uniquelyIdentified(chips).filter(\.isOffered)
+  }
+
+  var chipTranslations: [String: String] {
+    documentSession?.chipTranslations ?? [:]
+  }
+
+  var chipTranslationPhase: DocumentTranslationPhase {
+    documentSession?.chipPhase ?? .idle
+  }
+
+  var isChipTranslating: Bool {
+    chipTranslationPhase == .translating || chipTranslationPhase == .checkingAvailability
   }
 
   var selectedWords: [String] {
@@ -215,6 +312,18 @@ final class DocumentImportReviewModel {
     clearResults()
     phase = .capturing
     errorMessage = DocumentImportStatusPresenter.processingErrorMessage(for: error)
+    failureAlert = .imageProcessing(
+      message: errorMessage ?? DocumentImportStatusPresenter.processingErrorMessage(for: error)
+    )
+  }
+
+  /// Image imports return to the selected-image preview while keeping the
+  /// recognized source so the user can pick the image again.
+  func cancelTranslationKeepingSource() {
+    preparationToken = UUID()
+    clearResults(keepingSource: true)
+    errorMessage = nil
+    phase = .capturing
   }
 
   private func startPreparation() {
@@ -224,18 +333,17 @@ final class DocumentImportReviewModel {
     phase = .organizing
   }
 
-  private func clearResults() {
+  private func clearResults(keepingSource: Bool = false) {
     chips = []
     selection = ImportChipSelection(chips: [])
-    chipTranslations = [:]
-    chipTranslationConfiguration = nil
-    isChipTranslating = false
-    chipTranslationPhase = .idle
     documentSession = nil
-    preparedDisplayText = ""
-    reviewDocument = nil
-    originalImageDocument = nil
+    failureAlert = nil
     didUseDeterministicFallback = false
+    if !keepingSource {
+      preparedDisplayText = ""
+      reviewDocument = nil
+      originalImageDocument = nil
+    }
   }
 
   private func prepare(from document: CanonicalDocument, displayText: String) async {
@@ -247,6 +355,9 @@ final class DocumentImportReviewModel {
     // cannot stall word preparation.
     let session = documentSessionFactory(document)
     documentSession = session
+    session.onFailureReport = { [weak self] report in
+      self?.presentFailureAlert(report)
+    }
 
     phase = .preparingWords
     preparedDisplayText = displayText
@@ -297,19 +408,14 @@ final class DocumentImportReviewModel {
     chips = advisedChips
     selection = ImportChipSelection(chips: advisedChips)
     phase = offeredChips.isEmpty ? .noWordsAvailable : .reviewing
+    session.registerChips(
+      offeredChips.map { ChipTranslationUnit(id: $0.id, text: $0.text) }
+    )
 
     // Start the visible task after the structured source and chips reach their
     // stable layout; an earlier start can be cancelled by that layout change.
     await beginDocumentTranslationIfAvailable(session)
     guard preparationToken == token else { return }
-
-    if !offeredChips.isEmpty,
-      let session = documentSession,
-      session.phase == .translating || session.phase == .completed
-    {
-      chipTranslationConfiguration =
-        ImportCandidateTranslationModifier.refreshedConfiguration(chipTranslationConfiguration)
-    }
   }
 
   // MARK: Selection
@@ -318,8 +424,12 @@ final class DocumentImportReviewModel {
     let token = preparationToken
     await session.checkAvailability()
     guard preparationToken == token else { return }
-    guard session.phase == .translating else { return }
-    session.beginTranslation()
+    switch session.phase {
+    case .translating, .needsLanguageDownload:
+      session.beginTranslation()
+    default:
+      break
+    }
   }
 
   func toggleSelection(_ chip: ImportCandidateChip) {
@@ -342,9 +452,7 @@ final class DocumentImportReviewModel {
     let restored = chip.restoringOriginal()
     chips = chips.map { $0.id == chip.id ? restored : $0 }
     selection.updateChips(chips)
-    if let translation = chipTranslations[chip.id] {
-      chipTranslations[restored.id] = translation
-    }
+    documentSession?.moveChipTranslation(from: chip.id, to: restored.id)
   }
 
   // MARK: Saving
@@ -352,6 +460,7 @@ final class DocumentImportReviewModel {
   func beginSaving() {
     isSaving = true
     errorMessage = nil
+    failureAlert = nil
   }
 
   func endSaving() {
@@ -361,6 +470,24 @@ final class DocumentImportReviewModel {
   func failSaving() {
     isSaving = false
     errorMessage = DocumentImportStatusPresenter.saveFailureMessage
+    failureAlert = .saveFailure()
+  }
+
+  // MARK: Failure alert
+
+  func dismissFailureAlert() {
+    failureAlert = nil
+    documentSession?.acknowledgeFailureReport()
+  }
+
+  func retryTranslationFromAlert() {
+    failureAlert = nil
+    documentSession?.retry()
+  }
+
+  private func presentFailureAlert(_ report: TranslationFailureReport) {
+    guard failureAlert == nil else { return }
+    failureAlert = .translation(report)
   }
 }
 

@@ -366,6 +366,145 @@ final class DocumentTranslationEngineTests: XCTestCase {
     XCTAssertGreaterThan(retriedConfiguration.version, initialConfiguration.version)
   }
 
+  @MainActor
+  func testHandlePreparesSessionThenTranslatesDocumentAndChipsInOneTask() async {
+    let block = makeBlock(id: makeUUID(1), text: "Hello")
+    let importSession = ImportDocumentSession(
+      document: makeDocument([block]),
+      engine: DocumentTranslationEngine(
+        availabilityChecker: FakeAvailability(status: .installed),
+        languageDetector: FakeDetector(language: Locale.Language(identifier: "en"))
+      )
+    )
+    let session = DocumentAndChipTranslationSession(documentBlockIDs: [block.id])
+    importSession.registerChips([ChipTranslationUnit(id: "hello", text: "hello")])
+    importSession.beginTranslation()
+
+    await importSession.handle(session)
+
+    XCTAssertEqual(session.events, ["prepare", "document", "chips"])
+    XCTAssertEqual(importSession.chipTranslations["hello"], "释义-hello")
+    XCTAssertEqual(importSession.phase, .completed)
+    XCTAssertEqual(importSession.chipPhase, .completed)
+    XCTAssertNil(importSession.configuration)
+  }
+
+  @MainActor
+  func testDocumentFailureStillTranslatesChipsAndPublishesReport() async {
+    let block = makeBlock(id: makeUUID(1), text: "Hello")
+    let importSession = ImportDocumentSession(
+      document: makeDocument([block]),
+      engine: DocumentTranslationEngine(
+        availabilityChecker: FakeAvailability(status: .installed),
+        languageDetector: FakeDetector(language: Locale.Language(identifier: "en"))
+      )
+    )
+    let session = DocumentAndChipTranslationSession(
+      documentBlockIDs: [block.id],
+      documentFailuresRemaining: 2
+    )
+    importSession.registerChips([ChipTranslationUnit(id: "hello", text: "hello")])
+    importSession.beginTranslation()
+
+    await importSession.handle(session)
+    XCTAssertTrue(importSession.usesLowLatencyTranslation)
+
+    await importSession.handle(session)
+
+    XCTAssertEqual(
+      importSession.phase,
+      .failed(.internalFailure("generic translation failure"))
+    )
+    XCTAssertEqual(importSession.chipPhase, .completed)
+    XCTAssertEqual(importSession.chipTranslations["hello"], "释义-hello")
+    XCTAssertEqual(
+      importSession.failureReport?.documentPhase,
+      .failed(.internalFailure("generic translation failure"))
+    )
+  }
+
+  @MainActor
+  func testChipFailureRetriesWithoutRedoingCompletedDocument() async {
+    let block = makeBlock(id: makeUUID(1), text: "Hello")
+    let importSession = ImportDocumentSession(
+      document: makeDocument([block]),
+      engine: DocumentTranslationEngine(
+        availabilityChecker: FakeAvailability(status: .installed),
+        languageDetector: FakeDetector(language: Locale.Language(identifier: "en"))
+      )
+    )
+    let session = DocumentAndChipTranslationSession(
+      documentBlockIDs: [block.id],
+      chipFailuresRemaining: 1
+    )
+    importSession.registerChips([ChipTranslationUnit(id: "hello", text: "hello")])
+    importSession.beginTranslation()
+
+    await importSession.handle(session)
+    XCTAssertEqual(importSession.phase, .completed)
+    XCTAssertEqual(importSession.chipPhase, .translating)
+    XCTAssertTrue(importSession.usesLowLatencyTranslation)
+
+    await importSession.handle(session)
+
+    XCTAssertEqual(session.documentTranslateCount, 1)
+    XCTAssertEqual(session.chipTranslateCount, 2)
+    XCTAssertEqual(importSession.chipTranslations["hello"], "释义-hello")
+    XCTAssertEqual(importSession.chipPhase, .completed)
+  }
+
+  @MainActor
+  func testRetryAfterFinalChipFailureOnlyRequestsMissingChips() async {
+    let block = makeBlock(id: makeUUID(1), text: "Hello")
+    let importSession = ImportDocumentSession(
+      document: makeDocument([block]),
+      engine: DocumentTranslationEngine(
+        availabilityChecker: FakeAvailability(status: .installed),
+        languageDetector: FakeDetector(language: Locale.Language(identifier: "en"))
+      )
+    )
+    let session = DocumentAndChipTranslationSession(
+      documentBlockIDs: [block.id],
+      chipFailuresRemaining: 2
+    )
+    importSession.registerChips([ChipTranslationUnit(id: "hello", text: "hello")])
+    importSession.beginTranslation()
+
+    await importSession.handle(session)
+    await importSession.handle(session)
+    XCTAssertEqual(importSession.chipPhase, .failed(.internalFailure("generic translation failure")))
+    XCTAssertEqual(session.documentTranslateCount, 1)
+
+    await importSession.retry(with: session)
+
+    XCTAssertEqual(session.documentTranslateCount, 1)
+    XCTAssertEqual(session.chipTranslateCount, 3)
+    XCTAssertEqual(importSession.chipTranslations["hello"], "释义-hello")
+    XCTAssertEqual(importSession.chipPhase, .completed)
+  }
+
+  @MainActor
+  func testPrepareFailureMapsToDownloadStateWithoutRetryingTranslation() async {
+    let block = makeBlock(id: makeUUID(1), text: "Hello")
+    let importSession = ImportDocumentSession(
+      document: makeDocument([block]),
+      engine: DocumentTranslationEngine(
+        availabilityChecker: FakeAvailability(status: .supportedNotInstalled),
+        languageDetector: FakeDetector(language: Locale.Language(identifier: "en"))
+      )
+    )
+    let session = DocumentAndChipTranslationSession(documentBlockIDs: [block.id])
+    session.prepareError = DocumentTranslationServiceError.notInstalled
+    importSession.beginTranslation()
+
+    await importSession.handle(session)
+
+    XCTAssertEqual(importSession.phase, .needsLanguageDownload)
+    XCTAssertEqual(session.documentTranslateCount, 0)
+    XCTAssertNil(importSession.configuration)
+    XCTAssertTrue(importSession.failureReport?.requiresRetry == true)
+  }
+
   private func makeDocument(_ blocks: [CanonicalBlock]) -> CanonicalDocument {
     CanonicalDocument(
       id: makeUUID(0),
@@ -489,6 +628,68 @@ private final class FailingThenSucceedingSession: DocumentTranslationSessionHand
 
 private struct GenericTranslationFailure: Error, CustomStringConvertible {
   var description: String { "generic translation failure" }
+}
+
+private final class DocumentAndChipTranslationSession:
+  DocumentTranslationSessionHandling, @unchecked Sendable
+{
+  let documentBlockIDs: Set<UUID>
+  var documentFailuresRemaining: Int
+  var chipFailuresRemaining: Int
+  var prepareError: Error?
+  private(set) var events: [String] = []
+  private(set) var documentTranslateCount = 0
+  private(set) var chipTranslateCount = 0
+
+  init(
+    documentBlockIDs: Set<UUID>,
+    documentFailuresRemaining: Int = 0,
+    chipFailuresRemaining: Int = 0
+  ) {
+    self.documentBlockIDs = documentBlockIDs
+    self.documentFailuresRemaining = documentFailuresRemaining
+    self.chipFailuresRemaining = chipFailuresRemaining
+  }
+
+  func prepare() async throws {
+    events.append("prepare")
+    if let prepareError {
+      throw prepareError
+    }
+  }
+
+  func translate(
+    _ requests: [DocumentTranslationRequest]
+  ) async throws -> [DocumentTranslationResponse] {
+    let isDocument = requests.contains { documentBlockIDs.contains($0.sourceBlockID) }
+    events.append(isDocument ? "document" : "chips")
+
+    if isDocument {
+      documentTranslateCount += 1
+      if documentFailuresRemaining > 0 {
+        documentFailuresRemaining -= 1
+        throw GenericTranslationFailure()
+      }
+      return requests.map {
+        DocumentTranslationResponse(
+          clientIdentifier: $0.clientIdentifier,
+          targetText: "译文"
+        )
+      }
+    }
+
+    chipTranslateCount += 1
+    if chipFailuresRemaining > 0 {
+      chipFailuresRemaining -= 1
+      throw GenericTranslationFailure()
+    }
+    return requests.map {
+      DocumentTranslationResponse(
+        clientIdentifier: $0.clientIdentifier,
+        targetText: "释义-\($0.clientIdentifier)"
+      )
+    }
+  }
 }
 
 private struct CancellingTranslationSession: DocumentTranslationSessionHandling {

@@ -17,6 +17,9 @@ struct WordPickerView: View {
     @State private var advisorToken = UUID()
     @State private var meanings: [String: String] = [:]
     @State private var configuration: TranslationSession.Configuration?
+    @State private var chipStatus: ChipTranslationStatus = .idle
+    @State private var usesLowLatency = false
+    @State private var showsChipFailureAlert = false
     @State private var isPreparingChips = true
     @State private var hasPreparedChips = false
     @State private var persistenceError: String?
@@ -35,6 +38,7 @@ struct WordPickerView: View {
 
     private var canSave: Bool {
         selection.selectedCount > 0 && !isPreparing && !isSaving && !hasSavedSubmission
+            && chipStatus != .translating && chipStatus != .failed
     }
 
     private var sourceTokens: [String] {
@@ -84,6 +88,12 @@ struct WordPickerView: View {
         .animation(.easeInOut(duration: 0.28), value: isPreparing)
         .translationTask(configuration) { session in
             await translateChips(with: session)
+        }
+        .alert("部分单词释义暂不可用", isPresented: $showsChipFailureAlert) {
+            Button("重试") { retryChipTranslation() }
+            Button("退出", role: .cancel) { onCancel() }
+        } message: {
+            Text("可以重试补齐释义，或退出。")
         }
         .onAppear(perform: startChipTranslation)
         .onChange(of: isPhraseTranslationReady) { _, isReady in
@@ -178,6 +188,7 @@ struct WordPickerView: View {
                 chips: offeredChips,
                 selection: $selection,
                 meanings: meanings,
+                isTranslating: chipStatus == .translating,
                 onRestoreOriginal: restoreOriginal
             )
         }
@@ -239,10 +250,14 @@ struct WordPickerView: View {
             guard advisorToken == token else { return }
             advisorChips = preparedChips
             selection = ImportChipSelection(chips: preparedChips)
+            isPreparingChips = false
             guard !preparedChips.isEmpty else {
-                isPreparingChips = false
+                chipStatus = .completed
                 return
             }
+            chipStatus = .translating
+            usesLowLatency = false
+            showsChipFailureAlert = false
             configuration = TranslationSession.Configuration(
                 source: Locale.Language(identifier: "en"),
                 target: Locale.Language(identifier: "zh-Hans")
@@ -257,13 +272,52 @@ struct WordPickerView: View {
     }
 
     private func translateChips(with session: TranslationSession) async {
-        for chip in advisorChips where meanings[chip.id] == nil {
-            if let meaning = try? await session.translate(chip.text).targetText {
-                meanings[chip.id] = meaning
+        guard chipStatus == .translating else { return }
+        do {
+            try await session.prepareTranslation()
+            for chip in advisorChips where meanings[chip.id] == nil {
+                let response = try await session.translate(chip.text)
+                guard !response.targetText.isEmpty else {
+                    throw ChipTranslationFailure.emptyResponse
+                }
+                meanings[chip.id] = response.targetText
             }
+            chipStatus = .completed
+            configuration = nil
+        } catch {
+            guard !Task.isCancelled else {
+                chipStatus = .idle
+                return
+            }
+            if !usesLowLatency {
+                usesLowLatency = true
+                chipStatus = .translating
+                configuration = lowLatencyConfiguration()
+                return
+            }
+            chipStatus = .failed
+            configuration = nil
+            showsChipFailureAlert = true
         }
-        configuration = nil
-        isPreparingChips = false
+    }
+
+    private func retryChipTranslation() {
+        showsChipFailureAlert = false
+        chipStatus = .translating
+        configuration = lowLatencyConfiguration()
+    }
+
+    private func lowLatencyConfiguration() -> TranslationSession.Configuration {
+        let source = Locale.Language(identifier: "en")
+        let target = Locale.Language(identifier: "zh-Hans")
+        if #available(iOS 26.4, *) {
+            return TranslationSession.Configuration(
+                source: source,
+                target: target,
+                preferredStrategy: .lowLatency
+            )
+        }
+        return TranslationSession.Configuration(source: source, target: target)
     }
 
     private func save() {
@@ -309,6 +363,17 @@ struct WordPickerView: View {
         }
     }
 
+}
+
+private enum ChipTranslationStatus {
+    case idle
+    case translating
+    case completed
+    case failed
+}
+
+private enum ChipTranslationFailure: Error {
+    case emptyResponse
 }
 
 private struct ShimmerBox: View {

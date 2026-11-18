@@ -59,6 +59,10 @@ struct SystemDocumentTranslationSession: DocumentTranslationSessionHandling {
     self.session = session
   }
 
+  func prepare() async throws {
+    try await session.prepareTranslation()
+  }
+
   func translate(
     _ requests: [DocumentTranslationRequest]
   ) async throws -> [DocumentTranslationResponse] {

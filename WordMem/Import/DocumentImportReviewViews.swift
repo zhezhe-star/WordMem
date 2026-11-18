@@ -12,6 +12,8 @@ struct DocumentImportReviewScreen<Source: View>: View {
   let onSubmit: () -> Void
   var showsHeader = true
   var noWordsActionTitle = "编辑原文"
+  var onRetryProcessing: (() -> Void)?
+  var onCancelFailure: (() -> Void)?
   @ViewBuilder var source: () -> Source
 
   var body: some View {
@@ -80,16 +82,28 @@ struct DocumentImportReviewScreen<Source: View>: View {
           .disabled(model.isSaving)
         }
       }
-      .importCandidateTranslations(
-        chips: model.chips,
-        sourceText: nil,
-        configuration: $model.chipTranslationConfiguration,
-        translations: $model.chipTranslations,
-        phraseTranslation: .constant(nil),
-        isTranslating: $model.isChipTranslating,
-        phase: $model.chipTranslationPhase
-      )
       .importDocumentTranslationTask(for: model.documentSession)
+      .alert(item: $model.failureAlert) { alert in
+        if alert.showsRetry {
+          return Alert(
+            title: Text(alert.title),
+            message: Text(alert.message),
+            primaryButton: .default(Text(alert.retryTitle ?? "重试")) {
+              retry(alert)
+            },
+            secondaryButton: .cancel(Text(alert.cancelTitle ?? "取消")) {
+              cancel(alert)
+            }
+          )
+        }
+        return Alert(
+          title: Text(alert.title),
+          message: Text(alert.message),
+          dismissButton: .default(Text("知道了")) {
+            model.dismissFailureAlert()
+          }
+        )
+      }
       .onChange(of: model.phase) { _, newPhase in
         announceReviewReadiness(newPhase)
       }
@@ -98,6 +112,28 @@ struct DocumentImportReviewScreen<Source: View>: View {
           UIAccessibility.post(notification: .announcement, argument: message)
         }
       }
+    }
+  }
+
+  private func retry(_ alert: ImportFailureAlert) {
+    model.dismissFailureAlert()
+    switch alert.kind {
+    case .translation:
+      model.retryTranslationFromAlert()
+    case .save:
+      onSubmit()
+    case .imageProcessing:
+      onRetryProcessing?()
+    }
+  }
+
+  private func cancel(_ alert: ImportFailureAlert) {
+    model.dismissFailureAlert()
+    switch alert.kind {
+    case .translation:
+      (onCancelFailure ?? onCancel)()
+    case .imageProcessing, .save:
+      break
     }
   }
 
@@ -318,28 +354,12 @@ struct ImportDocumentTranslationCard: View {
   }
 
   private func statusMessageView(_ message: String) -> some View {
-    VStack(alignment: .leading, spacing: 8) {
-      Text(message)
-        .font(.subheadline)
-        .foregroundStyle(.secondary)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(message)
-        .accessibilityAddTraits(.updatesFrequently)
-
-      if showsRetry {
-        Button("重试") { session.retry() }
-          .font(.footnote.weight(.semibold))
-      }
-    }
-  }
-
-  private var showsRetry: Bool {
-    switch session.phase {
-    case .needsLanguageDownload, .unsupportedLanguagePair, .failed:
-      true
-    default:
-      false
-    }
+    Text(message)
+      .font(.subheadline)
+      .foregroundStyle(.secondary)
+      .accessibilityElement(children: .ignore)
+      .accessibilityLabel(message)
+      .accessibilityAddTraits(.updatesFrequently)
   }
 
   @ViewBuilder

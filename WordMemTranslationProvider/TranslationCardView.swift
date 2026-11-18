@@ -11,6 +11,8 @@ struct TranslationCardView: View {
     @State private var translatedText = ""
     @State private var status: Status = .idle
     @State private var configuration: TranslationSession.Configuration?
+    @State private var usesLowLatency = false
+    @State private var showsFailureAlert = false
 
     private let storage = LocalStorageManager()
 
@@ -45,6 +47,14 @@ struct TranslationCardView: View {
         .onAppear(perform: loadCard)
         .translationTask(configuration) { session in
             await translate(with: session)
+        }
+        .alert("翻译暂时不可用", isPresented: $showsFailureAlert) {
+            Button("重试") { startTranslation() }
+            Button("退出", role: .cancel) {
+                context.finish(translation: nil)
+            }
+        } message: {
+            Text("请重试；退出会关闭翻译组件。")
         }
     }
 
@@ -98,6 +108,8 @@ struct TranslationCardView: View {
             return
         }
         status = .translating
+        usesLowLatency = false
+        showsFailureAlert = false
         configuration = TranslationSession.Configuration(
             source: Locale.Language(identifier: "en"),
             target: Locale.Language(identifier: "zh-Hans")
@@ -107,13 +119,35 @@ struct TranslationCardView: View {
     private func translate(with session: TranslationSession) async {
         guard status == .translating else { return }
         do {
+            try await session.prepareTranslation()
             let response = try await session.translate(sourceText)
             translatedText = response.targetText
             status = .ready
             configuration = nil
         } catch {
+            guard !Task.isCancelled else { return }
+            if !usesLowLatency {
+                usesLowLatency = true
+                status = .translating
+                configuration = lowLatencyConfiguration()
+                return
+            }
             status = .translationFailed
             configuration = nil
+            showsFailureAlert = true
         }
+    }
+
+    private func lowLatencyConfiguration() -> TranslationSession.Configuration {
+        let source = Locale.Language(identifier: "en")
+        let target = Locale.Language(identifier: "zh-Hans")
+        if #available(iOS 26.4, *) {
+            return TranslationSession.Configuration(
+                source: source,
+                target: target,
+                preferredStrategy: .lowLatency
+            )
+        }
+        return TranslationSession.Configuration(source: source, target: target)
     }
 }

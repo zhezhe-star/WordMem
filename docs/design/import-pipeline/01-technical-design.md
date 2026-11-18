@@ -469,9 +469,10 @@ Minimum mapping:
 |---|---|
 | Image data invalid | “无法读取所选图片，请更换图片后重试。” |
 | No usable canonical text | “没有识别到可整理的内容。” |
-| Translation not installed | “需要下载翻译资源后才能翻译。” |
-| Language pair unsupported | “当前设备暂不支持这对语言的翻译。” |
-| Language detection failed | “无法识别语言，可以手动选择语言或直接保存单词。” |
+| Translation not installed | “需要下载翻译语言后才能翻译。” |
+| Language pair unsupported | “请前往「设置 > App > 翻译 > 语言」下载「英语 → 简体中文」后再试。” |
+| Language detection failed | “无法识别语言，请重试或取消导入。” |
+| Translation failed after fallback | “翻译暂时不可用，请重试或取消导入。” |
 | Foundation Models unavailable | Continue with deterministic pipeline; no user-facing failure. |
 | All candidates dictionary-unavailable | “没有可保存的单词。可以更换内容或手动添加。” |
 
