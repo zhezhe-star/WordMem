@@ -33,3 +33,5 @@
 - [2026-11-16T09:05:00+08:00] release — 修复分支已推送，PR #23 已创建：https://github.com/zhezhe-star/WordMem/pull/23（base main，OPEN，未合并）。等待用户决定是否合并。
 - [2026-11-16T10:20:00+08:00] decision — 用户要求提交 TestFlight。按 `docs/testflight-release.md`：不合并 PR #23 到 main，直接将 `release/testflight` 快进到当前修复提交并推送，触发 Xcode Cloud `TestFlight Beta` workflow。
 - [2026-11-16T10:25:00+08:00] release — `release/testflight` 已从 `c889bbe` 快进到 `f095107` 并推送成功，按 `docs/testflight-release.md` 触发 Xcode Cloud `TestFlight Beta`。本机无 App Store Connect API 凭据，无法查询 Xcode Cloud 构建状态；需在 App Store Connect > Xcode Cloud / TestFlight 确认。PR #23 仍未合并到 main。
+- [2026-11-16T19:06:18+08:00] decision — 用户指示：先等待 TestFlight 构建结果，PR #23 暂不合并；Xcode Cloud 状态由用户在 App Store Connect 确认。
+- [2026-11-18T09:52:51+08:00] decision — 通过 ASC API（新配置密钥 3783P2JX27）确认：11-13 之后 Xcode Cloud 零构建记录，11-16 推送 f095107 未触发 TestFlight Beta workflow；TestFlight build 54（11-12 上传）为修复前代码。原因疑似 webhook 丢失。现重推 release/testflight 触发构建。
