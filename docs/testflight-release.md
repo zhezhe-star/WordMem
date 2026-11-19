@@ -124,3 +124,25 @@ Expect the final line to be `** BUILD SUCCEEDED **`. This local check validates 
 | Build missing in TestFlight | Wait for processing, then inspect the App Store Connect TestFlight build list and Xcode Cloud post-action logs. |
 | External tester has no build | The build was added to the external group and the first external Beta App Review is approved. |
 | Export-compliance prompt reappears | Confirm `ITSAppUsesNonExemptEncryption` remains `NO`, or update it and the runbook if the app's encryption scope changed. |
+
+## Post-push verification (mandatory, added 2026-11-19)
+
+The GitHub → Xcode Cloud webhook can fail silently. After every push to
+`release/testflight`, verify within ~10 minutes that a build actually started:
+
+```bash
+bash scripts/xcode-cloud-heartbeat.sh <pushed-commit-sha>
+```
+
+Exit 0 = build running/succeeded; exit 1 = no build seen — re-trigger with an
+empty commit on top of the pushed SHA (same-SHA re-push produces no GitHub
+event). Details and pitfalls: `.claude/skills/xcodecloud-trigger/SKILL.md`.
+
+## Import-flow guard
+
+Keep exactly one `.translationTask` per import surface (issue #22 root cause
+R1). Verify after any import/translation change:
+
+```bash
+bash scripts/check-single-translation-task.sh
+```
